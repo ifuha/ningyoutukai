@@ -42,13 +42,16 @@ cd web
 npm install
 ```
 
+認証(better-auth)は **api 側**で動いています(`/api/auth/*`、ユーザー・セッションは DB に保存)。web は `authClient` から api に接続します。
+
 `web/.env` を作成して次を設定します(値は共有を受けてください。コミットしないこと)。
 
 ```
 ANTHROPIC_API_KEY=
-BETTER_AUTH_URL=http://localhost:3000
-BETTER_AUTH_SECRET=
+VITE_API_URL=http://localhost:3001   # 省略時も同じ値
 ```
+
+`api/.env` の `BETTER_AUTH_SECRET` は `openssl rand -hex 32` などで生成してください。
 
 ```bash
 npm run dev     # http://localhost:3000
