@@ -1,8 +1,8 @@
-import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { snakeCase, boolean, index, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { productMembers } from "./product_members";
 import { taskTypes } from "./task_types";
 
-export const tasks = pgTable(
+export const tasks = snakeCase.table(
   "tasks",
   {
     taskId: uuid().primaryKey().defaultRandom(),

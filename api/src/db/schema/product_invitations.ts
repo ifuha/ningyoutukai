@@ -1,10 +1,10 @@
-import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { snakeCase, index, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { invitationStatusEnum, inviteeTypeEnum } from "./enums";
 import { products } from "./products";
 import { users } from "./users";
  
 // 全テーブル uuid
-export const productInvitations = pgTable(
+export const productInvitations = snakeCase.table(
   "product_invitations",
   {
     invitationId: uuid().primaryKey().defaultRandom(),

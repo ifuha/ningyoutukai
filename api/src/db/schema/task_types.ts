@@ -1,8 +1,8 @@
 
-import { pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { snakeCase, text, unique, uuid } from "drizzle-orm/pg-core";
 import { products } from "./products";
 
-export const taskTypes = pgTable(
+export const taskTypes = snakeCase.table(
   "task_types",
   {
     taskTypeId: uuid().primaryKey().defaultRandom(),
