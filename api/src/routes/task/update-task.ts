@@ -1,9 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { getMembership, isMemberOfProduct } from "../../lib/product-access";
+import { getMembership } from "../../lib/product-access";
 import {
   TIME_LIMIT_ERROR,
   descriptionSchema,
@@ -12,6 +12,8 @@ import {
   timeLimitSchema,
 } from "../../lib/task-input";
 import { taskColumns } from "../../lib/task-view";
+
+const COMPLETED_ERROR = "完了済みのタスクは変更できません";
 
 // タスク情報変更 PATCH /api/product/:productId/task/:taskId(リーダーのみ)
 export const updateTask = new Elysia({ name: "task-update-task" })
@@ -41,6 +43,9 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         );
       if (!task) return status(404, { message: "タスクが見つかりません" });
 
+      // 完了済みのタスクは変更できない(body の検証より先に判定する)
+      if (task.completedAt) return status(409, { message: COMPLETED_ERROR });
+
       // 変更する項目だけを集める(body に含まれない項目は変更しない)
       const changes: Partial<typeof tasks.$inferInsert> = {};
       if (body.taskName !== undefined) {
@@ -59,14 +64,6 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         }
       }
       if (body.isVisible !== undefined) changes.isVisible = body.isVisible;
-      if (body.productMemberId !== undefined) {
-        if (!(await isMemberOfProduct(params.productId, body.productMemberId))) {
-          return status(400, {
-            message: "担当者はプロダクトのメンバーを指定してください",
-          });
-        }
-        changes.productMemberId = body.productMemberId;
-      }
 
       if (Object.keys(changes).length === 0) {
         return status(400, { message: "変更する項目を指定してください" });
@@ -75,8 +72,10 @@ export const updateTask = new Elysia({ name: "task-update-task" })
       const [updated] = await db
         .update(tasks)
         .set(changes)
-        .where(eq(tasks.taskId, params.taskId))
+        .where(and(eq(tasks.taskId, params.taskId), isNull(tasks.completedAt)))
         .returning(taskColumns);
+      // 確認から更新までの間に完了確定された場合
+      if (!updated) return status(409, { message: COMPLETED_ERROR });
       return updated;
     },
     {
@@ -89,7 +88,6 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         taskName: t.Optional(taskNameSchema()),
         description: t.Optional(t.Union([descriptionSchema(), t.Null()])),
         timeLimit: t.Optional(t.Union([timeLimitSchema(), t.Null()])),
-        productMemberId: t.Optional(t.String({ format: "uuid" })),
         isVisible: t.Optional(t.Boolean()),
       }),
       detail: { summary: "タスク情報変更" },

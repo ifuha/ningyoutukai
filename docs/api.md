@@ -41,7 +41,7 @@
 | **GET** `/api/product/{productId}/task` | タスク一覧取得 | 指定したプロダクト内の閲覧可能なタスク一覧を取得する |
 | **GET** `/api/product/{productId}/task/{taskId}` | 指定したタスクを取得 | 指定したタスクの詳細情報を取得する |
 | **GET** `/api/product/{productId}/member/{memberId}/task` | 指定したメンバーのタスクを取得 | 指定したメンバーに割り振られているタスクの一覧を取得する |
-| **PATCH** `/api/product/{productId}/task/{taskId}` | タスク情報変更 | タスクのタイトル、説明、期限、担当者、公開設定などを変更する |
+| **PATCH** `/api/product/{productId}/task/{taskId}` | タスク情報変更 | タスクのタイトル、説明、期限、公開設定などを変更する |
 | **POST** `/api/product/{productId}/task/{taskId}/complete-report` | タスク完了報告 | 担当メンバーがリーダーに完了を報告する。Resend APIを使用してメール通知する |
 | **PATCH** `/api/product/{productId}/task/{taskId}/complete` | タスク完了確定 | プロダクトリーダーが確認後、タスクを完了状態に変更する |
 
