@@ -93,4 +93,27 @@ describe("POST /api/auth/sign-in/social", () => {
     expect(sa).not.toBe(sb);
   });
 
+  test("google: 認可 URL を返す", async () => {
+    const { res, json } = await signInSocial({ provider: "google" });
+    expect(res.status).toBe(200);
+    track(json.url);
+
+    const url = new URL(json.url);
+    expect(url.host).toBe("accounts.google.com");
+    expect(url.searchParams.get("client_id")).toBe("test-google-client-id");
+    expect(url.searchParams.get("state")).toBeTruthy();
+    expect(url.searchParams.get("redirect_uri")).toBe(`${baseURL}/api/auth/callback/google`);
+  });
+
+  test("callbackURL を指定してもリクエストが受理される(認可 URL 自体には含まれず state に紐づく)", async () => {
+    const callbackURL = `${webOrigin}/dashboard`;
+    const { res, json } = await signInSocial({ provider: "github", callbackURL });
+    expect(res.status).toBe(200);
+    track(json.url);
+    // redirect_uri は常に API 側のコールバックで、callbackURL は URL に露出しない
+    const url = new URL(json.url);
+    expect(url.searchParams.get("redirect_uri")).toBe(`${baseURL}/api/auth/callback/github`);
+    expect(json.url).not.toContain("dashboard");
+  });
+
 });
