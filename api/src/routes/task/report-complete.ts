@@ -33,6 +33,11 @@ export const reportComplete = new Elysia({ name: "task-report-complete" })
         return status(404, { message: "タスクが見つかりません" });
       }
 
+      // 報告できるのは担当者本人だけ(リーダーでも担当者でなければ不可)
+      if (task.productMemberId !== viewer.productMemberId) {
+        return status(403, { message: "担当者のみ完了を報告できます" });
+      }
+
       return task;
     },
     {
