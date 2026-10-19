@@ -141,3 +141,38 @@ describe("POST /api/auth/sign-in/social", () => {
     expect(json.code).toBe("VALIDATION_ERROR");
   });
 });
+
+describe("パスワード認証は無効", () => {
+  test("POST /api/auth/sign-up/email は成功せず、ユーザーも作られない", async () => {
+    const email = `social-test-${crypto.randomUUID()}@example.com`;
+    createdEmails.add(email);
+    const { res, json } = await post("/api/auth/sign-up/email", {
+      email,
+      password: "password1234",
+      name: "Test User",
+    });
+    expect(res.ok).toBe(false);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+    expect(json?.token).toBeUndefined();
+    expect(res.headers.get("set-cookie")).toBeNull();
+
+    const { db } = await import("../../src/db");
+    const schema = await import("../../src/db/auth-schema");
+    const { eq } = await import("drizzle-orm");
+    const rows = await db.select().from(schema.user).where(eq(schema.user.email, email));
+    expect(rows).toHaveLength(0);
+  });
+
+  test("POST /api/auth/sign-in/email は成功せず、セッションが発行されない", async () => {
+    const { res, json } = await post("/api/auth/sign-in/email", {
+      email: "nobody@example.com",
+      password: "password1234",
+    });
+    expect(res.ok).toBe(false);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+    expect(json?.code).toBe("EMAIL_PASSWORD_DISABLED");
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+});
