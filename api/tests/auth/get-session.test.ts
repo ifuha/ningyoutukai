@@ -89,4 +89,41 @@ describe("GET /api/auth/get-session", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toBeNull();
   });
+
+  describe("署名が不正な cookie", () => {
+    test("署名部分を改ざんすると null", async () => {
+      const user = await createTestUser();
+      const session = await createTestSession(user.id);
+      const cookie = await sessionCookie(session.token);
+      // 末尾の 1 文字を別の文字に差し替える(値は "token.署名" を URL エンコードした形)
+      const tampered = cookie.slice(0, -1) + (cookie.endsWith("A") ? "B" : "A");
+
+      const res = await getSession(tampered);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toBeNull();
+    });
+
+    test("署名なし(トークンのみ)の cookie は null", async () => {
+      const user = await createTestUser();
+      const session = await createTestSession(user.id);
+      const name = (await ctx()).authCookies.sessionToken.name;
+
+      const res = await getSession(`${name}=${session.token}`);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toBeNull();
+    });
+
+    test("別のシークレットで署名した cookie は null", async () => {
+      const user = await createTestUser();
+      const session = await createTestSession(user.id);
+      const name = (await ctx()).authCookies.sessionToken.name;
+      const forged = (
+        await serializeSignedCookie(name, session.token, "wrong-secret")
+      ).split(";")[0]!;
+
+      const res = await getSession(forged);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toBeNull();
+    });
+  });
 });
