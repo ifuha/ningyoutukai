@@ -4,7 +4,7 @@ import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { getMembership } from "../../lib/product-access";
-import { taskColumns } from "../../lib/task-view";
+import { canSee, taskColumns } from "../../lib/task-view";
 
 // 指定したタスクを取得 GET /api/product/:productId/task/:taskId
 export const getTask = new Elysia({ name: "task-get-task" })
@@ -29,7 +29,9 @@ export const getTask = new Elysia({ name: "task-get-task" })
             eq(productMembers.productId, params.productId)
           )
         );
-      if (!task) return status(404, { message: "タスクが見つかりません" });
+      // 見えないタスクは存在を漏らさないよう、存在しない場合と同じ 404 にする
+      if (!task || !canSee(task, viewer))
+        return status(404, { message: "タスクが見つかりません" });
 
       return task;
     },
