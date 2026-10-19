@@ -1,0 +1,77 @@
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
+import { serializeSignedCookie } from "better-call";
+import { auth, webOrigin } from "../../src/auth";
+import { db } from "../../src/db";
+import { session as sessionTable, user as userTable } from "../../src/db/auth-schema";
+
+const BASE_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3001";
+const SESSION_COOKIE = "better-auth.session_token";
+
+const createdUserIds: string[] = [];
+
+/** テスト用ユーザーを DB に直接作成する(パスワード認証には依存しない) */
+async function createTestUser() {
+  const ctx = await auth.$context;
+  const unique = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const user = await ctx.internalAdapter.createUser(
+    {
+      email: `sign-out-test-${unique}@example.com`,
+      name: "sign-out test",
+      emailVerified: true,
+    },
+    { method: "admin" },
+  );
+  createdUserIds.push(user.id);
+  return user;
+}
+
+/** セッションを DB に作成し、署名付きセッション cookie ヘッダ値を返す */
+async function createSessionFor(userId: string) {
+  const ctx = await auth.$context;
+  const session = await ctx.internalAdapter.createSession(userId);
+  // serializeSignedCookie は "name=<encode(value.signature)>; ..." を返すので先頭の組だけ使う
+  const serialized = await serializeSignedCookie(
+    SESSION_COOKIE,
+    session.token,
+    ctx.secret,
+  );
+  const cookie = serialized.split(";")[0]!;
+  return { session, cookie };
+}
+
+function request(path: string, init: { method?: string; cookie?: string } = {}) {
+  const headers: Record<string, string> = { origin: webOrigin };
+  if (init.cookie) headers.cookie = init.cookie;
+  if (init.method === "POST") headers["content-type"] = "application/json";
+  return auth.handler(
+    new Request(`${BASE_URL}/api/auth${path}`, {
+      method: init.method ?? "GET",
+      headers,
+      body: init.method === "POST" ? "{}" : undefined,
+    }),
+  );
+}
+
+const signOut = (cookie?: string) => request("/sign-out", { method: "POST", cookie });
+const getSession = (cookie?: string) => request("/get-session", { cookie });
+
+async function cleanup() {
+  for (const id of createdUserIds.splice(0)) {
+    await db.delete(sessionTable).where(eq(sessionTable.userId, id));
+    await db.delete(userTable).where(eq(userTable.id, id));
+  }
+}
+
+afterEach(cleanup);
+afterAll(cleanup);
+
+describe("POST /api/auth/sign-out", () => {
+  test("ヘルパーでログイン済み状態を作れる", async () => {
+    const user = await createTestUser();
+    const { cookie } = await createSessionFor(user.id);
+    const res = await getSession(cookie);
+    const body = (await res.json()) as { user: { id: string } } | null;
+    expect(body?.user.id).toBe(user.id);
+  });
+});
