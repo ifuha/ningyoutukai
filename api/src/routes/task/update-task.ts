@@ -4,6 +4,13 @@ import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { getMembership, isMemberOfProduct } from "../../lib/product-access";
+import {
+  TIME_LIMIT_ERROR,
+  descriptionSchema,
+  parseTimeLimit,
+  taskNameSchema,
+  timeLimitSchema,
+} from "../../lib/task-input";
 import { taskColumns } from "../../lib/task-view";
 
 // タスク情報変更 PATCH /api/product/:productId/task/:taskId(リーダーのみ)
@@ -43,7 +50,13 @@ export const updateTask = new Elysia({ name: "task-update-task" })
       }
       if (body.description !== undefined) changes.description = body.description;
       if (body.timeLimit !== undefined) {
-        changes.timeLimit = body.timeLimit === null ? null : new Date(body.timeLimit);
+        if (body.timeLimit === null) {
+          changes.timeLimit = null;
+        } else {
+          const parsed = parseTimeLimit(body.timeLimit);
+          if (!parsed) return status(400, { message: TIME_LIMIT_ERROR });
+          changes.timeLimit = parsed;
+        }
       }
       if (body.isVisible !== undefined) changes.isVisible = body.isVisible;
       if (body.productMemberId !== undefined) {
@@ -73,9 +86,9 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         taskId: t.String({ format: "uuid" }),
       }),
       body: t.Object({
-        taskName: t.Optional(t.String({ maxLength: 200 })),
-        description: t.Optional(t.Union([t.String(), t.Null()])),
-        timeLimit: t.Optional(t.Union([t.String({ format: "date-time" }), t.Null()])),
+        taskName: t.Optional(taskNameSchema()),
+        description: t.Optional(t.Union([descriptionSchema(), t.Null()])),
+        timeLimit: t.Optional(t.Union([timeLimitSchema(), t.Null()])),
         productMemberId: t.Optional(t.String({ format: "uuid" })),
         isVisible: t.Optional(t.Boolean()),
       }),
