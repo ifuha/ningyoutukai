@@ -1,6 +1,10 @@
+import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
+import { db } from "../../db";
+import { tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { getMembership, isMemberOfProduct } from "../../lib/product-access";
+import { taskColumns, visibleTo } from "../../lib/task-view";
 
 // 指定したメンバーのタスクを取得 GET /api/product/:productId/member/:memberId/task
 export const listMemberTasks = new Elysia({ name: "task-list-member-tasks" })
@@ -14,7 +18,10 @@ export const listMemberTasks = new Elysia({ name: "task-list-member-tasks" })
       if (!(await isMemberOfProduct(params.productId, params.memberId)))
         return status(404, { message: "メンバーが見つかりません" });
 
-      return [];
+      return await db
+        .select(taskColumns)
+        .from(tasks)
+        .where(and(eq(tasks.productMemberId, params.memberId), visibleTo(viewer)));
     },
     {
       requireUser: true,
