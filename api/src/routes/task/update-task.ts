@@ -55,6 +55,10 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         changes.productMemberId = body.productMemberId;
       }
 
+      if (Object.keys(changes).length === 0) {
+        return status(400, { message: "変更する項目を指定してください" });
+      }
+
       const [updated] = await db
         .update(tasks)
         .set(changes)
