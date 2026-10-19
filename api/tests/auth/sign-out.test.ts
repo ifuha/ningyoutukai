@@ -111,6 +111,31 @@ describe("POST /api/auth/sign-out", () => {
     expect(await res.json()).toBeNull();
   });
 
+  test("cookie なしでもエラーにならず 200 / success: true で cookie を無効化する", async () => {
+    const res = await signOut();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+    const sessionCookie = res.headers
+      .getSetCookie()
+      .find((c) => c.includes(`${SESSION_COOKIE}=`));
+    expect(sessionCookie).toMatch(/Max-Age=0/i);
+  });
+
+  test("同一ユーザーの別セッションは削除されない", async () => {
+    const user = await createTestUser();
+    const a = await createSessionFor(user.id);
+    const b = await createSessionFor(user.id);
+
+    await signOut(a.cookie);
+
+    const rows = await db.select().from(sessionTable).where(eq(sessionTable.userId, user.id));
+    expect(rows.map((r) => r.id)).toEqual([b.session.id]);
+
+    const res = await getSession(b.cookie);
+    const body = (await res.json()) as { session: { id: string } } | null;
+    expect(body?.session.id).toBe(b.session.id);
+  });
+
   test("ヘルパーでログイン済み状態を作れる", async () => {
     const user = await createTestUser();
     const { cookie } = await createSessionFor(user.id);
