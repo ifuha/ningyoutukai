@@ -3,7 +3,12 @@ import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { getMembership } from "../../lib/product-access";
+import { mailer } from "../../lib/mailer";
+import {
+  getLeaderContacts,
+  getMemberContact,
+  getMembership,
+} from "../../lib/product-access";
 import { canSee, taskColumns } from "../../lib/task-view";
 
 // タスク完了報告 POST /api/product/:productId/task/:taskId/complete-report
@@ -54,6 +59,17 @@ export const reportComplete = new Elysia({ name: "task-report-complete" })
         )
         .returning(taskColumns);
       if (!updated) return status(409, { message: "すでに報告済みです" });
+
+      // 全リーダーへメール通知(mailer.send は失敗しても例外を投げない)
+      const leaders = await getLeaderContacts(params.productId);
+      if (leaders.length > 0) {
+        const reporter = await getMemberContact(task.productMemberId);
+        await mailer.send({
+          to: leaders.map((l) => l.email),
+          subject: `タスクの完了報告: ${task.taskName}`,
+          text: `${reporter?.userName ?? "メンバー"} さんがタスク「${task.taskName}」の完了を報告しました。`,
+        });
+      }
 
       return updated;
     },
