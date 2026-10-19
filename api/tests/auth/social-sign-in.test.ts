@@ -69,4 +69,28 @@ afterAll(async () => {
 });
 
 describe("POST /api/auth/sign-in/social", () => {
+  test("github: 認可 URL を返し、state と client_id を含む", async () => {
+    const { res, json } = await signInSocial({ provider: "github" });
+    expect(res.status).toBe(200);
+    expect(json.redirect).toBe(true);
+    track(json.url);
+
+    const url = new URL(json.url);
+    expect(url.origin + url.pathname).toBe("https://github.com/login/oauth/authorize");
+    expect(url.searchParams.get("client_id")).toBe("test-github-client-id");
+    expect(url.searchParams.get("state")).toBeTruthy();
+    expect(url.searchParams.get("redirect_uri")).toBe(`${baseURL}/api/auth/callback/github`);
+    expect(url.searchParams.get("response_type")).toBe("code");
+  });
+
+  test("github: 呼び出しごとに異なる state が発行される", async () => {
+    const a = await signInSocial({ provider: "github" });
+    const b = await signInSocial({ provider: "github" });
+    track(a.json.url);
+    track(b.json.url);
+    const sa = new URL(a.json.url).searchParams.get("state");
+    const sb = new URL(b.json.url).searchParams.get("state");
+    expect(sa).not.toBe(sb);
+  });
+
 });
