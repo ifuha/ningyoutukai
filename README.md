@@ -2,8 +2,8 @@
 
 | ディレクトリ | 内容 | ポート |
 | --- | --- | --- |
-| `web/` | TanStack Start + BetterAuth(フロント) | 3000 |
-| `api/` | Elysia + drizzle + PostgreSQL(API) | 3001 |
+| `web/` | TanStack Start) | 3000 |
+| `api/` | Elysia + drizzle + PostgreSQL(API) + BetterAuth(フロント | 3001 |
 
 ## 必要なもの
 
