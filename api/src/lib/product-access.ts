@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db";
-import { productMembers } from "../db/schema";
+import { productMembers, users } from "../db/schema";
 
 export type Membership = {
   productMemberId: string;
@@ -28,6 +28,30 @@ export async function getMembership(
       )
     );
   return row;
+}
+
+/** メンバーの連絡先(通知メールの宛先)。メンバーが存在しなければ undefined */
+export async function getMemberContact(memberId: string) {
+  const [row] = await db
+    .select({ email: users.email, userName: users.userName })
+    .from(productMembers)
+    .innerJoin(users, eq(productMembers.userId, users.userId))
+    .where(eq(productMembers.productMemberId, memberId));
+  return row;
+}
+
+/** プロダクトのリーダーの連絡先の一覧(完了報告の通知先) */
+export async function getLeaderContacts(productId: string) {
+  return await db
+    .select({ email: users.email, userName: users.userName })
+    .from(productMembers)
+    .innerJoin(users, eq(productMembers.userId, users.userId))
+    .where(
+      and(
+        eq(productMembers.productId, productId),
+        eq(productMembers.role, "leader")
+      )
+    );
 }
 
 /** 指定した memberId が、そのプロダクトのメンバーなら true */
