@@ -165,16 +165,6 @@ describe("各項目の更新", () => {
     expect(row.description).toBeNull();
     expect(row.timeLimit).toBeNull();
   });
-
-  test("完了済みのタスクも変更できる", async () => {
-    const completedAt = new Date("2029-01-01T00:00:00Z");
-    const task = await insertTask(a.members[0]!.memberId, { completedAt });
-    const res = await patch(a.leader.cookie, task.taskId, { taskName: "完了後に変更" });
-    expect(res.status).toBe(200);
-    const row = (await findTask(task.taskId))!;
-    expect(row.taskName).toBe("完了後に変更");
-    expect(row.completedAt!.getTime()).toBe(completedAt.getTime());
-  });
 });
 
 describe("taskName の検証", () => {
@@ -221,8 +211,6 @@ describe("body の検証", () => {
       { description: 1 },
       { timeLimit: "明日" },
       { timeLimit: 12345 },
-      { productMemberId: "abc" },
-      { productMemberId: null },
     ]) {
       const res = await patch(a.leader.cookie, task.taskId, body);
       expect(res.status).toBe(422);
@@ -233,40 +221,109 @@ describe("body の検証", () => {
   });
 });
 
-describe("担当者の変更", () => {
-  test("別プロダクトのメンバーは 400 で変更されない", async () => {
+describe("担当者は変更できない", () => {
+  test("productMemberId を含めても無視され、他の項目は更新される", async () => {
+    const m = a.members[0]!;
+    const task = await insertTask(m.memberId);
+    const res = await patch(a.leader.cookie, task.taskId, {
+      productMemberId: a.members[1]!.memberId,
+      taskName: "担当者は変えない",
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).productMemberId).toBe(m.memberId);
+    const row = (await findTask(task.taskId))!;
+    expect(row.productMemberId).toBe(m.memberId);
+    expect(row.taskName).toBe("担当者は変えない");
+  });
+
+  test("別プロダクトのメンバーを指定しても無視される", async () => {
     const m = a.members[0]!;
     const task = await insertTask(m.memberId);
     const res = await patch(a.leader.cookie, task.taskId, {
       productMemberId: b.members[0]!.memberId,
-      taskName: "同時に変えない",
+      isVisible: false,
     });
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ message: "担当者はプロダクトのメンバーを指定してください" });
+    expect(res.status).toBe(200);
     const row = (await findTask(task.taskId))!;
     expect(row.productMemberId).toBe(m.memberId);
-    expect(row.taskName).toBe("テストタスク");
+    expect(row.isVisible).toBe(false);
   });
 
-  test("存在しない memberId は 400", async () => {
-    const task = await insertTask(a.members[0]!.memberId);
-    const res = await patch(a.leader.cookie, task.taskId, { productMemberId: crypto.randomUUID() });
-    expect(res.status).toBe(400);
-  });
-
-  test("同じプロダクトの別メンバーに変更できる", async () => {
-    const task = await insertTask(a.members[0]!.memberId);
-    const res = await patch(a.leader.cookie, task.taskId, { productMemberId: a.members[1]!.memberId });
-    expect(res.status).toBe(200);
-    expect((await res.json()).productMemberId).toBe(a.members[1]!.memberId);
-    expect((await findTask(task.taskId))!.productMemberId).toBe(a.members[1]!.memberId);
-  });
-
-  test("リーダー自身にも変更できる", async () => {
-    const task = await insertTask(a.members[0]!.memberId);
+  test("productMemberId だけの body は変更項目なしとして 400", async () => {
+    const m = a.members[0]!;
+    const task = await insertTask(m.memberId);
     const res = await patch(a.leader.cookie, task.taskId, { productMemberId: a.leader.memberId });
-    expect(res.status).toBe(200);
-    expect((await findTask(task.taskId))!.productMemberId).toBe(a.leader.memberId);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ message: "変更する項目を指定してください" });
+    expect((await findTask(task.taskId))!.productMemberId).toBe(m.memberId);
+  });
+});
+
+describe("完了済みのタスク", () => {
+  const MSG = { message: "完了済みのタスクは変更できません" };
+  const completedAt = new Date("2029-01-01T00:00:00Z");
+
+  test("409 で変更されない", async () => {
+    const task = await insertTask(a.members[0]!.memberId, { completedAt });
+    const res = await patch(a.leader.cookie, task.taskId, { taskName: "完了後に変更" });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual(MSG);
+    const row = (await findTask(task.taskId))!;
+    expect(row.taskName).toBe("テストタスク");
+    expect(row.completedAt!.getTime()).toBe(completedAt.getTime());
+  });
+
+  test("未報告・報告済みのどちらでも 409", async () => {
+    const m = a.members[0]!;
+    const unreported = await insertTask(m.memberId, { completedAt });
+    const reported = await insertTask(m.memberId, {
+      completedAt,
+      reportedAt: new Date("2028-12-31T00:00:00Z"),
+    });
+    for (const t of [unreported, reported]) {
+      const res = await patch(a.leader.cookie, t.taskId, { isVisible: false });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual(MSG);
+      expect((await findTask(t.taskId))!.isVisible).toBe(true);
+    }
+  });
+
+  test("{} でも 409(完了済みの判定が body の検証より先)", async () => {
+    const task = await insertTask(a.members[0]!.memberId, { completedAt });
+    const res = await patch(a.leader.cookie, task.taskId, {});
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual(MSG);
+  });
+
+  test("不正な期限・空のタスク名でも 409", async () => {
+    const task = await insertTask(a.members[0]!.memberId, { completedAt });
+    for (const body of [{ timeLimit: "9999-12-31T00:00:00Z" }, { taskName: "   " }]) {
+      const res = await patch(a.leader.cookie, task.taskId, body);
+      expect(res.status).toBe(409);
+    }
+    expect((await findTask(task.taskId))!.taskName).toBe("テストタスク");
+  });
+
+  test("メンバーは 403、別プロダクトのタスクは 404(完了済みより先)", async () => {
+    const task = await insertTask(a.members[0]!.memberId, { completedAt });
+    expect((await patch(a.members[0]!.cookie, task.taskId, { taskName: "x" })).status).toBe(403);
+    const other = await insertTask(b.members[0]!.memberId, { completedAt });
+    expect((await patch(a.leader.cookie, other.taskId, { taskName: "x" })).status).toBe(404);
+  });
+
+  test("完了確定との競合: 更新直前に完了済みになっていた場合は更新しない", async () => {
+    // 確認(completedAt IS NULL)の後に完了確定された状態を、UPDATE の条件で再現する
+    const { db } = await import("../../src/db");
+    const { tasks } = await import("../../src/db/schema");
+    const { and, eq, isNull } = await import("drizzle-orm");
+    const task = await insertTask(a.members[0]!.memberId, { completedAt });
+    const rows = await db
+      .update(tasks)
+      .set({ taskName: "競合" })
+      .where(and(eq(tasks.taskId, task.taskId), isNull(tasks.completedAt)))
+      .returning();
+    expect(rows).toHaveLength(0);
+    expect((await findTask(task.taskId))!.taskName).toBe("テストタスク");
   });
 });
 
