@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
@@ -38,7 +38,24 @@ export const reportComplete = new Elysia({ name: "task-report-complete" })
         return status(403, { message: "担当者のみ完了を報告できます" });
       }
 
-      return task;
+      if (task.completedAt) return status(409, { message: "すでに完了しています" });
+      if (task.reportedAt) return status(409, { message: "すでに報告済みです" });
+
+      // 同時リクエストで二重に報告されないよう、未報告・未完了の条件を付けて更新する
+      const [updated] = await db
+        .update(tasks)
+        .set({ reportedAt: new Date() })
+        .where(
+          and(
+            eq(tasks.taskId, task.taskId),
+            isNull(tasks.reportedAt),
+            isNull(tasks.completedAt)
+          )
+        )
+        .returning(taskColumns);
+      if (!updated) return status(409, { message: "すでに報告済みです" });
+
+      return updated;
     },
     {
       requireUser: true,
