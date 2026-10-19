@@ -75,6 +75,18 @@ describe("POST /api/auth/sign-out", () => {
     expect(await res.json()).toEqual({ success: true });
   });
 
+  test("sign-out 後に session テーブルの該当行が削除される", async () => {
+    const user = await createTestUser();
+    const { session, cookie } = await createSessionFor(user.id);
+    const before = await db.select().from(sessionTable).where(eq(sessionTable.id, session.id));
+    expect(before).toHaveLength(1);
+
+    await signOut(cookie);
+
+    const after = await db.select().from(sessionTable).where(eq(sessionTable.id, session.id));
+    expect(after).toHaveLength(0);
+  });
+
   test("ヘルパーでログイン済み状態を作れる", async () => {
     const user = await createTestUser();
     const { cookie } = await createSessionFor(user.id);
