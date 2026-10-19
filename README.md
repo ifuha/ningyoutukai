@@ -25,6 +25,7 @@ bun run dev                   # http://localhost:3001
 - DB のポートは **5433** です(ホストにローカルの Postgres があっても 5432 と衝突しないようにしています)。
 - 停止: `docker compose down`(データも消す場合は `docker compose down -v`)
 - API のポートを変える場合は環境変数 `PORT` を指定してください。
+- Swagger UI: http://localhost:3001/swagger (OpenAPI の定義は `/swagger/json`)。Elysia のルートが自動で載ります。
 
 ### スキーマを変更するとき
 
