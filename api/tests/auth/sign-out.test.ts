@@ -99,6 +99,18 @@ describe("POST /api/auth/sign-out", () => {
     expect(sessionCookie).toMatch(/Max-Age=0/i);
   });
 
+  test("sign-out 後に同じ cookie で get-session を呼ぶと null", async () => {
+    const user = await createTestUser();
+    const { cookie } = await createSessionFor(user.id);
+    expect(await (await getSession(cookie)).json()).not.toBeNull();
+
+    await signOut(cookie);
+
+    const res = await getSession(cookie);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toBeNull();
+  });
+
   test("ヘルパーでログイン済み状態を作れる", async () => {
     const user = await createTestUser();
     const { cookie } = await createSessionFor(user.id);
