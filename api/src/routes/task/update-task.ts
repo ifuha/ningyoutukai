@@ -3,7 +3,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { getMembership } from "../../lib/product-access";
+import { getMembership, isMemberOfProduct } from "../../lib/product-access";
 import { taskColumns } from "../../lib/task-view";
 
 // タスク情報変更 PATCH /api/product/:productId/task/:taskId(リーダーのみ)
@@ -46,6 +46,14 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         changes.timeLimit = body.timeLimit === null ? null : new Date(body.timeLimit);
       }
       if (body.isVisible !== undefined) changes.isVisible = body.isVisible;
+      if (body.productMemberId !== undefined) {
+        if (!(await isMemberOfProduct(params.productId, body.productMemberId))) {
+          return status(400, {
+            message: "担当者はプロダクトのメンバーを指定してください",
+          });
+        }
+        changes.productMemberId = body.productMemberId;
+      }
 
       const [updated] = await db
         .update(tasks)
@@ -64,6 +72,7 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         taskName: t.Optional(t.String({ maxLength: 200 })),
         description: t.Optional(t.Union([t.String(), t.Null()])),
         timeLimit: t.Optional(t.Union([t.String({ format: "date-time" }), t.Null()])),
+        productMemberId: t.Optional(t.String({ format: "uuid" })),
         isVisible: t.Optional(t.Boolean()),
       }),
       detail: { summary: "タスク情報変更" },
