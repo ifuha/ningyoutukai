@@ -1,9 +1,9 @@
-import { pgTable, unique, uuid } from "drizzle-orm/pg-core";
+import { snakeCase, unique, uuid } from "drizzle-orm/pg-core";
 import { memberRoleEnum } from "./enums";
 import { products } from "./products";
 import { users } from "./users";
 
-export const productMembers = pgTable(
+export const productMembers = snakeCase.table(
   "product_members",
   {
     productMemberId: uuid().primaryKey().defaultRandom(),

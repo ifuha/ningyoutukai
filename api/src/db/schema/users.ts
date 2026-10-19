@@ -1,6 +1,6 @@
-import { uuid, pgTable, text } from "drizzle-orm/pg-core";
+import { snakeCase, uuid, text } from "drizzle-orm/pg-core";
 
-export const users = pgTable("users", {
+export const users = snakeCase.table("users", {
   userId: uuid().primaryKey().defaultRandom(),
   userName: text().notNull(),
   email: text().notNull().unique(),
