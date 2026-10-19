@@ -1,8 +1,9 @@
 import { Elysia, t } from "elysia";
 import { db } from "../../db";
-import { tasks } from "../../db/schema";
+import { and, eq } from "drizzle-orm";
+import { taskTypes, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { getMembership } from "../../lib/product-access";
+import { getMembership, isMemberOfProduct } from "../../lib/product-access";
 import { taskColumns } from "../../lib/task-view";
 
 // タスクを追加 POST /api/product/:productId/task
@@ -17,10 +18,30 @@ export const createTask = new Elysia({ name: "task-create-task" })
         return status(403, { message: "プロダクトリーダーのみ実行できます" });
       }
 
+      const taskName = body.taskName.trim();
+      if (!taskName) return status(400, { message: "タスク名を入力してください" });
+
+      if (!(await isMemberOfProduct(params.productId, body.productMemberId))) {
+        return status(400, { message: "担当者はプロダクトのメンバーを指定してください" });
+      }
+
+      if (body.taskTypeId) {
+        const [type] = await db
+          .select({ taskTypeId: taskTypes.taskTypeId })
+          .from(taskTypes)
+          .where(
+            and(
+              eq(taskTypes.taskTypeId, body.taskTypeId),
+              eq(taskTypes.productId, params.productId)
+            )
+          );
+        if (!type) return status(400, { message: "タスクの種類が見つかりません" });
+      }
+
       const [created] = await db
         .insert(tasks)
         .values({
-          taskName: body.taskName.trim(),
+          taskName,
           productMemberId: body.productMemberId,
           description: body.description,
           timeLimit: body.timeLimit ? new Date(body.timeLimit) : undefined,
