@@ -80,4 +80,13 @@ describe("GET /api/auth/get-session", () => {
     expect(body.session.token).toBe(session.token);
     expect(new Date(body.session.expiresAt).getTime()).toBeGreaterThan(Date.now());
   });
+
+  test("期限切れのセッションなら null", async () => {
+    const user = await createTestUser();
+    const session = await createTestSession(user.id, new Date(Date.now() - 60_000));
+
+    const res = await getSession(await sessionCookie(session.token));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toBeNull();
+  });
 });
