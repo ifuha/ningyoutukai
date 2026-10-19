@@ -9,6 +9,13 @@ import {
   getMembership,
   isMemberOfProduct,
 } from "../../lib/product-access";
+import {
+  TIME_LIMIT_ERROR,
+  descriptionSchema,
+  parseTimeLimit,
+  taskNameSchema,
+  timeLimitSchema,
+} from "../../lib/task-input";
 import { taskColumns } from "../../lib/task-view";
 
 // タスクを追加 POST /api/product/:productId/task
@@ -25,6 +32,13 @@ export const createTask = new Elysia({ name: "task-create-task" })
 
       const taskName = body.taskName.trim();
       if (!taskName) return status(400, { message: "タスク名を入力してください" });
+
+      let timeLimit: Date | undefined;
+      if (body.timeLimit !== undefined) {
+        const parsed = parseTimeLimit(body.timeLimit);
+        if (!parsed) return status(400, { message: TIME_LIMIT_ERROR });
+        timeLimit = parsed;
+      }
 
       if (!(await isMemberOfProduct(params.productId, body.productMemberId))) {
         return status(400, { message: "担当者はプロダクトのメンバーを指定してください" });
@@ -49,7 +63,7 @@ export const createTask = new Elysia({ name: "task-create-task" })
           taskName,
           productMemberId: body.productMemberId,
           description: body.description,
-          timeLimit: body.timeLimit ? new Date(body.timeLimit) : undefined,
+          timeLimit,
           taskTypeId: body.taskTypeId,
           isVisible: body.isVisible,
         })
@@ -73,10 +87,10 @@ export const createTask = new Elysia({ name: "task-create-task" })
       requireUser: true,
       params: t.Object({ productId: t.String({ format: "uuid" }) }),
       body: t.Object({
-        taskName: t.String({ maxLength: 200 }),
+        taskName: taskNameSchema(),
         productMemberId: t.String({ format: "uuid" }),
-        description: t.Optional(t.String()),
-        timeLimit: t.Optional(t.String({ format: "date-time" })),
+        description: t.Optional(descriptionSchema()),
+        timeLimit: t.Optional(timeLimitSchema()),
         taskTypeId: t.Optional(t.String({ format: "uuid" })),
         isVisible: t.Optional(t.Boolean()),
       }),
