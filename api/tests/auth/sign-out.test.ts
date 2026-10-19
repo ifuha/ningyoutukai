@@ -67,6 +67,14 @@ afterEach(cleanup);
 afterAll(cleanup);
 
 describe("POST /api/auth/sign-out", () => {
+  test("有効なセッション cookie で 200 と success: true を返す", async () => {
+    const user = await createTestUser();
+    const { cookie } = await createSessionFor(user.id);
+    const res = await signOut(cookie);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+  });
+
   test("ヘルパーでログイン済み状態を作れる", async () => {
     const user = await createTestUser();
     const { cookie } = await createSessionFor(user.id);
