@@ -20,7 +20,7 @@ const app = new Elysia()
   .use(errorHandler)
   .use(productRoutes)
   .use(taskRoutes)
-  .mount(auth.handler)
+  .all("/api/auth/*", ({ request }) => auth.handler(request), { parse: "none", detail: { hide: true } })
   .get("/", () => "Hello Elysia")
   .listen(Number(process.env.PORT ?? 3001));
 
