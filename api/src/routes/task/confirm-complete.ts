@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
@@ -26,7 +26,17 @@ export const confirmComplete = new Elysia({ name: "task-confirm-complete" })
         .where(and(eq(tasks.taskId, params.taskId), eq(productMembers.productId, params.productId)));
       if (!task) return status(404, { message: "タスクが見つかりません" });
 
-      return task;
+      if (task.completedAt) return status(409, { message: "すでに完了しています" });
+
+      // completedAt が空のときだけ更新する(同時に呼ばれても二重に完了にしない)
+      const [updated] = await db
+        .update(tasks)
+        .set({ completedAt: new Date() })
+        .where(and(eq(tasks.taskId, task.taskId), isNull(tasks.completedAt)))
+        .returning(taskColumns);
+      if (!updated) return status(409, { message: "すでに完了しています" });
+
+      return updated;
     },
     {
       requireUser: true,
