@@ -31,6 +31,7 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins: [webOrigin],
   database: drizzleAdapter(db, { provider: "pg", schema }),
-  emailAndPassword: { enabled: true },
+  // パスワード認証は提供しない(要件定義: DB にパスワードを持たない)
+  emailAndPassword: { enabled: false },
   socialProviders,
 });
