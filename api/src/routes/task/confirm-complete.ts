@@ -3,7 +3,8 @@ import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { getMembership } from "../../lib/product-access";
+import { mailer } from "../../lib/mailer";
+import { getMemberContact, getMembership } from "../../lib/product-access";
 import { taskColumns } from "../../lib/task-view";
 
 // タスク完了確定 PATCH /api/product/:productId/task/:taskId/complete
@@ -35,6 +36,16 @@ export const confirmComplete = new Elysia({ name: "task-confirm-complete" })
         .where(and(eq(tasks.taskId, task.taskId), isNull(tasks.completedAt)))
         .returning(taskColumns);
       if (!updated) return status(409, { message: "すでに完了しています" });
+
+      // 担当メンバーへ完了を通知する(送信に失敗しても API は成功のまま)
+      const assignee = await getMemberContact(updated.productMemberId);
+      if (assignee) {
+        await mailer.send({
+          to: assignee.email,
+          subject: `タスクが完了になりました: ${updated.taskName}`,
+          text: `${assignee.userName} さん\n\nタスク「${updated.taskName}」がプロダクトリーダーによって完了になりました。`,
+        });
+      }
 
       return updated;
     },
