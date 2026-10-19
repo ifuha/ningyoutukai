@@ -3,7 +3,12 @@ import { db } from "../../db";
 import { and, eq } from "drizzle-orm";
 import { taskTypes, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { getMembership, isMemberOfProduct } from "../../lib/product-access";
+import { mailer } from "../../lib/mailer";
+import {
+  getMemberContact,
+  getMembership,
+  isMemberOfProduct,
+} from "../../lib/product-access";
 import { taskColumns } from "../../lib/task-view";
 
 // タスクを追加 POST /api/product/:productId/task
@@ -49,6 +54,18 @@ export const createTask = new Elysia({ name: "task-create-task" })
           isVisible: body.isVisible,
         })
         .returning(taskColumns);
+
+      // 担当者へ通知(失敗してもタスク作成は成功させる。mailer は例外を投げない)
+      const contact = await getMemberContact(created.productMemberId);
+      if (contact) {
+        const lines = [`タスク「${created.taskName}」があなたに割り振られました。`];
+        if (created.timeLimit) lines.push(`期限: ${created.timeLimit.toISOString()}`);
+        await mailer.send({
+          to: contact.email,
+          subject: `タスクが割り振られました: ${created.taskName}`,
+          text: lines.join("\n"),
+        });
+      }
 
       return status(201, created);
     },
