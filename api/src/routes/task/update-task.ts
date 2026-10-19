@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
@@ -12,6 +12,8 @@ import {
   timeLimitSchema,
 } from "../../lib/task-input";
 import { taskColumns } from "../../lib/task-view";
+
+const COMPLETED_ERROR = "完了済みのタスクは変更できません";
 
 // タスク情報変更 PATCH /api/product/:productId/task/:taskId(リーダーのみ)
 export const updateTask = new Elysia({ name: "task-update-task" })
@@ -40,6 +42,9 @@ export const updateTask = new Elysia({ name: "task-update-task" })
           )
         );
       if (!task) return status(404, { message: "タスクが見つかりません" });
+
+      // 完了済みのタスクは変更できない(body の検証より先に判定する)
+      if (task.completedAt) return status(409, { message: COMPLETED_ERROR });
 
       // 変更する項目だけを集める(body に含まれない項目は変更しない)
       const changes: Partial<typeof tasks.$inferInsert> = {};
@@ -75,8 +80,10 @@ export const updateTask = new Elysia({ name: "task-update-task" })
       const [updated] = await db
         .update(tasks)
         .set(changes)
-        .where(eq(tasks.taskId, params.taskId))
+        .where(and(eq(tasks.taskId, params.taskId), isNull(tasks.completedAt)))
         .returning(taskColumns);
+      // 確認から更新までの間に完了確定された場合
+      if (!updated) return status(409, { message: COMPLETED_ERROR });
       return updated;
     },
     {
