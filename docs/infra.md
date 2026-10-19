@@ -3,7 +3,7 @@
 ## 要件
 
 1. **Cloudflare Containers にデプロイする**
-2. **R2 に DB のダンプを保存する**
+2. **api の DB を R2 にダンプする**
 
 ## 現状(2026-10 時点)
 
@@ -22,8 +22,9 @@
   - マイグレーション(`drizzle-kit migrate`)をデプロイ時のどの段階で実行するか。
   - 環境変数(`DATABASE_URL`、`BETTER_AUTH_SECRET`、`BETTER_AUTH_URL`、`WEB_ORIGIN`)の管理方法。
 
-## 2. R2 への DB ダンプ
+## 2. api の DB を R2 にダンプ
 
+- 対象: api の PostgreSQL(アプリのテーブルと、better-auth のユーザー・セッションなどを含む)。
 - 目的: DB のバックアップを Cloudflare R2 に保存する。
 - 方針案: `pg_dump` の出力を R2 にアップロードする(S3 互換 API を利用)。
 - 未決定の点:
