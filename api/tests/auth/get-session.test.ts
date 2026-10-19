@@ -53,7 +53,7 @@ async function getSession(cookie?: string) {
 afterAll(async () => {
   const { internalAdapter } = await ctx();
   for (const id of createdUserIds) {
-    await internalAdapter.deleteSessions(id);
+    // セッション・アカウントは deleteUser が一緒に削除する
     await internalAdapter.deleteUser(id);
   }
 });
@@ -63,5 +63,21 @@ describe("GET /api/auth/get-session", () => {
     const res = await getSession();
     expect(res.status).toBe(200);
     expect(await res.json()).toBeNull();
+  });
+
+  test("有効なセッション cookie ならユーザー情報とセッション情報を返す", async () => {
+    const user = await createTestUser();
+    const session = await createTestSession(user.id);
+
+    const res = await getSession(await sessionCookie(session.token));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user.id).toBe(user.id);
+    expect(body.user.email).toBe(user.email);
+    expect(body.user.name).toBe(user.name);
+    expect(body.session.id).toBe(session.id);
+    expect(body.session.userId).toBe(user.id);
+    expect(body.session.token).toBe(session.token);
+    expect(new Date(body.session.expiresAt).getTime()).toBeGreaterThan(Date.now());
   });
 });
