@@ -2,6 +2,7 @@ import { cors } from "@elysiajs/cors";
 import { openapi } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
 import { auth, webOrigin } from "./auth";
+import { errorHandler } from "./lib/error-handler";
 import { productRoutes } from "./routes/product";
 import { taskRoutes } from "./routes/task";
 
@@ -16,9 +17,10 @@ const app = new Elysia()
       },
     })
   )
+  .use(errorHandler)
   .use(productRoutes)
   .use(taskRoutes)
-  .mount(auth.handler)
+  .all("/api/auth/*", ({ request }) => auth.handler(request), { parse: "none", detail: { hide: true } })
   .get("/", () => "Hello Elysia")
   .listen(Number(process.env.PORT ?? 3001));
 
