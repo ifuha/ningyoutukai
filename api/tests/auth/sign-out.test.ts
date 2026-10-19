@@ -87,6 +87,18 @@ describe("POST /api/auth/sign-out", () => {
     expect(after).toHaveLength(0);
   });
 
+  test("Set-Cookie でセッション cookie が無効化される", async () => {
+    const user = await createTestUser();
+    const { cookie } = await createSessionFor(user.id);
+    const res = await signOut(cookie);
+
+    const setCookies = res.headers.getSetCookie();
+    const sessionCookie = setCookies.find((c) => c.includes(`${SESSION_COOKIE}=`));
+    expect(sessionCookie).toBeDefined();
+    expect(sessionCookie).toMatch(new RegExp(`${SESSION_COOKIE}=;`));
+    expect(sessionCookie).toMatch(/Max-Age=0/i);
+  });
+
   test("ヘルパーでログイン済み状態を作れる", async () => {
     const user = await createTestUser();
     const { cookie } = await createSessionFor(user.id);
