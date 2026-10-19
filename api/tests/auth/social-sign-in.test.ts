@@ -116,4 +116,28 @@ describe("POST /api/auth/sign-in/social", () => {
     expect(json.url).not.toContain("dashboard");
   });
 
+  test("callbackURL が信頼されていないオリジンの場合は拒否される", async () => {
+    const { res } = await signInSocial({ provider: "github", callbackURL: "https://evil.example.com/steal" });
+    expect(res.status).toBe(403);
+  });
+
+  test("Cookie 付きで Origin が信頼されていないオリジンの場合は拒否される(CSRF)", async () => {
+    // better-auth の Origin 検証は Cookie を伴うリクエストが対象
+    const { res } = await signInSocial({ provider: "github" }, "https://evil.example.com", "better-auth.session_token=dummy");
+    expect(res.status).toBe(403);
+  });
+
+  test("未設定のプロバイダ(discord)は 4xx エラー", async () => {
+    const { res, json } = await signInSocial({ provider: "discord" });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+    expect(json.code).toBe("PROVIDER_NOT_FOUND");
+    expect(json.url).toBeUndefined();
+  });
+
+  test("provider 未指定は 4xx エラー", async () => {
+    const { res, json } = await signInSocial({});
+    expect(res.status).toBe(400);
+    expect(json.code).toBe("VALIDATION_ERROR");
+  });
 });
