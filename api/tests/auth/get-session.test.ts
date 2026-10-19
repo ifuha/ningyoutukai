@@ -18,7 +18,8 @@ async function createTestUser() {
     email: `get-session-test-${unique}@example.com`,
     name: `get-session-test-${unique}`,
     emailVerified: true,
-  });
+    // 型上必須の第 2 引数(validateUserInfo 未設定のため実質使われない)
+  }, { method: "email-password" });
   createdUserIds.push(user.id);
   return user;
 }
@@ -86,6 +87,29 @@ describe("GET /api/auth/get-session", () => {
     const session = await createTestSession(user.id, new Date(Date.now() - 60_000));
 
     const res = await getSession(await sessionCookie(session.token));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toBeNull();
+  });
+
+  test("DB に存在しないトークンなら null", async () => {
+    // 正しく署名されていても、対応するセッションが DB になければ無効
+    const res = await getSession(await sessionCookie(`nonexistent-${crypto.randomUUID()}`));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toBeNull();
+  });
+
+  test("DB から削除済みのセッションなら null", async () => {
+    const user = await createTestUser();
+    const session = await createTestSession(user.id);
+    const cookie = await sessionCookie(session.token);
+
+    // 削除前は取得できる
+    const before = await getSession(cookie);
+    expect((await before.json()).session.id).toBe(session.id);
+
+    await (await ctx()).internalAdapter.deleteSession(session.token);
+
+    const res = await getSession(cookie);
     expect(res.status).toBe(200);
     expect(await res.json()).toBeNull();
   });
