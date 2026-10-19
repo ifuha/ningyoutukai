@@ -6,14 +6,24 @@ import * as schema from "./db/auth-schema";
 
 export const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 
+type GithubProfileLite = {
+  login: string;
+};
+
 // GitHub / Google は環境変数が揃っているものだけ有効にする
 const socialProviders = {
   ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
     ? {
         github: {
-          clientId: process.env.GITHUB_CLIENT_ID,
-          clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        },
+        clientId: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        // 追加: メール非公開の人でも email を取れるようにする
+        scope: ["read:user", "user:email"],
+        // 追加: ログインのたびに呼ばれる。username の変更にも追従する
+        mapProfileToUser: (profile: GithubProfileLite) => ({
+          githubUsername: profile.login,
+        }),
+      },
       }
     : {}),
   ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
@@ -33,5 +43,11 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   // パスワード認証は提供しない(要件定義: DB にパスワードを持たない)
   emailAndPassword: { enabled: false },
+  user: {
+  // 追加: app-user.ts が users へコピーするために、better-auth の user に保存する
+  additionalFields: {
+    githubId: { type: "string", required: false, input: false },
+  },
+},
   socialProviders,
 });

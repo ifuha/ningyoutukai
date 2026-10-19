@@ -2,6 +2,7 @@ import { cors } from "@elysiajs/cors";
 import { openapi } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
 import { auth, webOrigin } from "./auth";
+import { productRoutes } from "./routes/product";
 
 const app = new Elysia()
   .use(cors({ origin: webOrigin, credentials: true }))
@@ -14,6 +15,7 @@ const app = new Elysia()
       },
     })
   )
+  .use(productRoutes)
   .mount(auth.handler)
   .get("/", () => "Hello Elysia")
   .listen(Number(process.env.PORT ?? 3001));
