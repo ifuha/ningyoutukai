@@ -3,7 +3,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { getMembership, isMemberOfProduct } from "../../lib/product-access";
+import { getMembership } from "../../lib/product-access";
 import {
   TIME_LIMIT_ERROR,
   descriptionSchema,
@@ -64,14 +64,6 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         }
       }
       if (body.isVisible !== undefined) changes.isVisible = body.isVisible;
-      if (body.productMemberId !== undefined) {
-        if (!(await isMemberOfProduct(params.productId, body.productMemberId))) {
-          return status(400, {
-            message: "担当者はプロダクトのメンバーを指定してください",
-          });
-        }
-        changes.productMemberId = body.productMemberId;
-      }
 
       if (Object.keys(changes).length === 0) {
         return status(400, { message: "変更する項目を指定してください" });
@@ -96,7 +88,6 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         taskName: t.Optional(taskNameSchema()),
         description: t.Optional(t.Union([descriptionSchema(), t.Null()])),
         timeLimit: t.Optional(t.Union([timeLimitSchema(), t.Null()])),
-        productMemberId: t.Optional(t.String({ format: "uuid" })),
         isVisible: t.Optional(t.Boolean()),
       }),
       detail: { summary: "タスク情報変更" },
