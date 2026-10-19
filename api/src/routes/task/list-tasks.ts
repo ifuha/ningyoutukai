@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
@@ -28,7 +28,9 @@ export const listTasks = new Elysia({ name: "task-list-tasks" })
             visibleTo(viewer),
             query.includeCompleted ? undefined : notCompleted()
           )
-        );
+        )
+        // 期限の昇順(期限なしは最後)。同じ期限は taskId の昇順で安定させる
+        .orderBy(sql`${tasks.timeLimit} asc nulls last`, asc(tasks.taskId));
     },
     {
       requireUser: true,
