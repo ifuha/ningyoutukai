@@ -4,7 +4,7 @@ import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { getMembership } from "../../lib/product-access";
-import { taskColumns } from "../../lib/task-view";
+import { taskColumns, visibleTo } from "../../lib/task-view";
 
 // タスク一覧取得 GET /api/product/:productId/task
 export const listTasks = new Elysia({ name: "task-list-tasks" })
@@ -22,7 +22,12 @@ export const listTasks = new Elysia({ name: "task-list-tasks" })
           productMembers,
           eq(tasks.productMemberId, productMembers.productMemberId)
         )
-        .where(and(eq(productMembers.productId, params.productId)));
+        .where(
+          and(
+            eq(productMembers.productId, params.productId),
+            visibleTo(viewer)
+          )
+        );
     },
     {
       requireUser: true,
