@@ -239,24 +239,3 @@ export function TaskKindDialog({
     </Modal>
   )
 }
-
-/** 見出しの「種類」ボタンと、押すと開くモーダル(リーダーにだけ出す) */
-export function TaskKindButton({ productId }: { productId: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
-      >
-        種類
-      </button>
-      <TaskKindDialog
-        productId={productId}
-        open={open}
-        onClose={() => setOpen(false)}
-      />
-    </>
-  )
-}
