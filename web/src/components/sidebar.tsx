@@ -17,7 +17,7 @@ function PlusIcon() {
   )
 }
 
-// サイドバー(Figma `side-light` / `side-dark`、幅 280px)。角丸は使わない(ユーザーの指定。Figma は 10px)。
+// サイドバー(Figma `side-light` / `side-dark`、幅 240px)。角丸は使わない(ユーザーの指定。Figma は 10px)。
 // データは、呼び出し側から渡す(api は、ここでは呼ばない)
 export function Sidebar({
   products,
