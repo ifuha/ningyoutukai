@@ -4,6 +4,7 @@ import { db } from "../db";
 import { products, productMembers, tasks, taskTypes, users } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
 import { buildTree } from "../lib/build-tree";
+import { ProductTreeSchema } from "../lib/tree-schema";
 
 export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
   .use(authGuard)
@@ -99,6 +100,10 @@ export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
     {
         requireUser: true,
         params: t.Object({ productId: t.String({ format: "uuid" }) }),
+        response: {
+          200: ProductTreeSchema,
+          404: t.Object({ message: t.String() }),
+        },
         detail: { summary: "プロダクト構造取得（ツリー表示）" },
     },
   );
