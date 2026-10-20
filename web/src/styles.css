@@ -1,5 +1,34 @@
-
 @import "tailwindcss";
+
+/*
+ * デザイントークン(Figma「人形使い」の、ライト / ダークの色の見本から)
+ * - ライト: 背景 #fffbe9、文字 #1c1a14
+ * - ダーク: 背景 #1b1f2a、文字 #ebebeb
+ * ダーク / ライトは、OS の設定に追従する(手動の切り替えは未定)。
+ */
+@theme {
+  --color-surface: #fffbe9;
+  --color-ink: #1c1a14;
+  /* 主役のボタン(GitHub)の背景。ライトでは濃紺、ダークでは文字色 */
+  --color-primary: #1b1f2a;
+  --color-on-primary: #ffffff;
+  /* 副のボタン(Google)の背景と枠・文字 */
+  --color-secondary: #ffffff;
+  --color-outline: #000000;
+  --font-sans: Inter, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic",
+    Meiryo, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: #1b1f2a;
+    --color-ink: #ebebeb;
+    --color-primary: #ebebeb;
+    --color-on-primary: #1b1f2a;
+    --color-secondary: #1b1f2a;
+    --color-outline: #ebebeb;
+  }
+}
 
 * {
   box-sizing: border-box;
@@ -13,5 +42,7 @@ body,
 
 body {
   margin: 0;
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
 }
-
