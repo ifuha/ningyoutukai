@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
 import { ProductTree } from '#/components/product-tree'
+import { TaskListDialog } from '#/components/task-list-dialog'
 import {
   TaskFormDialog,
   type TaskFormTarget,
@@ -26,6 +27,8 @@ function Product() {
   const { productId } = Route.useParams()
   const navigate = useNavigate()
   const [taskForm, setTaskForm] = useState<TaskFormTarget | null>(null)
+  // 全タスクの一覧を開いている人(再取得で最新になるよう、id で持つ)
+  const [listMemberId, setListMemberId] = useState<string | null>(null)
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => api<ProductSummary>(`/api/product/${productId}`),
@@ -95,6 +98,23 @@ function Product() {
                 onEditTask={
                   product.data?.role === 'leader'
                     ? (member, task) => setTaskForm({ edit: { task, member } })
+                    : undefined
+                }
+                onShowTasks={(member) => setListMemberId(member.productMemberId)}
+              />
+              <TaskListDialog
+                member={
+                  [tree.data.leader, ...tree.data.members].find(
+                    (m) => m.productMemberId === listMemberId,
+                  ) ?? null
+                }
+                onClose={() => setListMemberId(null)}
+                onEditTask={
+                  product.data?.role === 'leader'
+                    ? (member, task) => {
+                        setListMemberId(null)
+                        setTaskForm({ edit: { task, member } })
+                      }
                     : undefined
                 }
               />
