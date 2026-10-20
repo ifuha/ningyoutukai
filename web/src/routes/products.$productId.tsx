@@ -68,7 +68,7 @@ function Product() {
               ERR {tree.error.message}
             </p>
           ) : (
-            <div className="overflow-x-auto pb-4">
+            <div className="pb-4">
               <ProductTree tree={tree.data} />
             </div>
           )}
