@@ -102,6 +102,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (save.isPending) return
+    save.reset()
     save.mutate()
   }
 
@@ -125,7 +126,13 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
           autoComplete="off"
           value={taskName}
           disabled={save.isPending}
-          onChange={(e) => setTaskName(e.target.value)}
+          onChange={(e) => {
+            setTaskName(e.target.value)
+            // 空白だけは、必須の入力として通らないようにする
+            e.target.setCustomValidity(
+              e.target.value.trim() === '' ? 'タスク名を入力してください' : '',
+            )
+          }}
           className={`${fieldClass} h-10`}
         />
       </div>
