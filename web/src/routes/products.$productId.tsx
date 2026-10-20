@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
 import { ProductTree } from '#/components/product-tree'
+import { pendingReviews, ReviewDialog } from '#/components/review-dialog'
 import {
   TaskDetailDialog,
   type TaskDetailTarget,
@@ -37,6 +38,7 @@ function Product() {
   const [detailId, setDetailId] = useState<string | null>(null)
   // 全タスクの一覧を開いている人(再取得で最新になるよう、id で持つ)
   const [listMemberId, setListMemberId] = useState<string | null>(null)
+  const [reviewOpen, setReviewOpen] = useState(false)
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => api<ProductSummary>(`/api/product/${productId}`),
@@ -100,6 +102,15 @@ function Product() {
                   >
                     タスクを追加
                   </button>
+                  {tree.data && (
+                    <button
+                      type="button"
+                      onClick={() => setReviewOpen(true)}
+                      className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
+                    >
+                      確認待ち {pendingReviews(tree.data).length} 件
+                    </button>
+                  )}
                   <InviteMemberDialog productId={productId} />
                 </>
               )}
@@ -149,6 +160,14 @@ function Product() {
                 }
                 onClose={() => setDetailId(null)}
               />
+              {product.data?.role === 'leader' && (
+                <ReviewDialog
+                  productId={productId}
+                  items={pendingReviews(tree.data)}
+                  open={reviewOpen}
+                  onClose={() => setReviewOpen(false)}
+                />
+              )}
               {product.data?.role === 'leader' && (
                 <TaskFormDialog
                   productId={productId}
