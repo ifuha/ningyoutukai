@@ -1,12 +1,9 @@
-import { useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Sidebar } from '#/components/sidebar'
+import { AppShell } from '#/components/app-shell'
 import { Prompt, Terminal } from '#/components/terminal'
-import { api, type ProductSummary } from '#/lib/api'
 import { authClient } from '#/lib/auth-client'
 
-// ホーム(`/home`)。ログイン必須。未ログインなら、ログイン画面(`/`)へ戻す。
+// ホーム(`/home`)。ログイン必須。未ログインなら、ログイン画面(`/`)へ戻す(`AppShell` が行う)。
 // いまは、ログイン中のユーザーと、所属しているプロダクトの一覧だけの仮の画面
 // (Figma のホーム画面(サイドバーつき)ができたら、入れ替える)
 export const Route = createFileRoute('/home')({ component: Home })
@@ -14,44 +11,21 @@ export const Route = createFileRoute('/home')({ component: Home })
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
 
 function Home() {
-  const { data: session, isPending } = authClient.useSession()
   const navigate = useNavigate()
-
-  // 未ログインなら、ログイン画面へ
-  useEffect(() => {
-    if (!isPending && !session?.user) void navigate({ to: '/', replace: true })
-  }, [isPending, session?.user, navigate])
-
-  // 所属しているプロダクトの一覧(api に、ログインの cookie が届くかの確認も兼ねる)
-  const products = useQuery({
-    queryKey: ['products'],
-    queryFn: () => api<ProductSummary[]>('/api/product'),
-    enabled: Boolean(session?.user),
-    retry: false,
-  })
 
   async function signOut() {
     await authClient.signOut()
     void navigate({ to: '/', replace: true })
   }
 
-  if (isPending || !session?.user) return <main className="dot-grid h-screen" />
-
   return (
-    <div className="flex h-screen">
-      <Sidebar
-        products={(products.data ?? []).map((p) => ({
-          id: p.productId,
-          name: p.productName,
-        }))}
-        isLoading={products.isPending}
-      />
-      <main className="dot-grid flex min-w-0 flex-1 items-center justify-center overflow-y-auto px-4">
+    <AppShell>
+      {({ user, products }) => (
         <Terminal title="~/ningyoutukai — home">
           <Prompt>whoami</Prompt>
           <div>
-            <p className="text-2xl font-bold">{session.user.name}</p>
-            <p className="mt-1 text-sm opacity-70">{session.user.email}</p>
+            <p className="text-2xl font-bold">{user.name}</p>
+            <p className="mt-1 text-sm opacity-70">{user.email}</p>
           </div>
 
           <div className="space-y-2">
@@ -87,7 +61,7 @@ function Home() {
             </span>
           </button>
         </Terminal>
-      </main>
-    </div>
+      )}
+    </AppShell>
   )
 }
