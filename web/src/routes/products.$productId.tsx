@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
 import { ProductTree } from '#/components/product-tree'
+import {
+  TaskFormDialog,
+  type TaskFormTarget,
+} from '#/components/task-form-dialog'
 import {
   api,
   type ProductSummary,
@@ -20,6 +25,7 @@ const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
 function Product() {
   const { productId } = Route.useParams()
   const navigate = useNavigate()
+  const [taskForm, setTaskForm] = useState<TaskFormTarget | null>(null)
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => api<ProductSummary>(`/api/product/${productId}`),
@@ -56,7 +62,16 @@ function Product() {
             </div>
             <div className="flex shrink-0 items-center gap-3">
               {product.data?.role === 'leader' && (
-                <InviteMemberDialog productId={productId} />
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setTaskForm({})}
+                    className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
+                  >
+                    タスクを追加
+                  </button>
+                  <InviteMemberDialog productId={productId} />
+                </>
               )}
             <button
               type="button"
@@ -75,7 +90,22 @@ function Product() {
             </p>
           ) : (
             <div className="pb-4">
-              <ProductTree tree={tree.data} />
+              <ProductTree
+                tree={tree.data}
+                onEditTask={
+                  product.data?.role === 'leader'
+                    ? (member, task) => setTaskForm({ edit: { task, member } })
+                    : undefined
+                }
+              />
+              {product.data?.role === 'leader' && (
+                <TaskFormDialog
+                  productId={productId}
+                  members={[tree.data.leader, ...tree.data.members]}
+                  target={taskForm}
+                  onClose={() => setTaskForm(null)}
+                />
+              )}
             </div>
           )}
         </div>

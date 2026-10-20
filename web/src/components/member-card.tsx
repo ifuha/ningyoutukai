@@ -1,4 +1,4 @@
-import type { TreeMember } from '#/lib/api'
+import type { TreeMember, TreeTask } from '#/lib/api'
 
 const MAX_TASKS = 3
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
@@ -14,7 +14,14 @@ function formatLimit(iso: string): string {
 }
 
 // ツリーの 1 人分のカード(見出し部: アバター・名前・役割 / 本体: タスク 3 件まで / フッター: 件数)
-export function MemberCard({ member }: { member: TreeMember }) {
+// `onEditTask` を渡すと、タスク名が押せる(リーダーにだけ渡す。ツリーに完了済みは出ないので、すべて編集できる)
+export function MemberCard({
+  member,
+  onEditTask,
+}: {
+  member: TreeMember
+  onEditTask?: (task: TreeTask) => void
+}) {
   const isLeader = member.role === 'leader'
   const shown = member.tasks.slice(0, MAX_TASKS)
   const rest = member.tasks.length - shown.length
@@ -52,7 +59,17 @@ export function MemberCard({ member }: { member: TreeMember }) {
             {shown.map((t) => (
               <li key={t.taskId} className="text-sm">
                 <div className="flex items-baseline gap-2">
-                  <span className="min-w-0 flex-1 truncate">{t.taskName}</span>
+                  {onEditTask ? (
+                    <button
+                      type="button"
+                      onClick={() => onEditTask(t)}
+                      className="min-w-0 flex-1 cursor-pointer truncate text-left underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                    >
+                      {t.taskName}
+                    </button>
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate">{t.taskName}</span>
+                  )}
                   {t.timeLimit && (
                     <span className="shrink-0 text-xs">
                       {formatLimit(t.timeLimit)}

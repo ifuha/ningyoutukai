@@ -1,11 +1,24 @@
 import { MemberCard } from '#/components/member-card'
-import type { ProductTree as ProductTreeData } from '#/lib/api'
+import type {
+  ProductTree as ProductTreeData,
+  TreeMember,
+  TreeTask,
+} from '#/lib/api'
 import { useFitScale } from '#/lib/use-fit-scale'
 
 // リーダーを一番上、その下にメンバーを横に並べる木構造。線は破線(CSS だけ)、矢印は子から親へ向く
 // 幅に収まらないときは、全体を縮小する(横スクロールはなし)
-export function ProductTree({ tree }: { tree: ProductTreeData }) {
+// `onEditTask` を渡すと(リーダーだけ)、タスクが押せて、押した人とタスクを渡す
+export function ProductTree({
+  tree,
+  onEditTask,
+}: {
+  tree: ProductTreeData
+  onEditTask?: (member: TreeMember, task: TreeTask) => void
+}) {
   const { leader, members } = tree
+  const editFor = (m: TreeMember) =>
+    onEditTask && ((task: TreeTask) => onEditTask(m, task))
   const last = members.length - 1
   const { containerRef, contentRef, scale, height } = useFitScale()
 
@@ -24,7 +37,7 @@ export function ProductTree({ tree }: { tree: ProductTreeData }) {
           visibility: scale === null ? 'hidden' : 'visible',
         }}
       >
-        <MemberCard member={leader} />
+        <MemberCard member={leader} onEditTask={editFor(leader)} />
         {members.length === 0 ? (
           <p className="mt-4 text-sm opacity-60"># メンバーは、まだいません</p>
         ) : (
@@ -53,7 +66,7 @@ export function ProductTree({ tree }: { tree: ProductTreeData }) {
                     <span className="absolute top-0 left-1/2 h-4 -translate-x-1/2 border-l border-dashed border-ink/50" />
                     <span className="absolute top-4 left-1/2 size-0 -translate-x-1/2 border-x-[5px] border-b-[7px] border-x-transparent border-b-ink/50" />
                   </span>
-                  <MemberCard member={m} />
+                  <MemberCard member={m} onEditTask={editFor(m)} />
                 </li>
               ))}
             </ul>
