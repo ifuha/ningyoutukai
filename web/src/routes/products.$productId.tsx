@@ -73,8 +73,8 @@ function Product() {
     <AppShell activeProductId={productId} align="top">
       {() => (
         <div className="w-full min-w-0 space-y-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-48 flex-1">
               {product.isPending ? (
                 <p className="text-sm opacity-60">読み込み中…</p>
               ) : product.isError ? (
