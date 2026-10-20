@@ -33,7 +33,7 @@ export function Sidebar({
   isLoading?: boolean
 }) {
   return (
-    <aside className="flex h-screen w-[280px] shrink-0 flex-col overflow-y-auto bg-side px-4 pt-[26px] pb-6">
+    <aside className="flex h-screen w-60 shrink-0 flex-col overflow-y-auto bg-side px-4 pt-[26px] pb-6">
       <p className="pl-2.5 text-[28px] leading-normal font-semibold">
         人形使い
       </p>
@@ -63,7 +63,7 @@ export function Sidebar({
             <button
               type="button"
               onClick={() => onCreateProduct?.()}
-              className="flex h-12 w-full items-center justify-center gap-3 border border-dashed border-ink text-base font-medium hover:bg-side-item"
+              className="flex h-10 w-full items-center justify-center gap-3 border border-dashed border-ink text-base font-medium hover:bg-side-item"
             >
               <PlusIcon />
               プロダクト作成
