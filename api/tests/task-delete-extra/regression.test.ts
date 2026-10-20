@@ -5,8 +5,7 @@ import { cleanup, insertTask, setupProduct } from "../task/helpers";
 import { call, taskPath } from "./helpers";
 
 /**
- * 既知の不具合の再現(test.failing: いまは「失敗する」ことを期待して緑。直ると赤になる)。
- * 直ったら test.failing を test に変えて、通常のテストにする。
+ * 回帰テスト: 削除と更新系の同時実行で 409 にならないこと(修正済み)。
  */
 
 afterAll(cleanup);
@@ -37,21 +36,21 @@ async function raceStatuses(
   return statuses;
 }
 
-test.failing("削除と同時のタスク変更(PATCH)が 409 にならない(404 か 200)", async () => {
+test("削除と同時のタスク変更(PATCH)が 409 にならない(404 か 200)", async () => {
   const statuses = await raceStatuses((c, id) =>
     call("PATCH", taskPath(c.productId, id), { cookie: c.leader.cookie, body: { taskName: "x" } })
   );
   expect(statuses.filter((s) => s === 409)).toEqual([]);
 });
 
-test.failing("削除と同時の完了確定が 409 にならない(404 か 200)", async () => {
+test("削除と同時の完了確定が 409 にならない(404 か 200)", async () => {
   const statuses = await raceStatuses((c, id) =>
     call("PATCH", `${taskPath(c.productId, id)}/complete`, { cookie: c.leader.cookie })
   );
   expect(statuses.filter((s) => s === 409)).toEqual([]);
 });
 
-test.failing("削除と同時の完了報告が 409 にならない(404 か 200)", async () => {
+test("削除と同時の完了報告が 409 にならない(404 か 200)", async () => {
   const statuses = await raceStatuses((c, id) =>
     call("POST", `${taskPath(c.productId, id)}/complete-report`, { cookie: c.members[0]!.cookie })
   );
