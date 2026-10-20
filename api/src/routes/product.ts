@@ -4,6 +4,9 @@ import { db } from "../db";
 import { productMembers, products } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
 
+// Postgres の text は NUL 文字(\u0000)を保存できず、500 になるため、入力の時点で弾く
+const NO_NUL = "^[^\\u0000]*$";
+
 const productColumns = {
   productId: products.productId,
   productName: products.productName,
@@ -37,7 +40,7 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
     },
     {
       requireUser: true,
-      body: t.Object({ productName: t.String({ maxLength: 100 }) }),
+      body: t.Object({ productName: t.String({ maxLength: 100, pattern: NO_NUL }) }),
       detail: { summary: "プロダクト作成" },
     }
   )

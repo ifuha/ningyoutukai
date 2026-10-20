@@ -11,6 +11,7 @@ import {
   taskNameSchema,
   timeLimitSchema,
 } from "../../lib/task-input";
+import { taskStillExists } from "../../lib/task-race";
 import { taskColumns } from "../../lib/task-view";
 
 const COMPLETED_ERROR = "完了済みのタスクは変更できません";
@@ -74,8 +75,14 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         .set(changes)
         .where(and(eq(tasks.taskId, params.taskId), isNull(tasks.completedAt)))
         .returning(taskColumns);
-      // 確認から更新までの間に完了確定された場合
-      if (!updated) return status(409, { message: COMPLETED_ERROR });
+      if (!updated) {
+        // 確認から更新までの間に削除された場合
+        if (!(await taskStillExists(params.taskId))) {
+          return status(404, { message: "タスクが見つかりません" });
+        }
+        // 確認から更新までの間に完了確定された場合
+        return status(409, { message: COMPLETED_ERROR });
+      }
       return updated;
     },
     {
