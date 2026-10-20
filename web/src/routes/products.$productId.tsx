@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
+import { MemberManageDialog } from '#/components/member-manage-dialog'
 import { ProductTree } from '#/components/product-tree'
 import { pendingReviews, ReviewDialog } from '#/components/review-dialog'
 import {
@@ -39,6 +40,7 @@ function Product() {
   // 全タスクの一覧を開いている人(再取得で最新になるよう、id で持つ)
   const [listMemberId, setListMemberId] = useState<string | null>(null)
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [membersOpen, setMembersOpen] = useState(false)
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => api<ProductSummary>(`/api/product/${productId}`),
@@ -93,6 +95,15 @@ function Product() {
               )}
             </div>
             <div className="flex shrink-0 items-center gap-3">
+              {tree.data && (
+                <button
+                  type="button"
+                  onClick={() => setMembersOpen(true)}
+                  className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
+                >
+                  メンバー
+                </button>
+              )}
               {product.data?.role === 'leader' && (
                 <>
                   <button
@@ -159,6 +170,13 @@ function Product() {
                     : undefined
                 }
                 onClose={() => setDetailId(null)}
+              />
+              <MemberManageDialog
+                productId={productId}
+                tree={tree.data}
+                isLeader={isLeader}
+                open={membersOpen}
+                onClose={() => setMembersOpen(false)}
               />
               {product.data?.role === 'leader' && (
                 <ReviewDialog
