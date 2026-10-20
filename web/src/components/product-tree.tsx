@@ -8,20 +8,24 @@ import { useFitScale } from '#/lib/use-fit-scale'
 
 // リーダーを一番上、その下にメンバーを横に並べる木構造。線は破線(CSS だけ)、矢印は子から親へ向く
 // 幅に収まらないときは、全体を縮小する(横スクロールはなし)
-// `onEditTask` を渡すと(リーダーだけ)、タスクが押せて、押した人とタスクを渡す
+// `onEditTask` を渡すと、タスクが押せて、押した人とタスクを渡す(`canOpenTask` があれば、それが true の人のタスクだけ)
 // `onShowTasks` を渡すと、「他 N 件」が押せて、その人を渡す(全員向け)
 export function ProductTree({
   tree,
   onEditTask,
+  canOpenTask,
   onShowTasks,
 }: {
   tree: ProductTreeData
   onEditTask?: (member: TreeMember, task: TreeTask) => void
+  canOpenTask?: (member: TreeMember) => boolean
   onShowTasks?: (member: TreeMember) => void
 }) {
   const { leader, members } = tree
   const editFor = (m: TreeMember) =>
-    onEditTask && ((task: TreeTask) => onEditTask(m, task))
+    onEditTask && (canOpenTask?.(m) ?? true)
+      ? (task: TreeTask) => onEditTask(m, task)
+      : undefined
   const last = members.length - 1
   const { containerRef, contentRef, scale, height } = useFitScale()
 

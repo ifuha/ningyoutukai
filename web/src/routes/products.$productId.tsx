@@ -4,6 +4,11 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
 import { ProductTree } from '#/components/product-tree'
+import { pendingReviews, ReviewDialog } from '#/components/review-dialog'
+import {
+  TaskDetailDialog,
+  type TaskDetailTarget,
+} from '#/components/task-detail-dialog'
 import { TaskListDialog } from '#/components/task-list-dialog'
 import {
   TaskFormDialog,
@@ -13,6 +18,8 @@ import {
   api,
   type ProductSummary,
   type ProductTree as ProductTreeData,
+  type TreeMember,
+  type TreeTask,
 } from '#/lib/api'
 
 // プロダクトの画面(`/products/$productId`)。ログイン必須。見出しと、ツリー(リーダーとメンバー、タスク)
@@ -27,8 +34,11 @@ function Product() {
   const { productId } = Route.useParams()
   const navigate = useNavigate()
   const [taskForm, setTaskForm] = useState<TaskFormTarget | null>(null)
+  // 自分のタスクの詳細(完了報告)を開いているタスク。再取得で最新になるよう、id で持つ
+  const [detailId, setDetailId] = useState<string | null>(null)
   // 全タスクの一覧を開いている人(再取得で最新になるよう、id で持つ)
   const [listMemberId, setListMemberId] = useState<string | null>(null)
+  const [reviewOpen, setReviewOpen] = useState(false)
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => api<ProductSummary>(`/api/product/${productId}`),
@@ -40,12 +50,31 @@ function Product() {
     retry: false,
   })
 
+  const isLeader = product.data?.role === 'leader'
+  const myId = tree.data?.viewerProductMemberId
+  // 自分のタスクは詳細(リーダーも。編集は詳細から)、他人のタスクはリーダーだけ編集
+  const canOpenTask = (m: TreeMember) => isLeader || m.productMemberId === myId
+  const openTask = (member: TreeMember, task: TreeTask) => {
+    setListMemberId(null)
+    if (member.productMemberId === myId) setDetailId(task.taskId)
+    else setTaskForm({ edit: { task, member } })
+  }
+  const detail: TaskDetailTarget | null = tree.data
+    ? [tree.data.leader, ...tree.data.members].reduce<TaskDetailTarget | null>(
+        (found, member) => {
+          const task = member.tasks.find((t) => t.taskId === detailId)
+          return found ?? (task ? { task, member } : null)
+        },
+        null,
+      )
+    : null
+
   return (
     <AppShell activeProductId={productId} align="top">
       {() => (
         <div className="w-full min-w-0 space-y-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-48 flex-1">
               {product.isPending ? (
                 <p className="text-sm opacity-60">読み込み中…</p>
               ) : product.isError ? (
@@ -73,6 +102,15 @@ function Product() {
                   >
                     タスクを追加
                   </button>
+                  {tree.data && (
+                    <button
+                      type="button"
+                      onClick={() => setReviewOpen(true)}
+                      className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
+                    >
+                      確認待ち {pendingReviews(tree.data).length} 件
+                    </button>
+                  )}
                   <InviteMemberDialog productId={productId} />
                 </>
               )}
@@ -95,11 +133,8 @@ function Product() {
             <div className="pb-4">
               <ProductTree
                 tree={tree.data}
-                onEditTask={
-                  product.data?.role === 'leader'
-                    ? (member, task) => setTaskForm({ edit: { task, member } })
-                    : undefined
-                }
+                onEditTask={openTask}
+                canOpenTask={canOpenTask}
                 onShowTasks={(member) => setListMemberId(member.productMemberId)}
               />
               <TaskListDialog
@@ -109,15 +144,30 @@ function Product() {
                   ) ?? null
                 }
                 onClose={() => setListMemberId(null)}
-                onEditTask={
-                  product.data?.role === 'leader'
-                    ? (member, task) => {
-                        setListMemberId(null)
+                onEditTask={openTask}
+                canOpenTask={canOpenTask}
+              />
+              <TaskDetailDialog
+                productId={productId}
+                target={detail}
+                onEdit={
+                  isLeader
+                    ? ({ task, member }) => {
+                        setDetailId(null)
                         setTaskForm({ edit: { task, member } })
                       }
                     : undefined
                 }
+                onClose={() => setDetailId(null)}
               />
+              {product.data?.role === 'leader' && (
+                <ReviewDialog
+                  productId={productId}
+                  items={pendingReviews(tree.data)}
+                  open={reviewOpen}
+                  onClose={() => setReviewOpen(false)}
+                />
+              )}
               {product.data?.role === 'leader' && (
                 <TaskFormDialog
                   productId={productId}

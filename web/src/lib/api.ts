@@ -71,6 +71,8 @@ export type ProductTree = {
   product: { productId: string; productName: string }
   leader: TreeMember
   members: TreeMember[]
+  /** 呼び出したユーザー自身の productMemberId(自分のタスクの判定に使う) */
+  viewerProductMemberId: string
 }
 
 /** `GET /api/product/:productId/task_kinds`(タスクの種類の一覧)の 1 件 */

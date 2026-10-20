@@ -34,6 +34,8 @@ export const ProductTreeSchema = t.Object({
   product: t.Object({ productId: t.String(), productName: t.String() }),
   leader: t.Union([TreeNodeSchema, t.Null()]),
   members: t.Array(TreeNodeSchema),
+  // 呼び出したユーザー自身の productMemberId(自分のタスクかどうかを、画面が判断するために使う)
+  viewerProductMemberId: t.String(),
 });
 
 export type TreeTask = Static<typeof TreeTaskSchema>;
