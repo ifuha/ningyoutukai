@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Sidebar } from '#/components/sidebar'
-import { api, type ProductSummary } from '#/lib/api'
+import { api, type Invitation, type ProductSummary } from '#/lib/api'
 import { authClient } from '#/lib/auth-client'
 
 type SessionUser = NonNullable<
@@ -39,6 +39,14 @@ export function AppShell({
     retry: false,
   })
 
+  // 自分宛ての保留中の招待(サイドバーに出す。ホームの「招待」と、同じクエリを共有する)
+  const invitations = useQuery({
+    queryKey: ['invitations'],
+    queryFn: () => api<Invitation[]>('/api/invitation'),
+    enabled: Boolean(session?.user),
+    retry: false,
+  })
+
   if (isPending || !session?.user) return <main className="dot-grid h-screen" />
 
   return (
@@ -48,6 +56,7 @@ export function AppShell({
           id: p.productId,
           name: p.productName,
         }))}
+        invitations={invitations.data}
         isLoading={products.isPending}
         activeProductId={activeProductId}
         onSelectProduct={(productId) =>
