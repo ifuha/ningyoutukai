@@ -68,7 +68,8 @@ export function LoginButtons() {
       const origin = window.location.origin
       const { error } = await authClient.signIn.social({
         provider,
-        callbackURL: origin,
+        // ログインに成功したら、ホームへ。失敗したら、ログイン画面(`/`)に戻って、理由を出す
+        callbackURL: `${origin}/home`,
         errorCallbackURL: origin,
       })
       // 成功すると、ブラウザが認可画面に移動する。ここに来るのは、開始に失敗したとき
