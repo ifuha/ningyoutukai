@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { Prompt, Terminal } from '#/components/terminal'
-import { api } from '#/lib/api'
+import { api, type ProductSummary } from '#/lib/api'
 
 // プロダクト作成(`/products/new`)。ログイン必須。仮の見た目(ターミナル風)
 export const Route = createFileRoute('/products/new')({
@@ -36,8 +36,9 @@ function NewProduct() {
     submitting.current = true
     setPending(true)
     setError(null)
+    let created: ProductSummary
     try {
-      await api('/api/product', {
+      created = await api<ProductSummary>('/api/product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productName }),
@@ -49,7 +50,10 @@ function NewProduct() {
       return
     }
     void queryClient.invalidateQueries({ queryKey: ['products'] })
-    void navigate({ to: '/home' })
+    void navigate({
+      to: '/products/$productId',
+      params: { productId: created.productId },
+    })
   }
 
   return (

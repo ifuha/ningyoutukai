@@ -12,8 +12,10 @@ type SessionUser = NonNullable<
 // サイドバーつきの共通の枠(ログイン必須)。未ログインなら、ログイン画面(`/`)へ戻す。
 // 中身(右側の `main`)は、ログイン中のユーザーと、プロダクト一覧を受け取る関数で渡す
 export function AppShell({
+  activeProductId,
   children,
 }: {
+  activeProductId?: string
   children: (ctx: {
     user: SessionUser
     products: UseQueryResult<ProductSummary[]>
@@ -44,6 +46,10 @@ export function AppShell({
           name: p.productName,
         }))}
         isLoading={products.isPending}
+        activeProductId={activeProductId}
+        onSelectProduct={(productId) =>
+          void navigate({ to: '/products/$productId', params: { productId } })
+        }
         onCreateProduct={() => void navigate({ to: '/products/new' })}
       />
       <main className="dot-grid flex min-w-0 flex-1 overflow-y-auto px-4">
