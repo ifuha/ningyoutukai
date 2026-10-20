@@ -63,7 +63,7 @@ export function Sidebar({
             <button
               type="button"
               onClick={() => onCreateProduct?.()}
-              className="flex h-10 w-full items-center justify-center gap-3 border border-dashed border-ink text-base font-medium hover:bg-side-item"
+              className="flex h-12 w-full items-center justify-center gap-3 border border-dashed border-ink text-base font-medium hover:bg-side-item"
             >
               <PlusIcon />
               プロダクト作成
