@@ -73,6 +73,13 @@ export type ProductTree = {
   members: TreeMember[]
 }
 
+/** `GET /api/product/:productId/task_kinds`(タスクの種類の一覧)の 1 件 */
+export type TaskKind = {
+  taskTypeId: string
+  taskTypeName: string
+  productId: string
+}
+
 /** `GET /api/invitation`(自分宛ての保留中の招待)の 1 件 */
 export type Invitation = {
   invitationId: string
