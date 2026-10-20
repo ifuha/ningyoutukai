@@ -5,6 +5,7 @@ import { productMembers, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { mailer } from "../../lib/mailer";
 import { getMemberContact, getMembership } from "../../lib/product-access";
+import { taskStillExists } from "../../lib/task-race";
 import { taskColumns } from "../../lib/task-view";
 
 // タスク完了確定 PATCH /api/product/:productId/task/:taskId/complete
@@ -35,7 +36,13 @@ export const confirmComplete = new Elysia({ name: "task-confirm-complete" })
         .set({ completedAt: new Date() })
         .where(and(eq(tasks.taskId, task.taskId), isNull(tasks.completedAt)))
         .returning(taskColumns);
-      if (!updated) return status(409, { message: "すでに完了しています" });
+      if (!updated) {
+        // 確認から更新までの間に削除された場合
+        if (!(await taskStillExists(task.taskId))) {
+          return status(404, { message: "タスクが見つかりません" });
+        }
+        return status(409, { message: "すでに完了しています" });
+      }
 
       // 担当メンバーへ完了を通知する(送信に失敗しても API は成功のまま)
       const assignee = await getMemberContact(updated.productMemberId);
