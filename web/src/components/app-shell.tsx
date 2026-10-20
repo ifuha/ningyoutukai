@@ -13,9 +13,12 @@ type SessionUser = NonNullable<
 // 中身(右側の `main`)は、ログイン中のユーザーと、プロダクト一覧を受け取る関数で渡す
 export function AppShell({
   activeProductId,
+  align = 'center',
   children,
 }: {
   activeProductId?: string
+  // 'center': 縦横とも中央(既定)。'top': 縦は上から、横だけ中央
+  align?: 'center' | 'top'
   children: (ctx: {
     user: SessionUser
     products: UseQueryResult<ProductSummary[]>
@@ -53,7 +56,9 @@ export function AppShell({
         onCreateProduct={() => void navigate({ to: '/products/new' })}
       />
       <main className="dot-grid flex min-w-0 flex-1 overflow-y-auto px-4">
-        <div className="m-auto flex w-full justify-center py-6">
+        <div
+          className={`${align === 'top' ? 'mx-auto' : 'm-auto'} flex w-full justify-center py-6`}
+        >
           {children({ user: session.user, products })}
         </div>
       </main>
