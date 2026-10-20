@@ -8,6 +8,21 @@ const dateFormat = new Intl.DateTimeFormat('ja-JP', {
   day: 'numeric',
 })
 
+const dateTimeFormat = new Intl.DateTimeFormat('ja-JP', {
+  timeZone: 'Asia/Tokyo',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+/** ISO の日時を、日本時間の `YYYY/M/D HH:mm` にする */
+export function formatDateTime(iso: string): string {
+  return dateTimeFormat.format(new Date(iso))
+}
+
 /** ISO の日時を、日本時間の `M/D` にする */
 export function formatLimit(iso: string): string {
   return dateFormat.format(new Date(iso)).replace('月', '/').replace('日', '')
