@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
@@ -19,10 +19,11 @@ function NewProduct() {
   const [name, setName] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const submitting = useRef(false)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (pending) return
+    if (submitting.current) return
     const productName = name.trim()
     if (productName === '') {
       setError('プロダクト名を入力してください')
@@ -32,6 +33,7 @@ function NewProduct() {
       setError('プロダクト名は 100 文字以内で入力してください')
       return
     }
+    submitting.current = true
     setPending(true)
     setError(null)
     try {
@@ -42,10 +44,11 @@ function NewProduct() {
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました')
+      submitting.current = false
       setPending(false)
       return
     }
-    await queryClient.invalidateQueries({ queryKey: ['products'] })
+    void queryClient.invalidateQueries({ queryKey: ['products'] })
     void navigate({ to: '/home' })
   }
 
@@ -65,9 +68,9 @@ function NewProduct() {
                 autoFocus
                 autoComplete="off"
                 value={name}
-                disabled={pending}
+                readOnly={pending}
                 onChange={(e) => setName(e.target.value)}
-                className="h-12 w-full border-2 border-ink bg-surface px-3 font-mono text-[16px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+                className="h-12 w-full border-2 border-ink bg-surface px-3 font-mono text-[16px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
               />
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">

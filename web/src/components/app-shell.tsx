@@ -46,8 +46,10 @@ export function AppShell({
         isLoading={products.isPending}
         onCreateProduct={() => void navigate({ to: '/products/new' })}
       />
-      <main className="dot-grid flex min-w-0 flex-1 items-center justify-center overflow-y-auto px-4">
-        {children({ user: session.user, products })}
+      <main className="dot-grid flex min-w-0 flex-1 overflow-y-auto px-4">
+        <div className="m-auto flex w-full justify-center py-6">
+          {children({ user: session.user, products })}
+        </div>
       </main>
     </div>
   )
