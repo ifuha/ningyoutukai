@@ -28,7 +28,7 @@ export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
         )
         .limit(1);
 
-      if (!me) return status(404, { message: "Product not found" });
+      if (!me) return status(404, { message: "プロダクトが見つかりません" });
 
       // 2. プロダクト情報
       const [product] = await db
@@ -40,7 +40,7 @@ export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
         .where(eq(products.productId, productId))
         .limit(1);
 
-      if (!product) return status(404, { message: "Product not found" });
+      if (!product) return status(404, { message: "プロダクトが見つかりません" });
 
       // 3. メンバー一覧（ユーザー情報つき）。並び順は名前順で固定する
       const memberRows = await db
@@ -97,7 +97,8 @@ export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
       return buildTree(product, memberRows, taskRows);
     },
     {
-      requireUser: true,
-      params: t.Object({ productId: t.String({ format: "uuid" }) }),
+        requireUser: true,
+        params: t.Object({ productId: t.String({ format: "uuid" }) }),
+        detail: { summary: "プロダクト構造取得（ツリー表示）" },
     },
   );

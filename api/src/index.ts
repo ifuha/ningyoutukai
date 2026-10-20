@@ -4,6 +4,7 @@ import { Elysia } from "elysia";
 import { auth, webOrigin } from "./auth";
 import { errorHandler } from "./lib/error-handler";
 import { productRoutes } from "./routes/product";
+import { productTreeRoutes } from "./routes/product-tree";
 import { taskRoutes } from "./routes/task";
 
 const app = new Elysia()
@@ -19,6 +20,7 @@ const app = new Elysia()
   )
   .use(errorHandler)
   .use(productRoutes)
+  .use(productTreeRoutes)
   .use(taskRoutes)
   .all("/api/auth/*", ({ request }) => auth.handler(request), { parse: "none", detail: { hide: true } })
   .get("/", () => "Hello Elysia")
