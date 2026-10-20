@@ -17,7 +17,7 @@ function PlusIcon() {
   )
 }
 
-// サイドバー(Figma `side-light` / `side-dark`、幅 280px)。角丸は使わない(ユーザーの指定。Figma は 10px)。
+// サイドバー(Figma `side-light` / `side-dark`、幅 240px)。角丸は使わない(ユーザーの指定。Figma は 10px)。
 // データは、呼び出し側から渡す(api は、ここでは呼ばない)
 export function Sidebar({
   products,
@@ -33,7 +33,7 @@ export function Sidebar({
   isLoading?: boolean
 }) {
   return (
-    <aside className="flex h-screen w-[280px] shrink-0 flex-col overflow-y-auto bg-side px-4 pt-[26px] pb-6">
+    <aside className="flex h-screen w-60 shrink-0 flex-col overflow-y-auto bg-side px-4 pt-[26px] pb-6">
       <p className="pl-2.5 text-[32px] leading-normal font-semibold">
         人形使い
       </p>
