@@ -1,3 +1,6 @@
+import { SidebarInvitation } from '#/components/sidebar-invitation'
+import type { Invitation } from '#/lib/api'
+
 export type SidebarProduct = { id: string; name: string }
 
 // Figma の `ant-design:plus-outlined`(色は、文字色に追従させる)
@@ -21,12 +24,15 @@ function PlusIcon() {
 // データは、呼び出し側から渡す(api は、ここでは呼ばない)
 export function Sidebar({
   products,
+  invitations = [],
   activeProductId,
   onSelectProduct,
   onCreateProduct,
   isLoading = false,
 }: {
   products: SidebarProduct[]
+  // 自分宛ての保留中の招待。1 件以上あるときだけ、「プロダクト」の上に出す
+  invitations?: Invitation[]
   activeProductId?: string
   onSelectProduct?: (productId: string) => void
   onCreateProduct?: () => void
@@ -37,6 +43,17 @@ export function Sidebar({
       <p className="text-[28px] leading-normal font-semibold">
         人形使い
       </p>
+
+      {invitations.length > 0 && (
+        <section aria-label="招待" className="mt-[26px]">
+          <p className="text-sm font-medium">招待({invitations.length})</p>
+          <ul className="mt-[7px] flex flex-col gap-4">
+            {invitations.map((i) => (
+              <SidebarInvitation key={i.invitationId} invitation={i} />
+            ))}
+          </ul>
+        </section>
+      )}
 
       <nav aria-label="プロダクト" className="mt-[26px]">
         <p className="text-sm">プロダクト</p>
