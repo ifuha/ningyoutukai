@@ -180,7 +180,10 @@ function AddForm({ productId }: { productId: string }) {
           value={name}
           maxLength={50}
           disabled={add.isPending}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value)
+            add.reset()
+          }}
           className={inputClass}
         />
         <button
