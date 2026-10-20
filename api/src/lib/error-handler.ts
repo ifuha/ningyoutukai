@@ -9,6 +9,12 @@ export const errorHandler = new Elysia({ name: "error-handler" }).onError(
   ({ code, error, status }) => {
     switch (code) {
       case "VALIDATION": {
+        // レスポンスがスキーマと合わないのは、利用者の入力ではなくサーバー側のバグ。
+        // 「入力が正しくありません」と返すと原因が隠れるので、500 にしてログに残す
+        if (error.type === "response") {
+          console.error(error);
+          return status(500, { message: "サーバーでエラーが発生しました" });
+        }
         const fields = [
           ...new Set(
             error.all
