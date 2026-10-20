@@ -72,3 +72,12 @@ export type ProductTree = {
   leader: TreeMember
   members: TreeMember[]
 }
+
+/** `GET /api/invitation`(自分宛ての保留中の招待)の 1 件 */
+export type Invitation = {
+  invitationId: string
+  productId: string
+  productName: string
+  leaderNames: string[]
+  createdAt: string
+}
