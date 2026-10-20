@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Prompt } from '#/components/terminal'
-import { api, type Invitation } from '#/lib/api'
+import { api, ApiError, type Invitation } from '#/lib/api'
 
 const buttonClass =
   'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
-// 招待 1 件分の行。承認・拒否のどちらも、成功しても失敗(404/409)しても、一覧を取り直す
+// 招待 1 件分の行。承認・拒否のどちらも、成功したら一覧を取り直す。
+// 失敗(404/409)は、行を残してエラーを読めるようにする(取り直すと行ごと消える)
 function InvitationRow({ invitation }: { invitation: Invitation }) {
   const queryClient = useQueryClient()
   const respond = useMutation({
@@ -17,10 +18,13 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
       // 承認したら、サイドバーのプロダクト一覧にも反映する
       if (action === 'accept')
         void queryClient.invalidateQueries({ queryKey: ['products'] })
+      void queryClient.invalidateQueries({ queryKey: ['invitations'] })
     },
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: ['invitations'] }),
   })
+  // 404/409 はその招待がもう無効なので、押せないままにする
+  const stale =
+    respond.error instanceof ApiError &&
+    (respond.error.status === 404 || respond.error.status === 409)
 
   return (
     <li className="space-y-1">
@@ -33,7 +37,7 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
         </div>
         <button
           type="button"
-          disabled={respond.isPending}
+          disabled={respond.isPending || stale}
           onClick={() => respond.mutate('accept')}
           className={buttonClass}
         >
@@ -41,7 +45,7 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
         </button>
         <button
           type="button"
-          disabled={respond.isPending}
+          disabled={respond.isPending || stale}
           onClick={() => respond.mutate('reject')}
           className={buttonClass}
         >
