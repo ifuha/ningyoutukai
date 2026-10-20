@@ -9,7 +9,7 @@ const dateFormat = new Intl.DateTimeFormat('ja-JP', {
 })
 
 /** ISO の日時を、日本時間の `M/D` にする */
-function formatLimit(iso: string): string {
+export function formatLimit(iso: string): string {
   return dateFormat.format(new Date(iso)).replace('月', '/').replace('日', '')
 }
 
