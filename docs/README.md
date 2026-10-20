@@ -6,6 +6,7 @@ ningyoutukai のドキュメント置き場です。要件定義、設計(ER 図
 
 - [requirements.md](./requirements.md): 人形使い 要件定義
 - [api.md](./api.md): API 設計書
+- [oauth-setup.md](./oauth-setup.md): GitHub / Google ログインの設定手順(OAuth アプリの登録、`api/.env`)
 - [dev-notes.md](./dev-notes.md): 開発中のメモ(暫定にしていること、あとで見直すこと。ログイン画面は暫定のデザイン)
 - [v2-todo.md](./v2-todo.md): v2 で対応すること(申し送り)
 - [api-tree.md](./api-tree.md): ツリー表示 API の仕様
