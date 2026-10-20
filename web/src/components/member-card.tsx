@@ -15,12 +15,15 @@ export function formatLimit(iso: string): string {
 
 // ツリーの 1 人分のカード(見出し部: アバター・名前・役割 / 本体: タスク 3 件まで / フッター: 件数)
 // `onEditTask` を渡すと、タスク名が押せる(リーダーにだけ渡す。ツリーに完了済みは出ないので、すべて編集できる)
+// `onShowTasks` を渡すと、4 件目以降があるとき「他 N 件」が押せて、全タスクの一覧を開ける
 export function MemberCard({
   member,
   onEditTask,
+  onShowTasks,
 }: {
   member: TreeMember
   onEditTask?: (task: TreeTask) => void
+  onShowTasks?: (member: TreeMember) => void
 }) {
   const isLeader = member.role === 'leader'
   const shown = member.tasks.slice(0, MAX_TASKS)
@@ -96,9 +99,19 @@ export function MemberCard({
         )}
       </div>
       <footer className="flex flex-wrap justify-between gap-x-2 border-t-2 border-ink px-2 py-1 text-xs opacity-80">
-        <span>
-          {rest > 0 ? `他 ${rest} 件` : `タスク ${member.tasks.length} 件`}
-        </span>
+        {rest > 0 && onShowTasks ? (
+          <button
+            type="button"
+            onClick={() => onShowTasks(member)}
+            className="cursor-pointer underline underline-offset-2 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            他 {rest} 件
+          </button>
+        ) : (
+          <span>
+            {rest > 0 ? `他 ${rest} 件` : `タスク ${member.tasks.length} 件`}
+          </span>
+        )}
         {pending > 0 && <span>確認待ち {pending} 件</span>}
       </footer>
     </article>
