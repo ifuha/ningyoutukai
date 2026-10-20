@@ -10,6 +10,17 @@ type GithubProfileLite = {
   login: string;
 };
 
+/**
+ * GitHub のプロフィールから、better-auth の `user` に保存する追加項目を作る。
+ * ログインのたびに呼ばれるので、GitHub のユーザー名(login)の変更にも追従する。
+ * キーは、`user.additionalFields` で宣言している `githubId` と同じにする
+ * (違うキーを返すと、保存されずに捨てられる)。
+ * 要件の「GitHub の username でメンバーを招待する」ために、ユーザー名(login)を入れる。
+ */
+export function mapGithubProfile(profile: GithubProfileLite) {
+  return { githubId: profile.login };
+}
+
 // GitHub / Google は環境変数が揃っているものだけ有効にする
 const socialProviders = {
   ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
@@ -20,9 +31,7 @@ const socialProviders = {
         // 追加: メール非公開の人でも email を取れるようにする
         scope: ["read:user", "user:email"],
         // 追加: ログインのたびに呼ばれる。username の変更にも追従する
-        mapProfileToUser: (profile: GithubProfileLite) => ({
-          githubUsername: profile.login,
-        }),
+        mapProfileToUser: mapGithubProfile,
       },
       }
     : {}),
