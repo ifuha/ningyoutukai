@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
 import { MemberManageDialog } from '#/components/member-manage-dialog'
+import { TaskKindButton } from '#/components/task-kind-dialog'
 import { ProductTree } from '#/components/product-tree'
 import { pendingReviews, ReviewDialog } from '#/components/review-dialog'
 import {
@@ -122,6 +123,7 @@ function Product() {
                       確認待ち {pendingReviews(tree.data).length} 件
                     </button>
                   )}
+                  <TaskKindButton productId={productId} />
                   <InviteMemberDialog productId={productId} />
                 </>
               )}
