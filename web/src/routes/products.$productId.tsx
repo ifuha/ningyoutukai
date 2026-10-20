@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
-import { InviteMemberForm } from '#/components/invite-member-form'
+import { InviteMemberDialog } from '#/components/invite-member-dialog'
 import { ProductTree } from '#/components/product-tree'
 import {
   api,
@@ -54,6 +54,9 @@ function Product() {
                 </>
               )}
             </div>
+            {product.data?.role === 'leader' && (
+              <InviteMemberDialog productId={productId} />
+            )}
             <button
               type="button"
               onClick={() => void navigate({ to: '/home' })}
@@ -62,9 +65,6 @@ function Product() {
               ホームへ戻る
             </button>
           </div>
-          {product.data?.role === 'leader' && (
-            <InviteMemberForm productId={productId} />
-          )}
           {product.isError ? null : tree.isPending || product.isPending ? (
             <p className="text-sm opacity-60">読み込み中…</p>
           ) : tree.isError ? (
