@@ -3,15 +3,17 @@ import { Modal } from '#/components/modal'
 import type { TreeMember, TreeTask } from '#/lib/api'
 
 // その人の全タスクの一覧(カードには 3 件までしか出ないので、その続きを見る・選ぶ画面)。並びはツリー API の順(期限が近い順)
-// `onEditTask` を渡すと(リーダーだけ)、タスク名が押せる。閲覧だけなら渡さない
+// `onEditTask` を渡すと、タスク名が押せる(`canOpenTask` があれば、それが true の人のだけ)。閲覧だけなら渡さない
 export function TaskListDialog({
   member,
   onClose,
   onEditTask,
+  canOpenTask,
 }: {
   member: TreeMember | null
   onClose: () => void
   onEditTask?: (member: TreeMember, task: TreeTask) => void
+  canOpenTask?: (member: TreeMember) => boolean
 }) {
   return (
     <Modal open={member !== null} onClose={onClose}>
@@ -24,7 +26,7 @@ export function TaskListDialog({
             {member.tasks.map((t) => (
               <li key={t.taskId} className="text-sm">
                 <div className="flex items-baseline gap-2">
-                  {onEditTask ? (
+                  {onEditTask && (canOpenTask?.(member) ?? true) ? (
                     <button
                       type="button"
                       onClick={() => onEditTask(member, t)}
