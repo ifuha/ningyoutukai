@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
+import { InvitationList } from '#/components/invitation-list'
 import { Prompt, Terminal } from '#/components/terminal'
 import { authClient } from '#/lib/auth-client'
 
@@ -49,6 +50,8 @@ function Home() {
               </ul>
             )}
           </div>
+
+          <InvitationList />
 
           <button
             type="button"
