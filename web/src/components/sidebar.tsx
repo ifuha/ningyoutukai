@@ -34,15 +34,15 @@ export function Sidebar({
 }) {
   return (
     <aside className="flex h-screen w-60 shrink-0 flex-col overflow-y-auto bg-side px-4 pt-[26px] pb-6">
-      <p className="pl-2.5 text-[28px] leading-normal font-semibold">
+      <p className="text-[28px] leading-normal font-semibold">
         人形使い
       </p>
 
       <nav aria-label="プロダクト" className="mt-[26px]">
-        <p className="pl-2.5 text-sm">プロダクト</p>
+        <p className="text-sm">プロダクト</p>
         <ul className="mt-[7px] flex flex-col gap-2">
           {isLoading ? (
-            <li className="h-12 pl-2.5 text-sm leading-[48px] opacity-60">
+            <li className="h-12 text-sm leading-[48px] opacity-60">
               読み込み中…
             </li>
           ) : (
@@ -52,7 +52,7 @@ export function Sidebar({
                   type="button"
                   onClick={() => onSelectProduct?.(p.id)}
                   aria-current={p.id === activeProductId ? 'page' : undefined}
-                  className="flex h-12 w-full items-center truncate pl-2.5 text-left text-base font-medium hover:bg-side-item aria-[current=page]:bg-side-item"
+                  className="flex h-12 w-full items-center truncate text-left text-base font-medium hover:bg-side-item aria-[current=page]:bg-side-item"
                 >
                   <span className="truncate">{p.name}</span>
                 </button>
