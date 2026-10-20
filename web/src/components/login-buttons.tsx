@@ -3,7 +3,8 @@ import { authClient } from '#/lib/auth-client'
 
 type Provider = 'github' | 'google'
 
-// Figma「login」のボタン: 幅 448 / 高さ 90、文字 24px、ボタンの間隔 25px
+// ボタンの大きさ: 幅 312 / 高さ 60(Figma のダークの login と同じ)、文字 18px、間隔 20px
+// (ライトの login は 448 x 90 だったが、大きすぎるため、小さくした)
 // GitHub は塗りつぶし、Google は枠線(ライト / ダークの色は styles.css のトークン)
 const providers: { id: Provider; label: string; className: string }[] = [
   {
@@ -49,14 +50,14 @@ export function LoginButtons() {
   }
 
   return (
-    <div className="flex w-full max-w-[448px] flex-col gap-[25px]">
+    <div className="flex w-full max-w-[312px] flex-col gap-[20px]">
       {providers.map((p) => (
         <button
           key={p.id}
           type="button"
           disabled={pending !== null}
           onClick={() => void signIn(p.id)}
-          className={`flex h-[90px] w-full items-center justify-center px-6 text-[24px] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${p.className}`}
+          className={`flex h-[60px] w-full items-center justify-center px-6 text-[18px] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${p.className}`}
         >
           {pending === p.id ? '移動しています…' : p.label}
         </button>

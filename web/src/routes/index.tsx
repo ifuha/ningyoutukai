@@ -55,10 +55,10 @@ function Home() {
   return (
     <main className="flex h-screen flex-col items-center px-4 pt-[clamp(4rem,30vh,19.5rem)] pb-16">
       <Logo />
-      <div className="mt-[clamp(3rem,21vh,13.5rem)] flex w-full flex-col items-center gap-[25px]">
+      <div className="mt-[clamp(3rem,21vh,13.5rem)] flex w-full flex-col items-center gap-[20px]">
         <LoginButtons />
         {error && (
-          <p role="alert" className="max-w-[448px] text-center text-base">
+          <p role="alert" className="max-w-[312px] text-center text-base">
             {loginErrorMessage(error)}
           </p>
         )}
