@@ -54,9 +54,10 @@ function Product() {
                 </>
               )}
             </div>
-            {product.data?.role === 'leader' && (
-              <InviteMemberDialog productId={productId} />
-            )}
+            <div className="flex shrink-0 items-center gap-3">
+              {product.data?.role === 'leader' && (
+                <InviteMemberDialog productId={productId} />
+              )}
             <button
               type="button"
               onClick={() => void navigate({ to: '/home' })}
@@ -64,6 +65,7 @@ function Product() {
             >
               ホームへ戻る
             </button>
+            </div>
           </div>
           {product.isError ? null : tree.isPending || product.isPending ? (
             <p className="text-sm opacity-60">読み込み中…</p>
