@@ -5,7 +5,9 @@ import { products } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
 import { getMembership } from "../lib/product-access";
 
-const messageSchema = t.Object({ message: t.String() });
+const NO_NUL = "^[^\\u0000]*$";
+
+const messageSchema =t.Object({ message: t.String() });
 
 const productSchema = t.Object({
   productId: t.String(),
@@ -41,7 +43,8 @@ export const productManageRoutes = new Elysia({ name: "product-manage" })
     {
       requireUser: true,
       params: t.Object({ productId: t.String({ format: "uuid" }) }),
-      body: t.Object({ productName: t.String({ maxLength: 100 }) }),
+      // NUL 文字は PostgreSQL が拒否して 500 になるため、pattern で弾いて 422 にする
+      body: t.Object({ productName: t.String({ maxLength: 100, pattern: NO_NUL }) }),
       response: { 200: productSchema, 400: messageSchema, 403: messageSchema, 404: messageSchema },
       detail: { summary: "プロダクト情報変更(リーダー)" },
     }
