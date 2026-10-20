@@ -1,58 +1,68 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { LoginButtons } from '#/components/login-buttons'
 import { authClient } from '#/lib/auth-client'
 
-export const Route = createFileRoute('/')({ component: Home })
+// ログインに失敗すると、better-auth が `/?error=コード` に戻してくる
+export const Route = createFileRoute('/')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    error: typeof search.error === 'string' ? search.error : undefined,
+  }),
+  component: Home,
+})
+
+const errorMessages: Record<string, string> = {
+  access_denied: 'ログインがキャンセルされました。もう一度お試しください',
+  email_not_found:
+    'メールアドレスを取得できませんでした。GitHub のメールアドレスを公開設定にして、もう一度お試しください',
+}
+
+function loginErrorMessage(code: string) {
+  return errorMessages[code] ?? 'ログインできませんでした。もう一度お試しください'
+}
+
+// Figma「login」: ロゴ(仮に、アプリ名の文字)と、2 つのボタンが、中央に縦に並ぶ
+function Logo() {
+  return (
+    <h1 className="text-[clamp(3rem,8vw,6.25rem)] leading-normal font-normal">
+      人形使い
+    </h1>
+  )
+}
 
 function Home() {
   const { data: session, isPending } = authClient.useSession()
+  const { error } = Route.useSearch()
+
+  // ログイン状態を確認している間は、背景だけを出す(ログイン画面が一瞬見えるのを避ける)
+  if (isPending) return <main className="min-h-screen" />
+
+  if (session?.user) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+        <p className="text-2xl">{session.user.name}</p>
+        <p className="text-base opacity-70">{session.user.email}</p>
+        <button
+          type="button"
+          onClick={() => void authClient.signOut()}
+          className="h-[60px] w-full max-w-[312px] border-2 border-outline text-xl hover:opacity-80"
+        >
+          ログアウト
+        </button>
+      </main>
+    )
+  }
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-20 text-neutral-50">
-      <section className="mx-auto max-w-xl rounded-2xl border border-neutral-800 bg-neutral-900 p-8 shadow-xl">
-        <p className="text-sm font-medium text-indigo-300">人形使い</p>
-        <h1 className="mt-3 text-3xl font-bold">Googleログイン</h1>
-        <p className="mt-3 text-neutral-300">
-          Googleアカウントでログインして、アプリを利用します。
-        </p>
-
-        {isPending ? (
-          <p className="mt-8 text-sm text-neutral-400">ログイン状態を確認中…</p>
-        ) : session?.user ? (
-          <div className="mt-8 flex items-center gap-4">
-            {session.user.image && (
-              <img
-                src={session.user.image}
-                alt=""
-                className="h-12 w-12 rounded-full"
-              />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">{session.user.name}</p>
-              <p className="truncate text-sm text-neutral-400">
-                {session.user.email}
-              </p>
-            </div>
-            <button
-              onClick={() => void authClient.signOut()}
-              className="rounded-lg border border-neutral-700 px-4 py-2 text-sm hover:bg-neutral-800"
-            >
-              ログアウト
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() =>
-              void authClient.signIn.social({
-                provider: 'google',
-                callbackURL: window.location.origin,
-              })
-            }
-            className="mt-8 w-full rounded-lg bg-white px-5 py-3 font-semibold text-neutral-900 hover:bg-neutral-200"
-          >
-            Googleでログイン
-          </button>
+    <main className="flex min-h-screen flex-col items-center px-4 pt-[clamp(4rem,30vh,19.5rem)] pb-16">
+      <Logo />
+      <div className="mt-[clamp(3rem,21vh,13.5rem)] flex w-full flex-col items-center gap-[25px]">
+        <LoginButtons />
+        {error && (
+          <p role="alert" className="max-w-[448px] text-center text-base">
+            {loginErrorMessage(error)}
+          </p>
         )}
-      </section>
+      </div>
     </main>
   )
 }
