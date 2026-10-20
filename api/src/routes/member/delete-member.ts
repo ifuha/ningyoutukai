@@ -37,12 +37,18 @@ export const deleteMember = new Elysia({ name: "member-delete-member" })
       }
 
       // タスクを先に消してからメンバーを消す(スキーマの cascade に頼らず明示する)
-      await db.transaction(async (tx) => {
+      // 同時削除では片方の delete が 0 件になるので、その場合は 404 を返す
+      // (タスクの削除は行ロックで直列化され、後続側は 0 件になるだけでエラーにならない)
+      const deleted = await db.transaction(async (tx) => {
         await tx.delete(tasks).where(eq(tasks.productMemberId, target.productMemberId));
-        await tx
+        return tx
           .delete(productMembers)
-          .where(eq(productMembers.productMemberId, target.productMemberId));
+          .where(eq(productMembers.productMemberId, target.productMemberId))
+          .returning({ productMemberId: productMembers.productMemberId });
       });
+      if (deleted.length === 0) {
+        return status(404, { message: "メンバーが見つかりません" });
+      }
 
       return status(204, undefined);
     },
