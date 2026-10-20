@@ -6,6 +6,7 @@ import { errorHandler } from "./lib/error-handler";
 import { productRoutes } from "./routes/product";
 import { productTreeRoutes } from "./routes/product-tree";
 import { taskRoutes } from "./routes/task";
+import { deleteTaskRoutes } from "./routes/task/delete-task";
 
 const app = new Elysia()
   .use(cors({ origin: webOrigin, credentials: true }))
@@ -22,6 +23,7 @@ const app = new Elysia()
   .use(productRoutes)
   .use(productTreeRoutes)
   .use(taskRoutes)
+  .use(deleteTaskRoutes)
   .all("/api/auth/*", ({ request }) => auth.handler(request), { parse: "none", detail: { hide: true } })
   .get("/", () => "Hello Elysia")
   .listen(Number(process.env.PORT ?? 3001));
