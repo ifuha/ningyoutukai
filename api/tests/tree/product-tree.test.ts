@@ -80,7 +80,13 @@ describe("リーダーから見たツリー", () => {
     const res = await get(url(), p.leader.cookie);
     expect(res.status).toBe(200);
     const tree = await res.json();
-    expect(Object.keys(tree).sort()).toEqual(["leader", "members", "product"]);
+    expect(Object.keys(tree).sort()).toEqual([
+      "leader",
+      "members",
+      "product",
+      "viewerProductMemberId",
+    ]);
+    expect(tree.viewerProductMemberId).toBe(p.leader.memberId);
     expect(tree.product.productId).toBe(p.productId);
     expect(tree.leader.role).toBe("leader");
     expect(tree.leader.productMemberId).toBe(p.leader.memberId);

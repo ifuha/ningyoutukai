@@ -29,6 +29,7 @@ export function buildTree(
   product: Pick<Product, "productId" | "productName">,
   memberRows: MemberRow[],
   taskRows: TaskRow[],
+  viewerProductMemberId: string,
 ): ProductTree {
   // メンバーごとにタスクをまとめる（入力の並び順を保つ）
   const tasksByMember = new Map<string, TreeTask[]>();
@@ -64,5 +65,5 @@ export function buildTree(
   const leader = leaderIndex >= 0 ? nodes[leaderIndex] : null;
   const members = nodes.filter((_, i) => i !== leaderIndex);
 
-  return { product, leader, members };
+  return { product, leader, members, viewerProductMemberId };
 }
