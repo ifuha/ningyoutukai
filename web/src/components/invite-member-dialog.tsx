@@ -25,14 +25,14 @@ export function InviteMemberDialog({ productId }: { productId: string }) {
       <dialog
         ref={ref}
         onClose={() => setOpen(false)}
-        // 外側(背景)を押したら閉じる。dialog 自体が押されたときだけ(中身は押しても閉じない)
+        // 外側(背景)を押したら閉じる。dialog 自体が押されたときだけ(余白は中の div 側なので、中身は押しても閉じない)
         onClick={(e) => {
           if (e.target === e.currentTarget) setOpen(false)
         }}
-        className="m-auto w-[min(32rem,calc(100vw-2rem))] border-2 border-ink bg-surface p-6 text-ink backdrop:bg-black/40"
+        className="m-auto w-[min(32rem,calc(100vw-2rem))] border-2 border-ink bg-surface text-ink backdrop:bg-black/40"
       >
         {open && (
-          <div className="space-y-4">
+          <div className="space-y-4 p-6">
             <InviteMemberForm productId={productId} />
             <button type="button" onClick={() => setOpen(false)} className={buttonClass}>
               閉じる
