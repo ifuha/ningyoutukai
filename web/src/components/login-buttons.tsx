@@ -50,7 +50,8 @@ const providers: {
 
 /**
  * GitHub / Google のログインボタン。
- * ログイン後は、トップページ(`/`)に戻る。失敗したときは、`/login?error=…` に戻る。
+ * ログイン画面はトップページ(`/`)。ログインしたあとも、失敗したときも、`/` に戻る
+ * (失敗したときは、`/?error=…` の形で、理由が付く)。
  */
 export function LoginButtons({ disabled }: { disabled?: boolean }) {
   const [pending, setPending] = useState<Provider | null>(null)
@@ -64,7 +65,7 @@ export function LoginButtons({ disabled }: { disabled?: boolean }) {
       const { error } = await authClient.signIn.social({
         provider,
         callbackURL: origin,
-        errorCallbackURL: `${origin}/login`,
+        errorCallbackURL: origin,
       })
       // 成功すると、ブラウザが認可画面に移動する。ここに来るのは、開始に失敗したとき
       if (error) {
