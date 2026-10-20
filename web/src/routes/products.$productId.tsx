@@ -5,6 +5,7 @@ import { AppShell } from '#/components/app-shell'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
 import { ManageMenu, type ManageMenuItem } from '#/components/manage-menu'
 import { MemberManageDialog } from '#/components/member-manage-dialog'
+import { ProductManageDialog } from '#/components/product-manage-dialog'
 import { TaskKindDialog } from '#/components/task-kind-dialog'
 import { ProductTree } from '#/components/product-tree'
 import { pendingReviews, ReviewDialog } from '#/components/review-dialog'
@@ -45,6 +46,7 @@ function Product() {
   const [membersOpen, setMembersOpen] = useState(false)
   const [kindsOpen, setKindsOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [productManageOpen, setProductManageOpen] = useState(false)
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => api<ProductSummary>(`/api/product/${productId}`),
@@ -64,6 +66,7 @@ function Product() {
       ? [
           { label: 'タスクの種類', onSelect: () => setKindsOpen(true) },
           { label: 'メンバーを招待', onSelect: () => setInviteOpen(true) },
+          { label: 'プロダクト管理', onSelect: () => setProductManageOpen(true) },
         ]
       : []),
   ]
@@ -194,6 +197,15 @@ function Product() {
                     productId={productId}
                     open={inviteOpen}
                     onClose={() => setInviteOpen(false)}
+                  />
+                  <ProductManageDialog
+                    productId={productId}
+                    productName={
+                      product.data?.productName ?? tree.data.product.productName
+                    }
+                    memberCount={tree.data.members.length + 1}
+                    open={productManageOpen}
+                    onClose={() => setProductManageOpen(false)}
                   />
                 </>
               )}
