@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   api,
+  ApiError,
   type TaskKind,
   type TreeMember,
   type TreeTask,
@@ -99,9 +100,22 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       queryClient.invalidateQueries({ queryKey: ['products', productId, 'tree'] }),
   })
 
+  // 削除は 2 段階(「削除」→ 確認)。404 は、すでに消えているので、閉じるだけでよい
+  const [confirmingRemove, setConfirmingRemove] = useState(false)
+  const remove = useMutation({
+    mutationFn: () =>
+      api<void>(`/api/product/${productId}/task/${initial?.taskId}`, { method: 'DELETE' }),
+    onSuccess: onDone,
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 404) onDone()
+    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ['products', productId, 'tree'] }),
+  })
+
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (save.isPending) return
+    if (save.isPending || remove.isPending) return
     save.reset()
     save.mutate()
   }
@@ -239,18 +253,71 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       )}
 
       <div className="flex gap-3">
-        <button type="submit" disabled={save.isPending} className={buttonClass}>
+        <button
+          type="submit"
+          disabled={save.isPending || remove.isPending}
+          className={buttonClass}>
           {save.isPending ? '送信中…' : initial ? '保存' : '追加'}
         </button>
         <button
           type="button"
-          disabled={save.isPending}
+          disabled={save.isPending || remove.isPending}
           onClick={onDone}
           className={buttonClass}
         >
           閉じる
         </button>
       </div>
+
+      {initial && (
+        <div className="space-y-3 border-t-2 border-ink pt-4">
+          {remove.isError && (
+            <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+              ERR {remove.error.message}
+            </p>
+          )}
+          {confirmingRemove ? (
+            <>
+              <p className="text-sm font-bold">
+                「{initial.taskName}」を削除しますか? 元に戻せません
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  disabled={remove.isPending || save.isPending}
+                  onClick={() => {
+                    remove.reset()
+                    remove.mutate()
+                  }}
+                  className={buttonClass}
+                >
+                  {remove.isPending ? '削除中…' : '削除する'}
+                </button>
+                <button
+                  type="button"
+                  disabled={remove.isPending}
+                  onClick={() => {
+                    remove.reset()
+                    setConfirmingRemove(false)
+                  }}
+                  className={buttonClass}
+                >
+                  やめる
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              disabled={save.isPending}
+              onClick={() => setConfirmingRemove(true)}
+              className={buttonClass}
+            >
+              このタスクを削除
+            </button>
+          )}
+        </div>
+      )}
     </form>
   )
 }
