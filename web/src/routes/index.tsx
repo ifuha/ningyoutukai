@@ -34,11 +34,11 @@ function Home() {
   const { error } = Route.useSearch()
 
   // ログイン状態を確認している間は、背景だけを出す(ログイン画面が一瞬見えるのを避ける)
-  if (isPending) return <main className="min-h-screen" />
+  if (isPending) return <main className="h-screen" />
 
   if (session?.user) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+      <main className="flex h-screen flex-col items-center justify-center gap-6 px-4">
         <p className="text-2xl">{session.user.name}</p>
         <p className="text-base opacity-70">{session.user.email}</p>
         <button
@@ -53,7 +53,7 @@ function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center px-4 pt-[clamp(4rem,30vh,19.5rem)] pb-16">
+    <main className="flex h-screen flex-col items-center px-4 pt-[clamp(4rem,30vh,19.5rem)] pb-16">
       <Logo />
       <div className="mt-[clamp(3rem,21vh,13.5rem)] flex w-full flex-col items-center gap-[25px]">
         <LoginButtons />
