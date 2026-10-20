@@ -1,52 +1,32 @@
 // ツリー表示用データの組み立て。DB には触らない純粋関数。
+import type { productMembers, products, taskTypes, tasks, users } from "../db/schema";
+import type { ProductTree, TreeNode, TreeTask } from "./tree-schema";
 
-export type MemberRow = {
-  productMemberId: string;
-  userId: string;
-  role: string; // "leader" | "member"（role の値はチームで確定させる）
-  userName: string;
-  avatarUrl: string | null;
-};
+// 入力(DB から取ってきた行)の型は、drizzle のテーブルの型から作る
+type Member = typeof productMembers.$inferSelect;
+type User = typeof users.$inferSelect;
+type Task = typeof tasks.$inferSelect;
+type TaskType = typeof taskTypes.$inferSelect;
+type Product = typeof products.$inferSelect;
 
-export type TaskRow = {
-  taskId: string;
-  taskName: string;
-  description: string | null;
-  timeLimit: Date | string | null;
-  reportedAt: Date | string | null;
-  isVisible: boolean;
-  productMemberId: string;
-  taskTypeId: string | null;
-  taskTypeName: string | null;
-};
+export type MemberRow = Pick<Member, "productMemberId" | "userId" | "role"> &
+  Pick<User, "userName" | "avatarUrl">;
 
-export type TreeTask = {
-  taskId: string;
-  taskName: string;
-  description: string | null;
-  timeLimit: Date | string | null;
-  reportedAt: Date | string | null;
-  isVisible: boolean;
-  taskType: { taskTypeId: string; taskTypeName: string } | null;
-};
-
-export type TreeNode = {
-  productMemberId: string;
-  userId: string;
-  userName: string;
-  avatarUrl: string | null;
-  role: string;
-  tasks: TreeTask[];
-};
-
-export type ProductTree = {
-  product: { productId: string; productName: string };
-  leader: TreeNode | null;
-  members: TreeNode[];
-};
+// タスクの種類は left join なので、種類名は null になりうる
+export type TaskRow = Pick<
+  Task,
+  | "taskId"
+  | "taskName"
+  | "description"
+  | "timeLimit"
+  | "reportedAt"
+  | "isVisible"
+  | "productMemberId"
+  | "taskTypeId"
+> & { taskTypeName: TaskType["taskTypeName"] | null };
 
 export function buildTree(
-  product: { productId: string; productName: string },
+  product: Pick<Product, "productId" | "productName">,
   memberRows: MemberRow[],
   taskRows: TaskRow[],
 ): ProductTree {
