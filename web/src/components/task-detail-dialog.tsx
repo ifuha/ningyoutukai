@@ -26,10 +26,13 @@ function Detail({
       api(`/api/product/${productId}/task/${task.taskId}/complete-report`, {
         method: 'POST',
       }),
-    // 失敗(409 など)でも取り直す。状態が変わっていれば、ここの表示も追従する(エラーの文は残る)
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: ['products', productId, 'tree'] }),
-    onSuccess: onClose,
+    // 失敗(409 など)では取り直さない。完了済みでツリーから消えると、エラーを出す前にモーダルごと閉じるため
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['products', productId, 'tree'],
+      })
+      onClose()
+    },
   })
 
   return (
