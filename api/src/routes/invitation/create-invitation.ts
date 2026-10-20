@@ -8,6 +8,8 @@ import { mailer } from "../../lib/mailer";
 import { getMembership } from "../../lib/product-access";
 
 const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
+// Postgres の text は NUL 文字を保存できず 500 になるため、入力の時点で弾く(422)
+const NO_NUL = "^[^\\u0000]*$";
 
 // メンバー招待 POST /api/product/:productId/invitation
 // githubId(GitHub の username)か email のどちらか一方を指定する。
@@ -23,12 +25,17 @@ export const createInvitation = new Elysia({ name: "invitation-create-invitation
         return status(403, { message: "プロダクトリーダーのみ実行できます" });
       }
 
-      const githubId = body.githubId?.trim() || undefined;
+      // GitHub の username は先頭の @ を 1 つだけ取り除く(@octocat → octocat)。@ は username に使えない
+      const rawGithubId = body.githubId?.trim().replace(/^@/, "");
+      const githubId = rawGithubId || undefined;
       const email = body.email?.trim() || undefined;
       if ((githubId && email) || (!githubId && !email)) {
         return status(400, {
           message: "GitHub のユーザー名かメールアドレスのどちらか一方を指定してください",
         });
+      }
+      if (githubId?.includes("@")) {
+        return status(400, { message: "GitHub のユーザー名の形式が正しくありません" });
       }
       const inviteeType = githubId ? ("github" as const) : ("gmail" as const);
       const identifier = (githubId ?? email)!;
@@ -38,7 +45,7 @@ export const createInvitation = new Elysia({ name: "invitation-create-invitation
 
       // 招待相手が登録済みか調べる(大文字小文字は区別しない)
       const [invitee] = await db
-        .select({ userId: users.userId, email: users.email })
+        .select({ userId: users.userId, email: users.email, githubId: users.githubId })
         .from(users)
         .where(
           githubId
@@ -53,36 +60,69 @@ export const createInvitation = new Elysia({ name: "invitation-create-invitation
         return status(409, { message: "すでにプロダクトのメンバーです" });
       }
 
-      // 保留中の招待が重複しないようにする(登録済みなら user_id で、未登録なら招待先で判定)
-      const sameIdentifier = and(
-        eq(productInvitations.inviteeType, inviteeType),
-        sql`lower(${productInvitations.inviteeIdentifier}) = ${identifier.toLowerCase()}`
-      );
-      const [duplicated] = await db
-        .select({ invitationId: productInvitations.invitationId })
-        .from(productInvitations)
-        .where(
+      // 同じプロダクト・同じ相手への処理を直列にする(重複の確認と insert の間に割り込ませない)。
+      // 登録済みならユーザー ID と招待先、未登録なら招待先をキーにする。デッドロックを避けるため、キーは並べ替えて取る
+      const lockKeys = [
+        `${params.productId}:${inviteeType}:${identifier.toLowerCase()}`,
+        ...(invitee ? [`${params.productId}:user:${invitee.userId}`] : []),
+      ].sort();
+
+      const created = await db.transaction(async (tx) => {
+        for (const key of lockKeys) {
+          await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${key}))`);
+        }
+
+        // 保留中の招待が重複しないようにする。登録済みなら、その人の user_id と、メール・GitHub username の
+        // すべてで照合し(addressedTo と同じ「同じ人」)、未登録なら同じ種類の招待先で照合する
+        const matchers = [
           and(
-            eq(productInvitations.productId, params.productId),
-            eq(productInvitations.status, "pending"),
-            invitee
-              ? or(eq(productInvitations.userId, invitee.userId), sameIdentifier)
-              : sameIdentifier
-          )
-        );
-      if (duplicated) return status(409, { message: "すでに招待しています" });
+            eq(productInvitations.inviteeType, inviteeType),
+            sql`lower(${productInvitations.inviteeIdentifier}) = ${identifier.toLowerCase()}`
+          )!,
+        ];
+        if (invitee) {
+          matchers.push(eq(productInvitations.userId, invitee.userId));
+          matchers.push(
+            and(
+              eq(productInvitations.inviteeType, "gmail"),
+              sql`lower(${productInvitations.inviteeIdentifier}) = ${invitee.email.toLowerCase()}`
+            )!
+          );
+          if (invitee.githubId) {
+            matchers.push(
+              and(
+                eq(productInvitations.inviteeType, "github"),
+                sql`lower(${productInvitations.inviteeIdentifier}) = ${invitee.githubId.toLowerCase()}`
+              )!
+            );
+          }
+        }
+        const [duplicated] = await tx
+          .select({ invitationId: productInvitations.invitationId })
+          .from(productInvitations)
+          .where(
+            and(
+              eq(productInvitations.productId, params.productId),
+              eq(productInvitations.status, "pending"),
+              or(...matchers)
+            )
+          );
+        if (duplicated) return null;
 
-      const [created] = await db
-        .insert(productInvitations)
-        .values({
-          productId: params.productId,
-          userId: invitee?.userId ?? null,
-          inviteeIdentifier: identifier,
-          inviteeType,
-        })
-        .returning();
+        const [row] = await tx
+          .insert(productInvitations)
+          .values({
+            productId: params.productId,
+            userId: invitee?.userId ?? null,
+            inviteeIdentifier: identifier,
+            inviteeType,
+          })
+          .returning();
+        return row!;
+      });
+      if (!created) return status(409, { message: "すでに招待しています" });
 
-      // 招待された人へ通知(失敗しても招待は成功させる。mailer は例外を投げない)。
+      // 招待された人へ通知(失敗しても招待は成功させる。例外は記録だけして握りつぶさない形で扱う)。
       // 宛先は、登録済みならそのメール、未登録でもメールで招待したならそのメール。GitHub だけで未登録なら送れない
       const to = invitee?.email ?? email;
       if (to) {
@@ -90,11 +130,15 @@ export const createInvitation = new Elysia({ name: "invitation-create-invitation
           .select({ productName: products.productName })
           .from(products)
           .where(eq(products.productId, params.productId));
-        await mailer.send({
-          to,
-          subject: `プロダクトに招待されました: ${product?.productName ?? ""}`,
-          text: `${user.userName} さんから、プロダクト「${product?.productName ?? ""}」に招待されました。\nアプリにログインして、招待を承認するとプロダクトに参加できます。`,
-        });
+        try {
+          await mailer.send({
+            to,
+            subject: `プロダクトに招待されました: ${product?.productName ?? ""}`,
+            text: `${user.userName} さんから、プロダクト「${product?.productName ?? ""}」に招待されました。\nアプリにログインして、招待を承認するとプロダクトに参加できます。`,
+          });
+        } catch (error) {
+          console.error("[invitation] 招待メールの送信に失敗しました", error);
+        }
       }
 
       return status(201, toInvitationView(created));
@@ -103,8 +147,8 @@ export const createInvitation = new Elysia({ name: "invitation-create-invitation
       requireUser: true,
       params: t.Object({ productId: t.String({ format: "uuid" }) }),
       body: t.Object({
-        githubId: t.Optional(t.String({ maxLength: 100 })),
-        email: t.Optional(t.String({ maxLength: 254 })),
+        githubId: t.Optional(t.String({ maxLength: 100, pattern: NO_NUL })),
+        email: t.Optional(t.String({ maxLength: 254, pattern: NO_NUL })),
       }),
       response: {
         201: InvitationSchema,
