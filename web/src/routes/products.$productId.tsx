@@ -4,6 +4,10 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
 import { ProductTree } from '#/components/product-tree'
+import {
+  TaskDetailDialog,
+  type TaskDetailTarget,
+} from '#/components/task-detail-dialog'
 import { TaskListDialog } from '#/components/task-list-dialog'
 import {
   TaskFormDialog,
@@ -13,6 +17,8 @@ import {
   api,
   type ProductSummary,
   type ProductTree as ProductTreeData,
+  type TreeMember,
+  type TreeTask,
 } from '#/lib/api'
 
 // プロダクトの画面(`/products/$productId`)。ログイン必須。見出しと、ツリー(リーダーとメンバー、タスク)
@@ -27,6 +33,8 @@ function Product() {
   const { productId } = Route.useParams()
   const navigate = useNavigate()
   const [taskForm, setTaskForm] = useState<TaskFormTarget | null>(null)
+  // 自分のタスクの詳細(完了報告)を開いているタスク。再取得で最新になるよう、id で持つ
+  const [detailId, setDetailId] = useState<string | null>(null)
   // 全タスクの一覧を開いている人(再取得で最新になるよう、id で持つ)
   const [listMemberId, setListMemberId] = useState<string | null>(null)
   const product = useQuery({
@@ -39,6 +47,25 @@ function Product() {
     queryFn: () => api<ProductTreeData>(`/api/product/${productId}/tree`),
     retry: false,
   })
+
+  const isLeader = product.data?.role === 'leader'
+  const myId = tree.data?.viewerProductMemberId
+  // 自分のタスクは詳細(リーダーも。編集は詳細から)、他人のタスクはリーダーだけ編集
+  const canOpenTask = (m: TreeMember) => isLeader || m.productMemberId === myId
+  const openTask = (member: TreeMember, task: TreeTask) => {
+    setListMemberId(null)
+    if (member.productMemberId === myId) setDetailId(task.taskId)
+    else setTaskForm({ edit: { task, member } })
+  }
+  const detail: TaskDetailTarget | null = tree.data
+    ? [tree.data.leader, ...tree.data.members].reduce<TaskDetailTarget | null>(
+        (found, member) => {
+          const task = member.tasks.find((t) => t.taskId === detailId)
+          return found ?? (task ? { task, member } : null)
+        },
+        null,
+      )
+    : null
 
   return (
     <AppShell activeProductId={productId} align="top">
@@ -95,11 +122,8 @@ function Product() {
             <div className="pb-4">
               <ProductTree
                 tree={tree.data}
-                onEditTask={
-                  product.data?.role === 'leader'
-                    ? (member, task) => setTaskForm({ edit: { task, member } })
-                    : undefined
-                }
+                onEditTask={openTask}
+                canOpenTask={canOpenTask}
                 onShowTasks={(member) => setListMemberId(member.productMemberId)}
               />
               <TaskListDialog
@@ -109,14 +133,21 @@ function Product() {
                   ) ?? null
                 }
                 onClose={() => setListMemberId(null)}
-                onEditTask={
-                  product.data?.role === 'leader'
-                    ? (member, task) => {
-                        setListMemberId(null)
+                onEditTask={openTask}
+                canOpenTask={canOpenTask}
+              />
+              <TaskDetailDialog
+                productId={productId}
+                target={detail}
+                onEdit={
+                  isLeader
+                    ? ({ task, member }) => {
+                        setDetailId(null)
                         setTaskForm({ edit: { task, member } })
                       }
                     : undefined
                 }
+                onClose={() => setDetailId(null)}
               />
               {product.data?.role === 'leader' && (
                 <TaskFormDialog
