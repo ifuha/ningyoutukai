@@ -32,6 +32,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
     throw new ApiError(res.status, message)
   }
+  // 204(本文なし)は undefined を返す
+  if (res.status === 204) return undefined as T
   return (await res.json()) as T
 }
 
