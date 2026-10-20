@@ -9,6 +9,7 @@ import {
   getMemberContact,
   getMembership,
 } from "../../lib/product-access";
+import { taskStillExists } from "../../lib/task-race";
 import { canSee, taskColumns } from "../../lib/task-view";
 
 // タスク完了報告 POST /api/product/:productId/task/:taskId/complete-report
@@ -58,7 +59,13 @@ export const reportComplete = new Elysia({ name: "task-report-complete" })
           )
         )
         .returning(taskColumns);
-      if (!updated) return status(409, { message: "すでに報告済みです" });
+      if (!updated) {
+        // 確認から更新までの間に削除された場合
+        if (!(await taskStillExists(task.taskId))) {
+          return status(404, { message: "タスクが見つかりません" });
+        }
+        return status(409, { message: "すでに報告済みです" });
+      }
 
       // 全リーダーへメール通知(mailer.send は失敗しても例外を投げない)
       const leaders = await getLeaderContacts(params.productId);
