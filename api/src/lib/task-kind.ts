@@ -5,11 +5,22 @@ import { taskTypes } from "../db/schema";
 
 export const TASK_KIND_NAME_MAX = 50;
 
-// Postgres の text は NUL 文字(\u0000)を保存できず、500 になるため、入力の時点で弾く
-const NO_NUL = "^[^\\u0000]*$";
+// Postgres の text は NUL 文字(\u0000)と、対になっていないサロゲートを保存できない
+// (500 になる、または名前が壊れて保存される)ため、入力の時点で弾く。
+// サロゲートは、上位+下位の対だけを許す
+const VALID_NAME = "^(?:[^\\u0000\\ud800-\\udfff]|[\\ud800-\\udbff][\\udc00-\\udfff])*$";
 
 export const taskKindNameSchema = () =>
-  t.String({ maxLength: TASK_KIND_NAME_MAX, pattern: NO_NUL });
+  t.String({ maxLength: TASK_KIND_NAME_MAX, pattern: VALID_NAME });
+
+// trim() が空白と見なさないゼロ幅の文字(U+200B〜U+200D、U+2060、U+180E、U+FEFF、U+0085)
+const INVISIBLE = /[\u200b-\u200d\u2060\u180e\ufeff\u0085]/g;
+
+/** トリムし、空(ゼロ幅の文字だけも空)なら null を返す。名前の途中のゼロ幅の文字は残す(絵文字の結合に必要) */
+export function normalizeTaskKindName(name: string) {
+  const trimmed = name.trim();
+  return trimmed.replace(INVISIBLE, "").trim() ? trimmed : null;
+}
 
 export const taskKindColumns = {
   taskTypeId: taskTypes.taskTypeId,

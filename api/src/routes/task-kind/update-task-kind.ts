@@ -7,6 +7,7 @@ import { getMembership } from "../../lib/product-access";
 import {
   isUniqueViolation,
   messageSchema,
+  normalizeTaskKindName,
   taskKindColumns,
   taskKindNameSchema,
   taskKindSchema,
@@ -24,7 +25,7 @@ export const updateTaskKind = new Elysia({ name: "task-kind-update" })
         return status(403, { message: "プロダクトリーダーのみ実行できます" });
       }
 
-      const taskTypeName = body.taskTypeName.trim();
+      const taskTypeName = normalizeTaskKindName(body.taskTypeName);
       if (!taskTypeName) return status(400, { message: "種類の名前を入力してください" });
 
       try {
