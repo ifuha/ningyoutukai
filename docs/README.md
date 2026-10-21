@@ -10,6 +10,9 @@ ningyoutukai のドキュメント置き場です。要件定義、設計(ER 図
 - [dev-notes.md](./dev-notes.md): 開発中のメモ(暫定にしていること、あとで見直すこと。ログイン画面は暫定のデザイン)
 - [v2-todo.md](./v2-todo.md): v2 で対応すること(申し送り)
 - [api-tree.md](./api-tree.md): ツリー表示 API の仕様
-- [infra.md](./infra.md): インフラ構成(アプリは Workers、PostgreSQL は Containers、R2 は DB ダンプの保存のみ)
+- [infra.md](./infra.md): インフラ構成(アプリは Workers、PostgreSQL は Neon + Hyperdrive、R2 は DB ダンプの保存のみ)
+- [deploy.md](./deploy.md): 本番デプロイの手順書(Neon、Hyperdrive、シークレット、OAuth、バックアップ、ロールバック)
+- [infra-spike.md](./infra-spike.md): api を Workers で動かす見極めの記録
+- [infra-do-container.md](./infra-do-container.md): Containers の Postgres の検証記録(採用しなかった)
 
 起動手順はルートの [README](../README.md) を参照してください。

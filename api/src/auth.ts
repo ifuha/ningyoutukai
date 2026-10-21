@@ -59,4 +59,16 @@ export const auth = betterAuth({
   },
 },
   socialProviders,
+  // 案 D(web と api が同じ親ドメインの別サブドメイン)のときだけ、cookie を親ドメインに付ける。
+  // COOKIE_DOMAIN(例: `.example.com`)が未設定なら何も足さない(従来どおり。案 S の同一オリジンもこちら)
+  ...(process.env.COOKIE_DOMAIN
+    ? {
+        advanced: {
+          crossSubDomainCookies: {
+            enabled: true,
+            domain: process.env.COOKIE_DOMAIN,
+          },
+        },
+      }
+    : {}),
 });
