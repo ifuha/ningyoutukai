@@ -6,10 +6,9 @@ import { authGuard } from "../../lib/auth-guard";
 import { InvitationSchema, MessageSchema, toInvitationView } from "../../lib/invitation";
 import { mailer } from "../../lib/mailer";
 import { getMembership } from "../../lib/product-access";
+import { NO_NUL } from "../../lib/validation";
 
 const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
-// Postgres の text は NUL 文字を保存できず 500 になるため、入力の時点で弾く(422)
-const NO_NUL = "^[^\\u0000]*$";
 
 // メンバー招待 POST /api/product/:productId/invitation
 // githubId(GitHub の username)か email のどちらか一方を指定する。

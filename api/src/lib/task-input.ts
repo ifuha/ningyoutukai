@@ -1,4 +1,5 @@
 import { t } from "elysia";
+import { NO_NUL } from "./validation";
 
 /** タスクの入力検証(作成・更新で共通)。 */
 
@@ -6,9 +7,6 @@ export const TASK_NAME_MAX = 200;
 export const DESCRIPTION_MAX = 5000;
 export const TIME_LIMIT_MIN_YEAR = 2000;
 export const TIME_LIMIT_MAX_YEAR = 2100;
-
-// Postgres の text は NUL 文字(\u0000)を保存できず、500 になるため、入力の時点で弾く
-const NO_NUL = "^[^\\u0000]*$";
 
 // 時刻とタイムゾーンつきの ISO 8601(例: 2026-12-01T09:00:00+09:00 / 2026-12-01T00:00:00Z)
 const ISO_DATE_TIME =
