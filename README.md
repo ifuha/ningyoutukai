@@ -39,7 +39,7 @@ DB のポートは **5433** です(ホストにローカルの Postgres があ�
 | `DATABASE_URL` | DB の接続先。docker compose の既定のままで動きます |
 | `BETTER_AUTH_SECRET` | 認証の署名用の秘密。`openssl rand -hex 32` などで生成します。開発では空でも起動しますが、**本番では必須**です |
 | `BETTER_AUTH_URL` | api 自身の URL(省略時 `http://localhost:3001`)。OAuth のコールバック URL の元になります |
-| `WEB_ORIGIN` | web の URL(省略時 `http://localhost:3000`)。CORS やログイン後の戻り先に使います |
+| `WEB_ORIGIN` | web の URL(省略時 `http://localhost:3000`)。CORS の許可と、ログイン後の戻り先として信頼する URL(better-auth の `trustedOrigins`)に使います |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`、`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | GitHub / Google でログインするための OAuth の情報。未設定だとログインのボタンが動きません。取得と登録の手順は [docs/oauth-setup.md](./docs/oauth-setup.md) |
 | `RESEND_API_KEY` / `MAIL_FROM` | メール通知(Resend)用。`RESEND_API_KEY` が未設定なら、メールは送らず、ログに出すだけです(開発・テストではこれで問題ありません)。`MAIL_FROM` は送信元(例: `人形使い <noreply@example.com>`) |
 
