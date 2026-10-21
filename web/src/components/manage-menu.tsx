@@ -62,6 +62,8 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
               type="button"
               role="menuitem"
               onClick={() => {
+                // 項目は閉じると消えるので、先に「管理」ボタンへフォーカスを移す(ダイアログを閉じたときの戻り先)
+                buttonRef.current?.focus()
                 setOpen(false)
                 item.onSelect()
               }}
