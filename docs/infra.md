@@ -36,7 +36,7 @@
 
 ## 現状(2026-10 時点)
 
-- ローカルでは `api/docker-compose.yml` で Postgres 17 を動かしている(ポート 5433)。web は `bun run dev` 相当(`vite dev`)、api は `bun run dev`。ここは従来どおり。
+- ローカルでは `api/docker-compose.yml` で Postgres 17 を動かしている(ポート 5433。本番の Neon は 18。バックアップの道具は 18 のクライアントで、両方をダンプできる。復元はダンプ元と同じメジャー版以上のサーバーへ行う)。web は `bun run dev` 相当(`vite dev`)、api は `bun run dev`。ここは従来どおり。
 - Workers 向けのコードと設定は用意済み: `api/src/worker.ts`、`api/wrangler.jsonc`(Hyperdrive・vars)、`web/src/worker.ts`、`web/wrangler.jsonc`(サービスバインディング)。`wrangler deploy --dry-run` でバンドルが作れることを確認済み。
 - **本番のリソース(Neon、Hyperdrive、R2、Worker)はまだ作っていない。** 作成とデプロイは [deploy.md](./deploy.md) の手順で行う。
 - 同一オリジン化(web 経由で `/api/*` が api に届く)は、ローカルの `wrangler dev`(web と api を同時に起動)で確認済み。デプロイした実環境での確認は未実施。

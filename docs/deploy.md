@@ -59,7 +59,7 @@ web / api を Cloudflare Workers、Postgres を Neon(Hyperdrive 経由)、バッ
 
 Neon のコンソール(<https://console.neon.tech>)で操作する。
 
-1. **プロジェクトを作成する。** 名前は `ningyoutukai` など。Postgres のバージョンは **17**(`infra/scripts` の `pg_dump` が postgres:17 のため。揃える)。
+1. **プロジェクトを作成する。** 名前は `ningyoutukai` など。Postgres のバージョンは **18 でも 17 でもよい**(本番は 18 で作成済み)。バックアップの道具(`infra/scripts`)は 18 のクライアントなので、どちらにも対応する。復元は、ダンプを取ったサーバーと同じメジャー版以上のサーバーへ行う(18 のダンプを 17 へ復元すると失敗しうる)。
 2. **リージョン**: アジアの近いほうを選ぶ。Neon のコンソールの選択肢を確認し、**東京があれば東京、なければ Singapore(`aws-ap-southeast-1`)**。Cloudflare の Worker は利用者に近い所で動き、Hyperdrive が DB の近くに接続を保つので、リージョンは DB 側(日本の利用者に近いほう)で決める。作成後は変更できない(変えるなら作り直し)。
 3. **データベース名とロール**: 既定の `neondb` / `neondb_owner` のままでもよいが、DB 名は `ningyoutukai` にしておくとダンプのファイル名と揃う。ロールは `neondb_owner`(マイグレーションに DDL の権限が要るため、この手順ではオーナー権限のロールを使う)。
 4. **接続文字列を 2 種類控える**(コンソールの「Connect」)。
@@ -219,7 +219,7 @@ curl -s -o /dev/null -w "%{http_code}\n" "$WEB/api/product"   # 401(未ログイ
 
 ```sh
 export DATABASE_URL="$NEON_DIRECT_URL"          # direct を使う
-export USE_DOCKER=1                              # pg_dump を postgres:17 の docker で実行
+export USE_DOCKER=1                              # pg_dump を docker(PG_IMAGE、既定 postgres:18)で実行
 export R2_ACCOUNT_ID=... R2_BUCKET=ningyoutukai-backup
 export R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=...
 infra/scripts/backup.sh                          # dump → R2 保存 → 整理の対象表示。保存先のキーが出力される

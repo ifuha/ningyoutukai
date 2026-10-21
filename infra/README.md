@@ -5,13 +5,14 @@ PostgreSQL のダンプ(バックアップ)とリストアの環境。方針は 
 - 本番の PostgreSQL は Neon(Hyperdrive 経由)。Cloudflare Containers の Postgres は採用しなかった(`docs/infra-do-container.md`)。
 - バックアップは `pg_dump` の出力を Cloudflare R2 にだけ置く。`DATABASE_URL` に Neon の **direct** 接続(`-pooler` なし)を渡して `scripts/backup.sh` を実行する。
 - 定期実行は GitHub Actions のスケジュール実行を第一案とする(`docs/deploy.md` の「R2 とバックアップ」)。
-- `postgres/`(Dockerfile)は Containers 用に作ったもので、本番では使わない。ローカルの検証用に残している。
+- `postgres/`(Dockerfile)は Containers 用に作った、**採用しなかった構成**のもの。本番では使わず、記録とローカルの検証用に残している(Postgres 17 のまま。バックアップの道具の版とは無関係)。
+- Postgres の版: 本番(Neon)は 18、開発(`api/docker-compose.yml`)は 17。バックアップの道具(pg_dump / pg_restore / psql)は **18 のクライアント**(`PG_IMAGE` 既定 `postgres:18`)で、18 も 17 もダンプできる。
 
 ## 構成
 
 | パス | 内容 |
 | --- | --- |
-| `postgres/Dockerfile` | Containers 用の Postgres 17 イメージ(healthcheck 付き) |
+| `postgres/Dockerfile` | Containers 用の Postgres 17 イメージ(healthcheck 付き。採用しなかった構成) |
 | `postgres/restore-on-init.sh` | 初回起動時、`RESTORE_FROM_URL` があればダンプから復元する |
 | `scripts/dump.sh` | `pg_dump -Fc --no-owner --no-acl` でダンプを取得する |
 | `scripts/upload-r2.sh` | ダンプを R2 に保存する。古い世代の整理(`--prune`) |
@@ -30,6 +31,7 @@ PostgreSQL のダンプ(バックアップ)とリストアの環境。方針は 
 | --- | --- | --- |
 | `DATABASE_URL` | ダンプ元の接続 URL | dump / backup |
 | `USE_DOCKER` | `1` で pg_dump / psql / aws を docker で実行 | 全て |
+| `PG_IMAGE` | `USE_DOCKER=1` のとき pg_dump / pg_restore / psql に使うイメージ(既定 `postgres:18`) | 全て |
 | `R2_ACCOUNT_ID` | R2 のアカウント ID(エンドポイントを組み立てる) | upload / restore / backup |
 | `R2_ENDPOINT` | エンドポイントを直接指定(`R2_ACCOUNT_ID` より優先。ローカルの S3 互換サーバー用) | 同上 |
 | `R2_BUCKET` | バケット名 | 同上 |
@@ -42,7 +44,7 @@ PostgreSQL のダンプ(バックアップ)とリストアの環境。方針は 
 | `COMPARE_URL` | 復元後に行数を比較する相手(ダンプ元)の URL | restore |
 | `RESTORE_FROM_URL` | コンテナ初回起動時に取得するダンプの URL(署名付き URL) | postgres/Dockerfile |
 
-`USE_DOCKER=1` のとき、`localhost` は `host.docker.internal` に読み替える。手元の `pg_dump` がサーバーよりバージョンが古いと失敗するため、手元の Postgres が 17 でなければ `USE_DOCKER=1` を使う。
+`USE_DOCKER=1` のとき、`localhost` は `host.docker.internal` に読み替える。`pg_dump` はサーバーより古い版だと失敗する(17 の pg_dump では 18 のサーバーをダンプできない)。逆に新しい pg_dump は古いサーバーをダンプできるので、クライアントは 18 を使う。手元の `pg_dump` が 18 未満なら `USE_DOCKER=1` を使う。`dump.sh` は、`pg_dump` のメジャー版が接続先サーバーより古いと、ダンプ前に分かりやすいエラーで止まる。
 
 ## 使い方
 
@@ -92,6 +94,7 @@ infra/scripts/restore.sh ningyoutukai/2026/10/ningyoutukai-20261021-133830.dump 
 
 - 復元先の DB 名は必須。無ければ作る。`postgres` などの管理用 DB は指定できない。
 - 復元先に既存のテーブルがあるときは、`--force` を付けないと止まる(`--clean --if-exists` で上書きされるため)。
+- **ダンプを取ったサーバーと同じメジャー版以上のサーバーへ復元する**のが安全。18 のダンプ(Neon)を 17 のサーバーへ復元すると失敗しうる(17 のダンプを 18 へ復元するのは問題ない)。
 - 復元後、`COMPARE_URL` があればテーブルごとの行数を比較し、不一致なら異常終了する。
 
 ## ローカルでの確認手順
@@ -99,8 +102,8 @@ infra/scripts/restore.sh ningyoutukai/2026/10/ningyoutukai-20261021-133830.dump 
 開発用 DB(`api-db-1`、5433)は読み取り(ダンプ)だけに使い、復元は別のコンテナに対して行う。
 
 ```sh
-# 1. 使い捨ての Postgres 17 を別ポートで起動
-docker run -d --name pg-restore -e POSTGRES_PASSWORD=test -p 5440:5432 postgres:17
+# 1. 使い捨ての Postgres 18 を別ポートで起動
+docker run -d --name pg-restore -e POSTGRES_PASSWORD=test -p 5440:5432 postgres:18
 # 2. S3 互換サーバーを起動してバケットを作る(R2 の代わり。例: SeaweedFS)
 docker run -d --name s3-local -p 9100:8333 chrislusf/seaweedfs server -s3 -dir=/data
 curl -X PUT http://localhost:9100/ningyoutukai-backup

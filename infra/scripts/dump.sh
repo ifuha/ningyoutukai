@@ -3,7 +3,7 @@
 #
 # 使い方:
 #   DATABASE_URL=postgres://user:pass@host:5432/ningyoutukai ./dump.sh [出力ディレクトリ]
-#   USE_DOCKER=1 ./dump.sh   # pg_dump を docker (postgres:17) で実行する
+#   USE_DOCKER=1 ./dump.sh   # pg_dump を docker (PG_IMAGE。既定 postgres:18) で実行する
 #
 # 出力: <出力ディレクトリ>/ningyoutukai-YYYYmmdd-HHMMSS.dump(既定は infra/dumps)
 # 標準出力には出力ファイルのパスだけを出す(他のスクリプトから使うため)。
@@ -18,6 +18,8 @@ out_dir="$(cd "$out_dir" && pwd)"
 
 file="$out_dir/${DUMP_PREFIX:-ningyoutukai}-$(date +%Y%m%d-%H%M%S).dump"
 rm -f "$file"
+
+check_pg_client_version "$(conn_url "$DATABASE_URL")"
 
 log "ダンプを取得します"
 if ! MOUNT_DIR="$out_dir" pg pg_dump -Fc --no-owner --no-acl \
