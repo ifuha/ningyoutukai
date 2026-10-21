@@ -15,7 +15,7 @@
     // さらに COOKIE_DOMAIN = .example.com を足す。
     "BETTER_AUTH_URL": "https://ningyoutukai-web.kosame-project.workers.dev",
     "WEB_ORIGIN": "https://ningyoutukai-web.kosame-project.workers.dev",
-    "MAIL_FROM": "onboarding@resend.dev"
+    "MAIL_FROM": "人形使い <noreply@mail.maars.dev>"
   },
 
   // Neon への接続は Hyperdrive 経由。id は `wrangler hyperdrive create` が出力する値に置き換える。
