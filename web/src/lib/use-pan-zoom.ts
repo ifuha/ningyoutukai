@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import type { KeyboardEvent, MouseEvent, PointerEvent, RefObject } from 'react'
+import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent, UIEvent, RefObject } from 'react'
 import {
   clampPan,
   clampScale,
   fitView,
   MAX_ZOOM,
   MIN_ZOOM,
+  revealDelta,
   zoomAt,
 } from '#/lib/pan-zoom'
 import type { Size, View } from '#/lib/pan-zoom'
@@ -189,6 +190,32 @@ export function usePanZoom(
       e.stopPropagation()
     }
   }
+  // キーボード(Tab)でフォーカスが画面外の要素に移ったら、見える位置まで動かす(ズームはしない)
+  // マウスで押したときのフォーカス(:focus-visible でない)では動かさない
+  const onFocus = (e: FocusEvent<HTMLElement>) => {
+    const el = e.currentTarget
+    const t = e.target
+    if (t === el || !(t instanceof HTMLElement)) return
+    try {
+      if (!t.matches(':focus-visible')) return
+    } catch {
+      return
+    }
+    const a = el.getBoundingClientRect()
+    const r = t.getBoundingClientRect()
+    const ox = a.left + el.clientLeft
+    const oy = a.top + el.clientTop
+    const { dx, dy } = revealDelta(
+      { left: r.left - ox, top: r.top - oy, right: r.right - ox, bottom: r.bottom - oy },
+      { width: el.clientWidth, height: el.clientHeight },
+    )
+    if (dx !== 0 || dy !== 0) panBy(dx, dy)
+  }
+  // overflow: clip でも、念のため(clip 非対応のブラウザ向け)ネイティブのスクロールで生じたずれを戻す
+  const onScroll = (e: UIEvent<HTMLElement>) => {
+    e.currentTarget.scrollLeft = 0
+    e.currentTarget.scrollTop = 0
+  }
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return
     const v = viewRef.current
@@ -239,6 +266,8 @@ export function usePanZoom(
       onPointerCancel: end,
       onClickCapture,
       onKeyDown,
+      onFocus,
+      onScroll,
     },
   }
 }

@@ -54,3 +54,24 @@ export function zoomAt(
     size,
   )
 }
+
+// フォーカスした要素を見える位置まで動かす
+export const REVEAL_MARGIN = 16
+
+// 要素の矩形(領域の左上を原点とした座標)を、領域の内側(余白 margin)に収めるための移動量 { dx, dy }
+// すでに収まっていれば 0。領域より大きい要素は、左上の端を余白の位置に合わせる
+export function revealDelta(
+  rect: { left: number; top: number; right: number; bottom: number },
+  area: { width: number; height: number },
+  margin = REVEAL_MARGIN,
+): { dx: number; dy: number } {
+  const axis = (start: number, end: number, length: number) => {
+    if (end - start > length - margin * 2 || start < margin) return margin - start
+    if (end > length - margin) return length - margin - end
+    return 0
+  }
+  return {
+    dx: axis(rect.left, rect.right, area.width),
+    dy: axis(rect.top, rect.bottom, area.height),
+  }
+}

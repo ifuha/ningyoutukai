@@ -5,6 +5,7 @@ import {
   fitView,
   MAX_ZOOM,
   MIN_ZOOM,
+  revealDelta,
   zoomAt,
 } from './pan-zoom'
 
@@ -65,5 +66,43 @@ describe('clampPan', () => {
   test('中身が 80px より小さいときは、その大きさ分は残る', () => {
     const r = clampPan({ x: -5000, y: 0, scale: 1 }, { ...size, w: 50 })
     expect(r.x).toBe(0)
+  })
+})
+
+describe('revealDelta', () => {
+  const area = { width: 800, height: 600 }
+  const box = (left: number, top: number, w = 100, h = 40) => ({
+    left,
+    top,
+    right: left + w,
+    bottom: top + h,
+  })
+  test('収まっているときは 0', () => {
+    expect(revealDelta(box(100, 100), area)).toEqual({ dx: 0, dy: 0 })
+  })
+  test('左にはみ出すと、余白 16px の位置まで右へ', () => {
+    expect(revealDelta(box(-200, 100), area)).toEqual({ dx: 216, dy: 0 })
+  })
+  test('右にはみ出すと、余白 16px の位置まで左へ', () => {
+    expect(revealDelta(box(900, 100), area).dx).toBe(800 - 16 - 1000)
+  })
+  test('上と下にはみ出すとき', () => {
+    expect(revealDelta(box(100, -50), area).dy).toBe(66)
+    expect(revealDelta(box(100, 700), area).dy).toBe(600 - 16 - 740)
+  })
+  test('余白の内側(端ぎりぎり)も動かす', () => {
+    expect(revealDelta(box(4, 100), area).dx).toBe(12)
+  })
+  test('領域より大きい要素は、左上を余白に合わせる', () => {
+    expect(revealDelta(box(-300, -100, 1000, 800), area)).toEqual({
+      dx: 316,
+      dy: 116,
+    })
+  })
+  test('移動範囲の制限を通しても、要素の一部は領域に残る', () => {
+    const size = { cw: 800, ch: 600, w: 1000, h: 300 }
+    const d = revealDelta(box(5000, 100), area)
+    const v = clampPan({ x: d.dx, y: 0, scale: 1 }, size)
+    expect(v.x).toBe(80 - 1000)
   })
 })
