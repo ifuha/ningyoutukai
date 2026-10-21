@@ -151,6 +151,7 @@ function Product() {
           ) : (
             <div className="pb-4">
               <ProductTree
+                key={productId}
                 tree={tree.data}
                 onEditTask={openTask}
                 canOpenTask={canOpenTask}
