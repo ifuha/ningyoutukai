@@ -50,7 +50,7 @@ export function ProductTree({
         aria-label="ツリー(ドラッグか矢印キーで移動、+ と - で拡大縮小、0 で全体表示)"
         tabIndex={0}
         {...handlers}
-        className={`relative w-full touch-none select-none overflow-hidden overscroll-contain border border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
+        className={`relative w-full touch-none select-none overflow-clip overscroll-contain border border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
           dragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         style={{ height: 'max(420px, calc(100dvh - 14rem))' }}
@@ -113,7 +113,12 @@ export function ProductTree({
           aria-hidden="true"
           className="pointer-events-none absolute bottom-1 left-2 text-xs opacity-50"
         >
-          ドラッグ・二本指スクロールで移動、Ctrl+ホイール・ピンチで拡大縮小
+          <span className="pointer-coarse:hidden">
+            ドラッグ・二本指スクロールで移動、Ctrl+ホイール・ピンチで拡大縮小
+          </span>
+          <span className="hidden pointer-coarse:inline">
+            1 本指で移動、2 本指で拡大縮小
+          </span>
         </p>
       </div>
     </div>

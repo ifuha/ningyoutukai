@@ -145,6 +145,7 @@ Figma のログイン画面のデザインが、まだ完成していない。�
 
 - ドラッグは 5px 未満ならクリック扱いで、カードの中のボタン(タスク名、「他 N 件」)はそのまま押せる。動かしたあとの解放では click を捨てる。ポインターのキャプチャは、動かし始めてから行う。
 - wheel は、領域の上だけ `preventDefault`(`passive: false` で直接つける)。領域には `overscroll-behavior: contain` と `touch-action: none` をつけ、端でページが動かないようにした。そのため、**ページの縦スクロールは、領域の外(見出しの上、領域の余白)で行う**。
+- フォーカス追従: Tab で領域内のボタンにフォーカスが移ったとき、画面からはみ出していれば、余白 16px で見える位置まで動かす(`revealDelta`、ズームはしない、移動範囲の制限は通す)。キーボード由来(`:focus-visible`)のときだけで、マウスで押したときは動かさない。領域は `overflow: clip` にして、ネイティブの scrollIntoView で `scrollLeft` がずれて、状態と表示が食い違うのを防ぐ(念のため、`scroll` で 0 に戻す)。
 - 領域の高さは `max(420px, calc(100dvh - 14rem))`(自由に動かす余白のため)。ズームの中心の計算は、点 p を固定して s→s' にするとき `x' = p.x - (p.x - x) * (s'/s)`(y も同様)。
 - 計算(fit、ズームの中心、倍率と移動範囲の制限)は `lib/pan-zoom.ts` の純粋関数で、`lib/pan-zoom.test.ts` を `cd web && bun test` で確認できる(`tsconfig.json` では `*.test.ts` を型チェックの対象から外している)。測定は `lib/use-canvas-size.ts`(`ResizeObserver`)。旧 `use-drag-pan.ts` と `use-fit-scale.ts` は削除した。
 
