@@ -33,7 +33,6 @@ const PG_PORT = 5432;
  */
 export class PgContainer extends DurableObject<PgContainerEnv> {
   private ready?: Promise<void>;
-  private openConns = 0;
   private lastActivity = Date.now();
 
   constructor(ctx: DurableObjectState, env: PgContainerEnv) {
@@ -55,19 +54,10 @@ export class PgContainer extends DurableObject<PgContainerEnv> {
     this.lastActivity = Date.now();
     const conn = this.ctx.container!.getTcpPort(PG_PORT).connect(`localhost:${PG_PORT}`);
     await conn.opened;
-    this.openConns++;
-    // ソケットが閉じたら数を戻す(接続中は、無通信でもコンテナを止めない)
-    const closed = () => {
-      this.openConns = Math.max(0, this.openConns - 1);
-      this.lastActivity = Date.now();
-    };
-    conn.closed.then(closed, closed);
+    // 接続の本数は数えない。ローカルでは、Worker 側が閉じても conn.closed が解決しなかったため、
+    // 数が減らず、無通信の判定に使えなかった(コンテナ内の Postgres 側では接続は閉じている)。
+    // 無通信かどうかは、最後に接続を開いた時刻だけで見る。
     return { readable: conn.readable, writable: conn.writable };
-  }
-
-  /** 診断用: 開いている接続の数 */
-  async stats() {
-    return { openConns: this.openConns, running: this.ctx.container?.running ?? false };
   }
 
   private ensureReady() {
@@ -142,12 +132,12 @@ export class PgContainer extends DurableObject<PgContainerEnv> {
     await this.ctx.storage.setAlarm(Date.now() + this.sleepAfterMs);
   }
 
-  /** 無通信の確認。接続が残っているか、最後の通信から sleepAfter が過ぎていなければ、次を予約する */
+  /** 無通信の確認。最後に接続を開いてから sleepAfter が過ぎていなければ、次を予約する */
   async alarm() {
     const c = this.ctx.container;
     if (!c?.running) return;
     const idle = Date.now() - this.lastActivity;
-    if (this.openConns > 0 || idle < this.sleepAfterMs) {
+    if (idle < this.sleepAfterMs) {
       await this.ctx.storage.setAlarm(Date.now() + Math.max(1000, this.sleepAfterMs - idle));
       return;
     }
