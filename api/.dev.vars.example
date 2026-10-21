@@ -10,3 +10,10 @@ WEB_ORIGIN=http://localhost:3000
 # GOOGLE_CLIENT_SECRET=
 # RESEND_API_KEY=
 # MAIL_FROM=
+
+# --- Containers の Postgres を Durable Object 経由で使うとき(wrangler.jsonc の PG_VIA_DO。docs/infra-do-container.md) ---
+# DATABASE_URL は、ユーザー / パスワード / DB 名の指定にだけ使う(ホスト名は何でもよい)
+# DATABASE_URL=postgres://postgres:postgres@do/ningyoutukai
+# PG_PASSWORD=postgres                # コンテナの POSTGRES_PASSWORD(DATABASE_URL のパスワードと同じにする)
+# PG_SLEEP_AFTER_SECONDS=600          # 接続が無いままこの秒数が過ぎたらコンテナを止める(データは消える)
+# RESTORE_FROM_URL=                   # 起動時にダンプ(pg_dump -Fc)から復元するときの URL
