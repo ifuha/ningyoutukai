@@ -65,6 +65,11 @@ describe('clampPan', () => {
   test('右へ出しすぎても、左の 80px は領域に残る', () => {
     expect(clampPan({ ...v, x: 5000 }, size).x).toBe(800 - 80)
   })
+  test('top / bottom があるとき、中身の一辺は見える領域(見出しの下)に 80px 残る', () => {
+    const sz = { ...size, top: 100, bottom: 50 }
+    expect(clampPan({ ...v, y: -5000 }, sz).y).toBe(100 + 80 - 300)
+    expect(clampPan({ ...v, y: 5000 }, sz).y).toBe(600 - 50 - 80)
+  })
   test('上下も同様', () => {
     expect(clampPan({ ...v, y: -5000 }, size).y).toBe(80 - 300)
     expect(clampPan({ ...v, y: 5000 }, size).y).toBe(600 - 80)
@@ -131,5 +136,38 @@ describe('visibleCenter', () => {
       x: 400,
       y: 100 + (600 - 150) / 2,
     })
+  })
+})
+
+describe('visibleCenter と中身', () => {
+  const sz = { cw: 1000, ch: 800, w: 1000, h: 400, top: 80, bottom: 48 }
+  test('中身が全部見えているなら、中身の中央', () => {
+    const view = { x: 100, y: 150, scale: 0.5 }
+    expect(visibleCenter(sz, view)).toEqual({ x: 350, y: 250 })
+  })
+  test('一部だけ見えているなら、見えている部分の中央', () => {
+    const view = { x: 0, y: -100, scale: 1 }
+    // 中身は y -100〜300、見える領域は 80〜752 → 共通部分は 80〜300
+    expect(visibleCenter(sz, view)).toEqual({ x: 500, y: 190 })
+  })
+  test('共通部分が無いときは、見える領域の中央', () => {
+    const view = { x: 0, y: 5000, scale: 1 }
+    expect(visibleCenter(sz, view)).toEqual({ x: 500, y: 416 })
+  })
+  test('「＋」を何度押しても、ツリーは見える領域に残り、見出しの下に潜らない', () => {
+    // 12 人相当: 自然な大きさ 3200×500、1280×800 の領域、fit は 35% 前後
+    const s = { cw: 1280, ch: 800, w: 3200, h: 500, top: 81, bottom: 48 }
+    const fit = fitView(s)
+    let view = fit
+    for (let i = 0; i < 6; i++) {
+      const c = visibleCenter(s, view)
+      view = zoomAt(view, c, view.scale * 1.25, s, fit.scale)
+      const top = view.y
+      const bottom = view.y + s.h * view.scale
+      expect(bottom).toBeGreaterThan(s.top + 80 - 1)
+      expect(top).toBeLessThan(s.ch - s.bottom - 80 + 1)
+    }
+    // 見出しの下に、ツリーの上端が潜り込んでいない(中央から拡大するので、上端が見出しより上へ行きすぎない)
+    expect(view.y + s.h * view.scale).toBeGreaterThan(s.top)
   })
 })

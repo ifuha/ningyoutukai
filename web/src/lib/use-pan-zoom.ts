@@ -58,7 +58,7 @@ export function usePanZoom(
     const s = sizeRef.current
     const v = viewRef.current
     if (!s || !v) return
-    const at = p ?? visibleCenter(s)
+    const at = p ?? visibleCenter(s, v)
     commit(zoomAt(v, at, scale, s, fitScaleRef.current))
   }
   const panBy = (dx: number, dy: number) => {

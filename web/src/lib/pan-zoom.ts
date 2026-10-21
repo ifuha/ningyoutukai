@@ -35,16 +35,19 @@ export function clampScale(scale: number, fitScale: number): number {
   return Math.min(MAX_ZOOM * fitScale, Math.max(MIN_ZOOM * fitScale, scale))
 }
 
-// 中身が完全に領域の外へ消えないよう、位置を制限する
-export function clampPan(view: View, { cw, ch, w, h }: Size): View {
+// 中身が完全に見えなくならないよう、位置を制限する
+// 「見える領域」は、左右は領域の幅、上下は重ねている見出し・操作バー(top / bottom)を除いた範囲。中身の一辺が、そこに最低 80px 残る
+export function clampPan(view: View, { cw, ch, w, h, top = 0, bottom = 0 }: Size): View {
   const sw = w * view.scale
   const sh = h * view.scale
+  const lo = top
+  const hi = ch - bottom
   const mx = Math.min(MIN_VISIBLE, sw, cw)
-  const my = Math.min(MIN_VISIBLE, sh, ch)
+  const my = Math.min(MIN_VISIBLE, sh, hi - lo)
   return {
     scale: view.scale,
     x: Math.min(cw - mx, Math.max(mx - sw, view.x)),
-    y: Math.min(ch - my, Math.max(my - sh, view.y)),
+    y: Math.min(hi - my, Math.max(lo + my - sh, view.y)),
   }
 }
 
@@ -92,10 +95,24 @@ export function revealDelta(
   }
 }
 
-// ボタン・キーでズームするときの中心: 上下に重ねている見出し・操作バーを除いた、見える領域の中央
-export function visibleCenter({ cw, ch, top = 0, bottom = 0 }: Size): {
-  x: number
-  y: number
-} {
-  return { x: cw / 2, y: top + (ch - top - bottom) / 2 }
+// ボタン・キーでズームするときの中心
+// 見える領域(上下に重ねている見出し・操作バーを除いた範囲)と、中身(view を渡したとき)の共通部分の中央。
+// 共通部分が無い(view なし、または中身が見えていない)ときは、見える領域の中央
+export function visibleCenter(
+  { cw, ch, w, h, top = 0, bottom = 0 }: Size,
+  view?: View,
+): { x: number; y: number } {
+  let x0 = 0
+  let x1 = cw
+  let y0 = top
+  let y1 = ch - bottom
+  const area = { x: cw / 2, y: (y0 + y1) / 2 }
+  if (view) {
+    x0 = Math.max(x0, view.x)
+    x1 = Math.min(x1, view.x + w * view.scale)
+    y0 = Math.max(y0, view.y)
+    y1 = Math.min(y1, view.y + h * view.scale)
+    if (x1 <= x0 || y1 <= y0) return area
+  }
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2 }
 }
