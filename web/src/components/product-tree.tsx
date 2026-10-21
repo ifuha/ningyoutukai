@@ -6,6 +6,7 @@ import type {
   TreeMember,
   TreeTask,
 } from '#/lib/api'
+import { useDragPan } from '#/lib/use-drag-pan'
 import { useFitScale } from '#/lib/use-fit-scale'
 
 const MIN_ZOOM = 0.5
@@ -13,7 +14,7 @@ const MAX_ZOOM = 4
 const STEP = 1.25
 
 // リーダーを一番上、その下にメンバーを横に並べる木構造。線は破線(CSS だけ)、矢印は子から親へ向く
-// 既定は、幅に収まるよう全体を縮小する(横スクロールなし)。操作バーで拡大すると、ツリーの領域だけがスクロールする
+// 既定は、幅に収まるよう全体を縮小する(横スクロールなし)。操作バーで拡大すると、スクロールバーは出さず、ドラッグ・スワイプで横に動かす
 // `onEditTask` を渡すと、タスクが押せて、押した人とタスクを渡す(`canOpenTask` があれば、それが true の人のタスクだけ)
 // `onShowTasks` を渡すと、「他 N 件」が押せて、その人を渡す(全員向け)
 export function ProductTree({
@@ -53,6 +54,10 @@ export function ProductTree({
     }
     centerRef.current = null
   }, [zoom, containerRef])
+  const { canPan, dragging, handlers } = useDragPan(containerRef, [
+    shown,
+    width,
+  ])
   // Ctrl/⌘ + ホイールで拡大縮小(ツリーの上だけ。passive だと preventDefault できないので直接つける)
   const wheelRef = useRef(changeZoom)
   wheelRef.current = (next) => changeZoom(next)
@@ -82,8 +87,16 @@ export function ProductTree({
       />
       <div
         ref={containerRef}
-        className="relative w-full overflow-auto"
-        style={{ height: height * shown + (zoom > 1 ? 16 : 0) }}
+        role="region"
+        aria-label="ツリー(拡大中は、ドラッグか左右キーで動かせます)"
+        tabIndex={0}
+        {...handlers}
+        className={`relative w-full touch-pan-y overflow-hidden ${
+          canPan
+            ? `select-none ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`
+            : ''
+        }`}
+        style={{ height: height * shown }}
       >
         <div
           ref={contentRef}
