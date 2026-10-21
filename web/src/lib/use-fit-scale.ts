@@ -1,8 +1,9 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 
-type Fit = { scale: number; height: number }
+type Fit = { scale: number; width: number; height: number }
 
 // コンテナの幅に収まるよう、中身を縮小する倍率を測る。収まるときは 1(拡大はしない)
+// width / height は、中身の自然な大きさ(倍率をかける前)。呼び出し側が、拡大縮小したあとの大きさを出すのに使う
 // 測定前(サーバー描画・初回)は null を返すので、呼び出し側は中身を隠しておく
 export function useFitScale() {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -17,13 +18,14 @@ export function useFitScale() {
     const contentWidth = content.offsetWidth
     if (contentWidth === 0) return
     const scale = Math.min(1, container.clientWidth / contentWidth)
-    const height = content.offsetHeight * scale
+    const height = content.offsetHeight
     setFit((prev) =>
       prev &&
       Math.abs(prev.scale - scale) < 0.001 &&
-      Math.abs(prev.height - height) < 0.5
+      prev.width === contentWidth &&
+      prev.height === height
         ? prev
-        : { scale, height },
+        : { scale, width: contentWidth, height },
     )
   }, [])
 
@@ -39,6 +41,7 @@ export function useFitScale() {
     containerRef,
     contentRef,
     scale: fit ? fit.scale : null,
-    height: fit ? fit.height : undefined,
+    width: fit?.width ?? 0,
+    height: fit?.height ?? 0,
   }
 }
