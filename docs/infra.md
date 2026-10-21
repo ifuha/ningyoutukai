@@ -34,9 +34,11 @@
 
 ## タスク
 
-- [ ] Postgres 用の `Dockerfile` と Containers の設定を作成する
+- [x] Postgres 用の `Dockerfile` を作成する(`infra/postgres/`)
+- [ ] Containers の設定を作成する(`wrangler` の `containers` 設定、シークレット、`RESTORE_FROM_URL` の発行)
 - [ ] api を Workers で動かせるようにする(Workers からコンテナの Postgres に接続する)
 - [ ] web / api を Workers にデプロイする設定を追加する
-- [ ] R2 のバケットと、ダンプ用の認証情報を用意する
-- [ ] `pg_dump` を R2 に保存する処理を作る
-- [ ] ダンプからのリストア手順を作成し、動作確認する
+- [ ] R2 のバケットと、ダンプ用の認証情報を用意する(手順の概要は `infra/README.md`。実際の作成は未実施)
+- [x] `pg_dump` を R2 に保存する処理を作る(`infra/scripts/`。ローカルの S3 互換サーバーで動作確認済み。実際の R2 では未確認)
+- [x] ダンプからのリストア手順を作成し、動作確認する(`infra/README.md`。使い捨てコンテナへの復元と行数の一致を確認済み)
+- [ ] Cron Trigger から `backup.sh` を呼ぶ Worker を作る(方針は `infra/README.md`)
