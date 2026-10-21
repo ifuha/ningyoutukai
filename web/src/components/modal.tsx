@@ -12,12 +12,21 @@ export function Modal({
   children: React.ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
+  // 開く直前にフォーカスされていた要素。閉じたら戻す(消えていたら何もしない)
+  const returnTo = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     const dialog = ref.current
     if (!dialog) return
-    if (open && !dialog.open) dialog.showModal()
-    if (!open && dialog.open) dialog.close()
+    if (open && !dialog.open) {
+      returnTo.current = document.activeElement as HTMLElement | null
+      dialog.showModal()
+    }
+    if (!open) {
+      if (dialog.open) dialog.close()
+      if (returnTo.current?.isConnected) returnTo.current.focus()
+      returnTo.current = null
+    }
   }, [open])
 
   return (

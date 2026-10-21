@@ -74,7 +74,8 @@ export function LoginButtons() {
       })
       // 成功すると、ブラウザが認可画面に移動する。ここに来るのは、開始に失敗したとき
       if (error) {
-        setFailed(error.message ?? 'ログインを開始できませんでした')
+        // better-auth のメッセージは英語なので出さない
+        setFailed('ログインを開始できませんでした。時間をおいて、もう一度お試しください')
         setPending(null)
       }
     } catch {

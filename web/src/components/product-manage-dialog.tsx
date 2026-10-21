@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '#/components/modal'
 import { api } from '#/lib/api'
+import { errorMessage } from '#/lib/error-message'
 
 const buttonClass =
   'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
@@ -12,7 +13,7 @@ const inputClass =
 function ErrorText({ message }: { message: string }) {
   return (
     <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
-      ERR {message}
+      ERR {errorMessage(message)}
     </p>
   )
 }
@@ -105,14 +106,15 @@ function DeleteBlock({
         <div className="space-y-2">
           <p className="break-words text-sm">
             「{productName}」を削除しますか?{' '}
-            {memberCount === undefined ? 'メンバー' : `メンバー ${memberCount}`}
-            ・タスク・招待も、すべて消えます。元に戻せません
+            {memberCount === undefined ? 'メンバー' : `メンバー(${memberCount} 人)`}
+            、タスク、招待、タスクの種類が、すべて消えます。元に戻せません
           </p>
           <label htmlFor="delete-confirm" className="block text-sm">
             確認のため、プロダクト名を入力してください
           </label>
           <input
             id="delete-confirm"
+            autoFocus
             value={typed}
             disabled={remove.isPending}
             onChange={(e) => setTyped(e.target.value)}
