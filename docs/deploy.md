@@ -230,7 +230,7 @@ infra/scripts/backup.sh                          # dump → R2 保存 → 整理
 
 Cloudflare の Cron Trigger は Worker を起動するだけで、Worker の中では `pg_dump` を実行できない(コンテナを使わない前提)。そこで、**GitHub Actions のスケジュール実行**で `infra/scripts/backup.sh` を動かす。ワークフローは [`.github/workflows/backup.yml`](../.github/workflows/backup.yml)。登録するシークレットと使い方は、次の「GitHub Actions のワークフロー」。
 
-- Postgres のバージョン: 本番の Neon は 18。CI の Postgres(サービスコンテナ)は 18 で本番に合わせ、開発用の `api/docker-compose.yml` は 17 のまま(CI は 18、開発は 17 という差がある)。
+- Postgres のバージョン: 本番の Neon は 18。CI の Postgres(サービスコンテナ)は 18 で本番に合わせ、開発用の `api/docker-compose.yml` も 18(v2.0 で 17 から上げた。CI の DB 名は、テストの安全装置のため `ningyoutukai_test`)。
 - 毎日 1 回、UTC 18:17(日本時間 3:17)に実行する。時刻は `backup.yml` の `cron` で変える。
 - ランナーの `pg_dump` は 16 で Neon(18)より古いため、`USE_DOCKER=1` で `postgres:18` の docker 上で実行する(`PG_IMAGE` で明示している。PGDG の `postgresql-client-18` を入れる方法もあるが、スクリプトが対応している docker 方式を採用した)。
 - 古いダンプの削除は、定期実行では行わない(対象の表示のみ)。手動実行で `prune` にチェックを入れたときだけ `PRUNE=1` になる。
@@ -335,7 +335,7 @@ api と web は独立してロールバックできる。`/api/*` の形(契約)
 | api が 500、ログに `connect ECONNREFUSED` / `ETIMEDOUT` | Hyperdrive の接続先に届いていない。接続文字列が direct か、`?sslmode=require` が付いているか、Neon の compute が起動中でないかを確認。`npx wrangler hyperdrive get ningyoutukai-db` で設定を見る |
 | `password authentication failed` | Hyperdrive に入れたパスワードが古い。Neon でパスワードを変えたあとは `wrangler hyperdrive update` |
 | 初回のリクエストだけ遅い | Neon の scale to zero(compute の再開)。Launch で停止を遅らせるか、許容する |
-| `wrangler dev` が `use a local Postgres connection string` で止まる | hyperdrive の `localConnectionString` か、環境変数 `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` が必要。`api/wrangler.jsonc` に既定値(docker compose の DB)が入っている |
+| `wrangler dev` が `use a local Postgres connection string` で止まる | hyperdrive の `localConnectionString` か、環境変数 `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` が必要。`api/wrangler.jsonc` に既定値(dev 用コンテナの DB、ポート 5434)が入っている |
 | `wrangler deploy` が `REPLACE_WITH_HYPERDRIVE_ID` で失敗 | [3.](#3-hyperdrive-を作る) の id の置き換えを忘れている |
 | web のデプロイで「service not found」 | api を先にデプロイしていない、または `services[].service` が api の `name`(`ningyoutukai-api`)と違う |
 | ログインしても cookie が付かない / すぐログアウトされる | (案 S)`BETTER_AUTH_URL` が web のオリジンと一致しているか(`https`、サブドメイン、末尾にスラッシュなし)。`BETTER_AUTH_SECRET` を途中で変えると、既存のセッションが全部無効になる。ブラウザで web の別オリジン(api の `workers.dev` の URL)を開いてログインしようとしていないか |

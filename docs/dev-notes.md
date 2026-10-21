@@ -49,15 +49,15 @@ Figma のログイン画面のデザインが、まだ完成していない。�
 
 ### 動かして確認する方法
 
-1. DB: `api` ディレクトリで `docker compose up -d --wait`
-2. マイグレーション: `api` ディレクトリで `bunx drizzle-kit migrate`(初回と、スキーマを変えたあと)
-3. api: `api` ディレクトリで `bun run dev`(ポート 3001)。`api/.env` を変えたら、api を再起動する
+1. DB: `api` ディレクトリで `docker compose up -d --wait`(dev 用の Postgres 18、ポート 5434。開発用 DB とテスト用 DB ができる)
+2. 環境変数: `api/.env.local.example` を `api/.env.local` にコピーして埋める(初回のみ)。マイグレーション: `api` ディレクトリで `bun run db:migrate`(初回と、スキーマを変えたあと)
+3. api: `api` ディレクトリで `bun run dev`(ポート 3001)。`api/.env.local` を変えたら、api を再起動する
 4. web: `web` ディレクトリで `npm run dev`(ポート 3000)
 5. `http://localhost:3000/` を開く
 
-実際にログインするには、`api/.env` に `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`、`GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` が必要。未設定だと、ボタンを押しても、api が「プロバイダが見つかりません」を返す(画面の見た目の確認には、影響しない)。
+実際にログインするには、`api/.env.local` に(開発用の OAuth アプリの値を。本番用とは分ける) `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`、`GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` が必要。未設定だと、ボタンを押しても、api が「プロバイダが見つかりません」を返す(画面の見た目の確認には、影響しない)。
 
-メール通知は、`api/.env` の `RESEND_API_KEY` が未設定なら送らず、ログだけ出す(`api/src/lib/mailer.ts`)。`.env` の説明は、ルートの [README.md](../README.md) を見る。
+メール通知は、`RESEND_API_KEY` が空(未設定)なら送らず、宛先・件名・本文をログに出す(`api/src/lib/mailer.ts`)。ローカルでは空のままにする。`.env.local` の説明は、ルートの [README.md](../README.md) を見る。
 
 ## 認証まわり
 
