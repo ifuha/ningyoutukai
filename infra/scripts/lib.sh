@@ -52,7 +52,7 @@ check_pg_client_version() {
   server="$(pg psql "$url" -At -c "show server_version_num" | awk '{print int($1/10000)}')"
   [[ "$client" =~ ^[0-9]+$ && "$server" =~ ^[0-9]+$ ]] || die "pg_dump またはサーバーのバージョンを取得できませんでした"
   if [ "$client" -lt "$server" ]; then
-    die "pg_dump が $client で、サーバー($server)より古いためダンプできません。USE_DOCKER=1 を付けるか、postgres クライアントを $server 以上にしてください(既定の PG_IMAGE は postgres:18)"
+    die "pg_dump が $client で、サーバー($server)より古いためダンプできません。USE_DOCKER=1 を付けるか(使う版は PG_IMAGE、既定 postgres:18)、postgres クライアントを 18 以上にしてください"
   fi
 }
 
