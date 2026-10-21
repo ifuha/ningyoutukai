@@ -136,7 +136,7 @@ describe("GitHub ログインのコールバック(外部通信はスタブ)", (
       name: "Google User",
       email,
       emailVerified: true,
-    });
+    }, { method: "admin" } as never);
     await internalAdapter.createAccount({
       userId: created.id,
       providerId: "google",
@@ -146,6 +146,26 @@ describe("GitHub ログインのコールバック(外部通信はスタブ)", (
     expect(session.user.id).toBe(created.id);
     const accounts = await db.select().from(account).where(eq(account.userId, created.id));
     expect(accounts.map((a) => a.providerId).sort()).toEqual(["github", "google"]);
+    expect((await authRow(email)).githubId).toBe(login);
+  });
+
+  test("ログイン済みの人が /update-user で githubId を書き換えても、保存されない(他人宛ての招待を横取りさせない)", async () => {
+    const login = `octo-${uid()}`;
+    const email = `cb-${crypto.randomUUID()}@example.com`;
+    await loginWithGithub({ numericId: 1005, login, email });
+    const { internalAdapter } = await auth.$context;
+    const created = await authRow(email);
+    const sess = await internalAdapter.createSession(created.id);
+    const { authCookies, secret } = await auth.$context;
+    const { serializeSignedCookie } = await import("better-call");
+    const signed = (await serializeSignedCookie(authCookies.sessionToken.name, sess.token, secret)).split(";")[0]!;
+    await auth.handler(
+      new Request(`${baseURL}/api/auth/update-user`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: webOrigin, cookie: signed },
+        body: JSON.stringify({ githubId: "victim", name: "x" }),
+      }),
+    );
     expect((await authRow(email)).githubId).toBe(login);
   });
 });
