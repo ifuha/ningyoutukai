@@ -83,6 +83,7 @@ bun install
 DATABASE_URL="$NEON_DIRECT_URL" bun run db:migrate
 ```
 
+- GitHub Actions から実行することもできる(手動実行の `migrate` ワークフロー。[8. の「GitHub Actions のワークフロー」](#github-actions-のワークフロー))。
 - `db:migrate` は `drizzle-kit migrate`(`api/package.json`)。`drizzle/` 以下のマイグレーションを順に適用する。適用済みのものは `drizzle.__drizzle_migrations` に記録され、再実行しても再適用されない。
 - `api/drizzle.config.ts` は `dotenv/config` を読むが、**シェルの環境変数が優先される**(`api/.env` に開発用の値があっても、上書きされない)。
 - 確認(任意): `psql "$NEON_DIRECT_URL" -c '\dt'` で `products`、`tasks`、`user` などが見える。
@@ -227,36 +228,63 @@ infra/scripts/backup.sh                          # dump → R2 保存 → 整理
 
 ### 定期実行: GitHub Actions のスケジュール実行(第一案)
 
-Cloudflare の Cron Trigger は Worker を起動するだけで、Worker の中では `pg_dump` を実行できない(コンテナを使わない前提)。そこで、**GitHub Actions のスケジュール実行**で `infra/scripts/backup.sh` を動かす。
+Cloudflare の Cron Trigger は Worker を起動するだけで、Worker の中では `pg_dump` を実行できない(コンテナを使わない前提)。そこで、**GitHub Actions のスケジュール実行**で `infra/scripts/backup.sh` を動かす。ワークフローは [`.github/workflows/backup.yml`](../.github/workflows/backup.yml)。登録するシークレットと使い方は、次の「GitHub Actions のワークフロー」。
 
-1. GitHub のリポジトリの Settings → Secrets に、`NEON_DATABASE_URL`(direct)、`R2_ACCOUNT_ID`、`R2_BUCKET`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY` を登録する。
-2. `.github/workflows/backup.yml` を作る(例。リポジトリには未追加)。
+- Postgres のバージョン: 本番の Neon は 18。CI の Postgres(サービスコンテナ)は 18 で本番に合わせ、開発用の `api/docker-compose.yml` は 17 のまま(CI は 18、開発は 17 という差がある)。
+- 毎日 1 回、UTC 18:17(日本時間 3:17)に実行する。時刻は `backup.yml` の `cron` で変える。
+- ランナーの `pg_dump` は 16 で Neon(18)より古いため、`USE_DOCKER=1` で `postgres:18` の docker 上で実行する(`PG_IMAGE` で明示している。PGDG の `postgresql-client-18` を入れる方法もあるが、スクリプトが対応している docker 方式を採用した)。
+- 古いダンプの削除は、定期実行では行わない(対象の表示のみ)。手動実行で `prune` にチェックを入れたときだけ `PRUNE=1` になる。
+- ダンプは一時ディレクトリに作り、R2 に保存したあとで削除する。**GitHub のアーティファクトには残さない**(ダンプにはユーザーのメールアドレスが入る)。ワークフローのログにダンプの中身も出ない。
+- 失敗すると GitHub が通知する(Actions の失敗通知)。スケジュール実行は、リポジトリに 60 日動きがないと止まる点に注意。
+- 代替案: Neon のダンプを Cloudflare Containers の Cron で取る(コストと運用が増えるので、第二案)。
 
-```yaml
-name: backup
-on:
-  schedule:
-    - cron: "0 17 * * *"   # UTC 17:00 = 日本時間 02:00
-  workflow_dispatch: {}
-jobs:
-  backup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: infra/scripts/backup.sh
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-          USE_DOCKER: "1"
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          PRUNE: "1"
+### GitHub Actions のワークフロー
+
+3 つのワークフローが `.github/workflows/` にある。
+
+| ファイル | きっかけ | 内容 | 使うシークレット |
+| --- | --- | --- | --- |
+| `ci.yml` | PR(base: dev / main)、dev への push | api: 型検査、マイグレーション、`bun test`(Postgres 18 のサービスコンテナ)。web: 型検査、ビルド | なし(フォークの PR でも安全) |
+| `migrate.yml` | 手動のみ | 本番(Neon)へ `bun run db:migrate` | `NEON_DATABASE_URL` |
+| `backup.yml` | 毎日(UTC 18:17)と手動 | `infra/scripts/backup.sh`(ダンプ → R2) | `NEON_DATABASE_URL`、`R2_*` |
+
+全て `permissions: contents: read`。
+
+#### GitHub に登録するもの
+
+リポジトリの Settings → Secrets and variables → Actions に、シークレットを登録する(値はここに書かない。`read -s` で入力すると履歴にも残らない)。
+
+| 名前 | 内容 |
+| --- | --- |
+| `NEON_DATABASE_URL` | Neon の **direct** 接続文字列(ホスト名に `-pooler` が入らない。[1.](#1-neon-のプロジェクトを作る)) |
+| `R2_ACCOUNT_ID` | Cloudflare のアカウント ID |
+| `R2_BUCKET` | バックアップ用のバケット名(例: `ningyoutukai-backup`) |
+| `R2_ACCESS_KEY_ID` | R2 API トークンの Access Key ID |
+| `R2_SECRET_ACCESS_KEY` | R2 API トークンの Secret Access Key |
+
+```sh
+# gh のコマンドで登録する例(値は標準入力から。コマンドラインに書かない)
+gh secret set NEON_DATABASE_URL --repo ifuha/ningyoutukai
+gh secret set R2_ACCOUNT_ID --repo ifuha/ningyoutukai
+gh secret set R2_BUCKET --repo ifuha/ningyoutukai
+gh secret set R2_ACCESS_KEY_ID --repo ifuha/ningyoutukai
+gh secret set R2_SECRET_ACCESS_KEY --repo ifuha/ningyoutukai
 ```
 
-- 失敗すると GitHub が通知する(Actions の失敗通知)。スケジュール実行は、リポジトリに 60 日動きがないと止まる点に注意。
-- ダンプにはユーザーのメールアドレスが入る。ワークフローのログにダンプの中身を出さない(`backup.sh` は出さない)。
-- 代替案: Neon のダンプを Cloudflare Containers の Cron で取る(コストと運用が増えるので、第二案)。
+**Environment `production`**: Settings → Environments → New environment で `production` を作る。`migrate.yml` はこの Environment で動く。**Required reviewers(レビュー必須)を設定する**ことを勧める。承認されるまでジョブが始まらないので、誤って本番に適用する事故を防げる(`confirm` の入力と二重の安全装置になる)。`NEON_DATABASE_URL` を Environment のシークレットとして登録すれば、本番のマイグレーション以外からは読めなくなる(その場合 `backup.yml` は Environment を指定していないので、リポジトリのシークレットにも登録する)。
+
+#### 使い方
+
+- **CI**: PR を作る / dev に push すると自動で動く。結果は PR の Checks、またはリポジトリの Actions タブで見る。
+- **マイグレーション**: スキーマを変えたとき、デプロイの前に実行する。Actions タブ → `migrate` → Run workflow → `confirm` に `migrate` と入力して実行する(違う文字列だと何もしない)。Environment に保護ルールがあれば、承認後に始まる。ログには、direct 接続の検査結果、リポジトリのマイグレーション数と適用済みの数(実行前)、適用後の数が出る。接続文字列は出ない。pooled(`-pooler`)の文字列が登録されていると、検査で失敗する。
+- **バックアップの手動実行**: Actions タブ → `backup` → Run workflow。古いダンプも削除したいときだけ `prune` にチェックを入れる。成功すると、ログの最後に保存先のキー(`ningyoutukai/YYYY/MM/...dump`)が出る。R2 のバケットにファイルがあることも確認する。
+- 初回のバックアップのあとは、[リストアの確認](#リストアの確認)を 1 回行う。
+
+#### 補足
+
+- **アクションのピン留め**: `oven-sh/setup-bun` は、コミット SHA でピン留めしている(コメントにバージョン)。`actions/checkout`、`actions/setup-node` はメジャータグ(`@v7`)のままで、**要ピン留め**(サプライチェーン対策として、SHA に固定するのが望ましい。`git ls-remote --tags https://github.com/actions/checkout` で SHA を調べ、Dependabot の `github-actions` で更新できる)。
+- **Neon の GitHub 連携**(プルリクエストごとにブランチを作る機能)は、任意の拡張。使うと CI が本番の DB に触れずに本番相当のデータで試せるが、今回は入れていない。CI は Postgres のサービスコンテナで足りるため。
+- ブランチ保護で CI を必須にする設定(Settings → Branches)は、必要に応じて別途行う。
 
 ### リストアの確認
 
