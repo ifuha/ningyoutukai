@@ -7,6 +7,7 @@ import {
   type TreeMember,
   type TreeTask,
 } from '#/lib/api'
+import { errorMessage } from '#/lib/error-message'
 
 // 期限は日本時間(+09:00)として扱う。`datetime-local` の値(`2026-12-01T09:00`)と ISO を行き来する
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
@@ -248,7 +249,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
 
       {save.isError && (
         <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
-          ERR {save.error.message}
+          ERR {errorMessage(save.error.message)}
         </p>
       )}
 

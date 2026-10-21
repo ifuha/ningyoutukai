@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '#/components/modal'
 import { api } from '#/lib/api'
+import { errorMessage } from '#/lib/error-message'
 
 const buttonClass =
   'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
@@ -12,7 +13,7 @@ const inputClass =
 function ErrorText({ message }: { message: string }) {
   return (
     <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
-      ERR {message}
+      ERR {errorMessage(message)}
     </p>
   )
 }

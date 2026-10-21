@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { Prompt, Terminal } from '#/components/terminal'
 import { api, type ProductSummary } from '#/lib/api'
+import { errorMessage } from '#/lib/error-message'
 
 // プロダクト作成(`/products/new`)。ログイン必須。仮の見た目(ターミナル風)
 export const Route = createFileRoute('/products/new')({
@@ -96,7 +97,7 @@ function NewProduct() {
             </div>
             {error && (
               <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
-                ERR {error}
+                ERR {errorMessage(error)}
               </p>
             )}
           </form>
