@@ -134,3 +134,13 @@ Figma のログイン画面のデザインが、まだ完成していない。�
 - `ProductTree` の右上に `TreeZoomBar`(「−」「＋」「全体表示」と倍率 %)。倍率 `zoom` は、`useFitScale` の幅合わせを 1.0 とした相対値で、1.25 倍ずつ、0.5〜4 の範囲。画面内の状態のみ(保存しない)。ツリーの再取得では変わらず、`key={productId}` で、プロダクトを切り替えると 1.0 に戻る。
 - 実際の倍率は `fit × zoom`(表示の % もこれ)。スクロールバーは出さない(ツリーの領域は `overflow-hidden`)。拡大して中身が領域より広いときだけ、ドラッグ(マウス左ボタン)・スワイプ(タッチ)・領域にフォーカスして左右キーで、横に動かせる(`useDragPan`、`scrollLeft` を更新するので端で止まる)。縦はページのスクロールのまま(`touch-action: pan-y`)。5px 未満の動きはクリック扱いで、動かしたあとの解放では click を捨てる。「全体表示」で収まれば位置も戻る。中身は `left-0` 相当 + `transform-origin: top left` で置き、狭いときだけ `left` で中央に寄せる。
 - 拡大縮小の前後で、見えている範囲の横の中央を保つ。Ctrl/⌘ + ホイールも、ツリー上だけ `preventDefault` して拡大縮小する。
+
+## GitHub のユーザー名での招待(`api/`)
+
+- 不具合: GitHub でログインしても、`user.github_id`(better-auth)と `users.github_id`(アプリ)が空のままで、GitHub のユーザー名での招待が誰にも届かなかった。原因は、better-auth が `mapProfileToUser` の戻り値のうち `input: false` の項目(`githubId`)を捨てること(`parseAdditionalUserInputFromProviderProfile`)。`input: true` にすると、ログイン済みの人が `/update-user` で自分の `githubId` を書き換え、他人宛ての招待を受け取れてしまうので使わない。
+- 修正: `api/src/auth.ts` で、`mapProfileToUser` が GitHub の login を控え、account の作成・更新フック(`syncGithubLogin`)が `user.github_id` に保存する。ログインのたびに動くので、新規・再ログイン・ユーザー名の変更・Google が先のユーザーへの紐づけのすべてで入る。`users.github_id` へは、これまでどおり `getOrCreateAppUser` が次のリクエストで写す。再現は `api/tests/auth/github-oauth-callback.test.ts`(OAuth のコールバックを、GitHub への通信をスタブして通す)。
+- 仕様: GitHub のユーザー名での招待は、GitHub でログインしたことのある人にだけ届く。Google だけでログインした人には届かない(メールアドレスで招待する)。
+- 既存のデータの修復: 修正のデプロイ後、該当者が一度ログインし直せば直る。待てない場合は、`api/scripts/backfill-github-username.ts`(account の GitHub の数値 ID から、公開 API で login を取り、`github_id` を埋める)を使う。
+  - 確認: `cd api && DATABASE_URL=<接続文字列> bun ./scripts/backfill-github-username.ts`(既定は dry-run。更新対象と更新後の値を表示。メールは伏せる)
+  - 更新: 同じコマンドに `--apply` を付ける。何度実行しても同じ(冪等)。GitHub の API は認証なしで 1 時間 60 回 / IP まで。超えたら止まるので、時間を置いて再実行する。
+  - 招待の紐づけは不要: `user_id` が空の招待も、`invitee_identifier` と `users.github_id` の一致で届く。
