@@ -106,14 +106,15 @@ function DeleteBlock({
         <div className="space-y-2">
           <p className="break-words text-sm">
             「{productName}」を削除しますか?{' '}
-            {memberCount === undefined ? 'メンバー' : `メンバー ${memberCount}`}
-            ・タスク・招待も、すべて消えます。元に戻せません
+            {memberCount === undefined ? 'メンバー' : `メンバー(${memberCount} 人)`}
+            、タスク、招待、タスクの種類が、すべて消えます。元に戻せません
           </p>
           <label htmlFor="delete-confirm" className="block text-sm">
             確認のため、プロダクト名を入力してください
           </label>
           <input
             id="delete-confirm"
+            autoFocus
             value={typed}
             disabled={remove.isPending}
             onChange={(e) => setTyped(e.target.value)}
