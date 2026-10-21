@@ -91,3 +91,11 @@ export function revealDelta(
     ),
   }
 }
+
+// ボタン・キーでズームするときの中心: 上下に重ねている見出し・操作バーを除いた、見える領域の中央
+export function visibleCenter({ cw, ch, top = 0, bottom = 0 }: Size): {
+  x: number
+  y: number
+} {
+  return { x: cw / 2, y: top + (ch - top - bottom) / 2 }
+}

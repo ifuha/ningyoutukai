@@ -7,6 +7,7 @@ import {
   MAX_ZOOM,
   MIN_ZOOM,
   revealDelta,
+  visibleCenter,
   zoomAt,
 } from '#/lib/pan-zoom'
 import type { Size, View } from '#/lib/pan-zoom'
@@ -57,7 +58,7 @@ export function usePanZoom(
     const s = sizeRef.current
     const v = viewRef.current
     if (!s || !v) return
-    const at = p ?? { x: s.cw / 2, y: s.ch / 2 }
+    const at = p ?? visibleCenter(s)
     commit(zoomAt(v, at, scale, s, fitScaleRef.current))
   }
   const panBy = (dx: number, dy: number) => {

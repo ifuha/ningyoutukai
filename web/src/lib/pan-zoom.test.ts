@@ -6,6 +6,7 @@ import {
   MAX_ZOOM,
   MIN_ZOOM,
   revealDelta,
+  visibleCenter,
   zoomAt,
 } from './pan-zoom'
 
@@ -118,5 +119,17 @@ describe('revealDelta', () => {
     const d = revealDelta(box(5000, 100), area)
     const v = clampPan({ x: d.dx, y: 0, scale: 1 }, size)
     expect(v.x).toBe(80 - 1000)
+  })
+})
+
+describe('visibleCenter', () => {
+  test('top / bottom が 0 なら、領域の中央', () => {
+    expect(visibleCenter(size)).toEqual({ x: 400, y: 300 })
+  })
+  test('見出しと操作バーを除いた、見える領域の中央', () => {
+    expect(visibleCenter({ ...size, top: 100, bottom: 50 })).toEqual({
+      x: 400,
+      y: 100 + (600 - 150) / 2,
+    })
   })
 })
