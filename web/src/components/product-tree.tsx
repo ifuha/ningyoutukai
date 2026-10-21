@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { MemberCard } from '#/components/member-card'
 import { TreeZoomBar } from '#/components/tree-zoom-bar'
 import type {
@@ -6,23 +7,27 @@ import type {
   TreeMember,
   TreeTask,
 } from '#/lib/api'
-import { useDragPan } from '#/lib/use-drag-pan'
-import { useFitScale } from '#/lib/use-fit-scale'
+import { useCanvasSize } from '#/lib/use-canvas-size'
+import { usePanZoom } from '#/lib/use-pan-zoom'
 
-const MIN_ZOOM = 0.5
-const MAX_ZOOM = 4
-const STEP = 1.25
+// 下に重ねる操作バーの高さの目安(px)
+const BOTTOM_INSET = 48
 
 // リーダーを一番上、その下にメンバーを横に並べる木構造。線は破線(CSS だけ)、矢印は子から親へ向く
-// 既定は、幅に収まるよう全体を縮小する(横スクロールなし)。操作バーで拡大すると、スクロールバーは出さず、ドラッグ・スワイプで横に動かす
+// 領域は、親(メイン領域)いっぱいの、自由にパン(移動)とズームができるキャンバス(スクロールバーは出さない)。初期表示は、全体が収まる倍率
+// `header`(見出しとボタン群)と操作バー・説明は、キャンバスの上に重ねる(操作できる部分だけ pointer-events を有効にし、あとは入力をキャンバスへ通す)
+// 全体表示とフォーカス追従は、見出しの高さ(測る)と操作バーの高さの分を避ける
+// 入力は `usePanZoom`(ドラッグ・二本指スクロール・ピンチ・キー)。ページの縦スクロールは、領域の外で行う
 // `onEditTask` を渡すと、タスクが押せて、押した人とタスクを渡す(`canOpenTask` があれば、それが true の人のタスクだけ)
 // `onShowTasks` を渡すと、「他 N 件」が押せて、その人を渡す(全員向け)
 export function ProductTree({
+  header,
   tree,
   onEditTask,
   canOpenTask,
   onShowTasks,
 }: {
+  header?: ReactNode
   tree: ProductTreeData
   onEditTask?: (member: TreeMember, task: TreeTask) => void
   canOpenTask?: (member: TreeMember) => boolean
@@ -34,78 +39,51 @@ export function ProductTree({
       ? (task: TreeTask) => onEditTask(m, task)
       : undefined
   const last = members.length - 1
-  const { containerRef, contentRef, scale, width, height } = useFitScale()
-  // zoom は、幅合わせ(scale)を 1 とした相対倍率。shown が実際にかける倍率
-  const [zoom, setZoom] = useState(1)
-  const shown = (scale ?? 1) * zoom
-  // 拡大縮小の前後で、見えている範囲の中央が動かないよう、中央の位置(全体に対する割合)を覚えて戻す
-  const centerRef = useRef<number | null>(null)
-  const changeZoom = (next: number) => {
-    const el = containerRef.current
-    if (el && el.scrollWidth > 0) {
-      centerRef.current = (el.scrollLeft + el.clientWidth / 2) / el.scrollWidth
-    }
-    setZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next)))
-  }
+  // 上に重ねている見出しの高さ。全体表示で、ツリーがその下に潜らないようにする(初回の描画の前に測る)
+  const headerRef = useRef<HTMLDivElement | null>(null)
+  const [headerHeight, setHeaderHeight] = useState(0)
   useLayoutEffect(() => {
-    const el = containerRef.current
-    if (el && centerRef.current !== null) {
-      el.scrollLeft = centerRef.current * el.scrollWidth - el.clientWidth / 2
-    }
-    centerRef.current = null
-  }, [zoom, containerRef])
-  const { canPan, dragging, handlers } = useDragPan(containerRef, [
-    shown,
-    width,
-  ])
-  // Ctrl/⌘ + ホイールで拡大縮小(ツリーの上だけ。passive だと preventDefault できないので直接つける)
-  const wheelRef = useRef(changeZoom)
-  wheelRef.current = (next) => changeZoom(next)
-  const zoomRef = useRef(zoom)
-  zoomRef.current = zoom
-  useEffect(() => {
-    const el = containerRef.current
+    const el = headerRef.current
     if (!el) return
-    const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return
-      e.preventDefault()
-      wheelRef.current(zoomRef.current * Math.exp(-e.deltaY * 0.002))
-    }
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
-  }, [containerRef])
+    const measure = () => setHeaderHeight(el.offsetHeight)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  const { containerRef, contentRef, size } = useCanvasSize(
+    headerHeight,
+    BOTTOM_INSET,
+  )
+  const { view, dragging, canZoomIn, canZoomOut, zoomIn, zoomOut, reset, handlers } =
+    usePanZoom(containerRef, size)
 
   return (
-    <div>
-      <TreeZoomBar
-        percent={Math.round(shown * 100)}
-        canZoomIn={zoom < MAX_ZOOM}
-        canZoomOut={zoom > MIN_ZOOM}
-        onZoomIn={() => changeZoom(zoom * STEP)}
-        onZoomOut={() => changeZoom(zoom / STEP)}
-        onReset={() => changeZoom(1)}
-      />
+    <div className="relative h-full w-full">
+      <div
+        ref={headerRef}
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 border-b border-ink/30 bg-surface/80 px-4 py-3"
+      >
+        {header}
+      </div>
       <div
         ref={containerRef}
         role="region"
-        aria-label="ツリー(拡大中は、ドラッグか左右キーで動かせます)"
+        aria-label="ツリー(ドラッグか矢印キーで移動、+ と - で拡大縮小、0 で全体表示)"
         tabIndex={0}
         {...handlers}
-        className={`relative w-full touch-pan-y overflow-hidden ${
-          canPan
-            ? `select-none ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`
-            : ''
+        className={`absolute inset-0 touch-none select-none overflow-clip overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${
+          dragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
-        style={{ height: height * shown }}
       >
         <div
           ref={contentRef}
-          className="absolute top-0 flex w-max flex-col items-center"
+          className="absolute top-0 left-0 flex w-max origin-top-left flex-col items-center"
           style={{
-            left: `max(0px, calc(50% - ${(width * shown) / 2}px))`,
-            transform: `scale(${shown})`,
-            transformOrigin: 'top left',
-            visibility: scale === null ? 'hidden' : 'visible',
+            transform: view
+              ? `translate(${view.x}px, ${view.y}px) scale(${view.scale})`
+              : undefined,
+            visibility: view ? 'visible' : 'hidden',
           }}
         >
           <MemberCard
@@ -152,6 +130,27 @@ export function ProductTree({
             </>
           )}
         </div>
+        <p
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-3 left-3 hidden text-xs opacity-50 sm:block"
+        >
+          <span className="pointer-coarse:hidden">
+            ドラッグ・二本指スクロールで移動、Ctrl+ホイール・ピンチで拡大縮小
+          </span>
+          <span className="hidden pointer-coarse:inline">
+            1 本指で移動、2 本指で拡大縮小
+          </span>
+        </p>
+      </div>
+      <div className="absolute right-3 bottom-3 z-10">
+        <TreeZoomBar
+          percent={Math.round((view?.scale ?? 1) * 100)}
+          canZoomIn={canZoomIn}
+          canZoomOut={canZoomOut}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onReset={reset}
+        />
       </div>
     </div>
   )
