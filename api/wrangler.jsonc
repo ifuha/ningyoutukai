@@ -3,5 +3,19 @@
   "name": "ningyoutukai-api",
   "main": "src/worker.ts",
   "compatibility_date": "2025-09-02",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  // Containers の Postgres を持つ Durable Object。バインディング PG_VIA_DO があれば、api はそこ経由で DB につなぐ
+  // (docs/infra-do-container.md)。使わない場合は、このブロックを消して DATABASE_URL / HYPERDRIVE にする
+  "containers": [
+    {
+      "class_name": "PgContainer",
+      "image": "../infra/postgres/Dockerfile",
+      "instance_type": "basic",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "PG_VIA_DO", "class_name": "PgContainer" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PgContainer"] }]
 }
