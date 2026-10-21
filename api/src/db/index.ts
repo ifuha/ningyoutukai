@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../lib/load-env";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { drizzle } from "drizzle-orm/node-postgres";
 
