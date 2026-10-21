@@ -16,11 +16,14 @@ export type Db = ReturnType<typeof createDb>;
  */
 export const dbStorage = new AsyncLocalStorage<Db>();
 
-const defaultDb = createDb();
+// 既定の `db` は、最初に使われたときに作る。Workers はデプロイ時にコードを一度実行して検証するが、
+// そのとき `DATABASE_URL` は無い(Workers は `dbStorage` 経由のリクエストごとの `db` を使うので、既定は不要)
+let defaultDb: Db | undefined;
+const getDefaultDb = () => (defaultDb ??= createDb());
 
-export const db = new Proxy(defaultDb, {
+export const db = new Proxy({} as Db, {
   get(_target, prop) {
-    const current = dbStorage.getStore() ?? defaultDb;
+    const current = dbStorage.getStore() ?? getDefaultDb();
     const value = Reflect.get(current, prop, current);
     return typeof value === "function" ? value.bind(current) : value;
   },
