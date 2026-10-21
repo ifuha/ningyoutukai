@@ -19,14 +19,14 @@
   },
 
   // Neon への接続は Hyperdrive 経由。id は `wrangler hyperdrive create` が出力する値に置き換える。
-  // ローカルの `wrangler dev` では id は使われず、localConnectionString(docker compose の既定の値。秘密ではない)
+  // ローカルの `wrangler dev` では id は使われず、localConnectionString(dev 用コンテナの既定の値。秘密ではない)
   // に向く。別の DB を使うときは、環境変数 CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE で上書きする
   // (デプロイでは localConnectionString は無視される)。
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
       "id": "988ccd0f0a7f4fba90c4fbdcf6f68797",
-      "localConnectionString": "postgres://postgres:postgres@localhost:5433/ningyoutukai"
+      "localConnectionString": "postgres://postgres:postgres@localhost:5434/ningyoutukai"
     }
   ]
 }
