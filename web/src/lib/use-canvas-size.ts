@@ -1,0 +1,43 @@
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import type { Size } from '#/lib/pan-zoom'
+
+// 領域(container)と中身(content)の大きさを測り、リサイズに追従する
+// 中身は、倍率をかける前の自然な大きさ(offsetWidth / offsetHeight は transform の影響を受けない)
+// 測定前(サーバー描画・初回)は null を返すので、呼び出し側は中身を隠しておく
+export function useCanvasSize() {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const contentRef = useRef<HTMLDivElement | null>(null)
+  const [size, setSize] = useState<Size | null>(null)
+
+  const measure = useCallback(() => {
+    const container = containerRef.current
+    const content = contentRef.current
+    if (!container || !content) return
+    const next = {
+      cw: container.clientWidth,
+      ch: container.clientHeight,
+      w: content.offsetWidth,
+      h: content.offsetHeight,
+    }
+    if (next.w === 0 || next.h === 0 || next.cw === 0 || next.ch === 0) return
+    setSize((prev) =>
+      prev &&
+      prev.cw === next.cw &&
+      prev.ch === next.ch &&
+      prev.w === next.w &&
+      prev.h === next.h
+        ? prev
+        : next,
+    )
+  }, [])
+
+  useLayoutEffect(() => {
+    measure()
+    const observer = new ResizeObserver(measure)
+    if (containerRef.current) observer.observe(containerRef.current)
+    if (contentRef.current) observer.observe(contentRef.current)
+    return () => observer.disconnect()
+  }, [measure])
+
+  return { containerRef, contentRef, size }
+}
