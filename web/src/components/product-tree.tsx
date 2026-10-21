@@ -132,7 +132,7 @@ export function ProductTree({
         </div>
         <p
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-3 left-3 text-xs opacity-50"
+          className="pointer-events-none absolute bottom-3 left-3 hidden text-xs opacity-50 sm:block"
         >
           <span className="pointer-coarse:hidden">
             ドラッグ・二本指スクロールで移動、Ctrl+ホイール・ピンチで拡大縮小
