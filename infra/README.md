@@ -1,0 +1,158 @@
+# infra
+
+PostgreSQL のダンプ(バックアップ)とリストアの環境。方針は [docs/infra.md](../docs/infra.md) を参照。
+
+- PostgreSQL は Cloudflare Containers で動かす(コンテナは Postgres のみ)。
+- バックアップは `pg_dump` の出力を Cloudflare R2 にだけ置く。
+- Containers のディスクは永続化されないので、R2 のダンプから復旧する。
+
+## 構成
+
+| パス | 内容 |
+| --- | --- |
+| `postgres/Dockerfile` | Containers 用の Postgres 17 イメージ(healthcheck 付き) |
+| `postgres/restore-on-init.sh` | 初回起動時、`RESTORE_FROM_URL` があればダンプから復元する |
+| `scripts/dump.sh` | `pg_dump -Fc --no-owner --no-acl` でダンプを取得する |
+| `scripts/upload-r2.sh` | ダンプを R2 に保存する。古い世代の整理(`--prune`) |
+| `scripts/restore.sh` | ダンプ(ファイル or R2 のキー)から指定の DB に復元する |
+| `scripts/verify.sh` | 2 つの DB のテーブルごとの行数を比較する |
+| `scripts/backup.sh` | dump → R2 保存 → 整理の対象表示、を一括実行する |
+| `scripts/lib.sh` | 共通関数(docker 経由の実行など) |
+
+ダンプにはユーザーのメールアドレス等が入る。`infra/dumps/` と `*.dump` は `.gitignore` 済み。リポジトリにコミットしないこと。
+
+## 環境変数
+
+値はリポジトリに書かない。シェルの環境変数か、コミットしない `infra/.env` から読み込む。
+
+| 変数 | 用途 | 使うスクリプト |
+| --- | --- | --- |
+| `DATABASE_URL` | ダンプ元の接続 URL | dump / backup |
+| `USE_DOCKER` | `1` で pg_dump / psql / aws を docker で実行 | 全て |
+| `R2_ACCOUNT_ID` | R2 のアカウント ID(エンドポイントを組み立てる) | upload / restore / backup |
+| `R2_ENDPOINT` | エンドポイントを直接指定(`R2_ACCOUNT_ID` より優先。ローカルの S3 互換サーバー用) | 同上 |
+| `R2_BUCKET` | バケット名 | 同上 |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 の API トークン | 同上 |
+| `R2_PREFIX` | キーの接頭辞(既定 `ningyoutukai`) | upload |
+| `RETENTION_DAYS` | 保持日数(既定 30) | upload `--prune` |
+| `MIN_KEEP` | 整理後も最低限残す件数(既定 3) | upload `--prune` |
+| `PRUNE` | `1` のときだけ古いダンプを削除(既定は表示のみ) | upload `--prune` / backup |
+| `RESTORE_SERVER_URL` | 復元先サーバーの接続 URL(DB 名部分は無視される) | restore |
+| `COMPARE_URL` | 復元後に行数を比較する相手(ダンプ元)の URL | restore |
+| `RESTORE_FROM_URL` | コンテナ初回起動時に取得するダンプの URL(署名付き URL) | postgres/Dockerfile |
+
+`USE_DOCKER=1` のとき、`localhost` は `host.docker.internal` に読み替える。手元の `pg_dump` がサーバーよりバージョンが古いと失敗するため、手元の Postgres が 17 でなければ `USE_DOCKER=1` を使う。
+
+## 使い方
+
+### ダンプを取る
+
+```sh
+export DATABASE_URL=postgres://postgres:postgres@localhost:5433/ningyoutukai
+USE_DOCKER=1 infra/scripts/dump.sh /tmp/dump-work
+# => /tmp/dump-work/ningyoutukai-YYYYmmdd-HHMMSS.dump
+```
+
+pg_dump の失敗やサイズ 0 のダンプは異常終了になる。
+
+### R2 に保存する
+
+```sh
+export R2_ACCOUNT_ID=... R2_BUCKET=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=...
+infra/scripts/upload-r2.sh /tmp/dump-work/ningyoutukai-20261021-133830.dump
+# => ningyoutukai/2026/10/ningyoutukai-20261021-133830.dump に保存
+```
+
+世代管理は、ファイル名の日付が `RETENTION_DAYS` より古いものが対象。
+
+```sh
+infra/scripts/upload-r2.sh --prune          # 対象を表示するだけ(削除しない)
+PRUNE=1 infra/scripts/upload-r2.sh --prune  # 実際に削除する
+```
+
+整理すると残りが `MIN_KEEP` 件を下回る場合は何も消さずに止まる。
+
+### 一括実行
+
+```sh
+infra/scripts/backup.sh   # dump → R2 保存 → 整理の対象表示(PRUNE=1 で削除)
+```
+
+### リストア
+
+```sh
+export RESTORE_SERVER_URL=postgres://postgres:***@localhost:5440/postgres
+export COMPARE_URL=$DATABASE_URL          # 任意。行数をダンプ元と比較する
+# ファイルから
+infra/scripts/restore.sh /tmp/dump-work/ningyoutukai-20261021-133830.dump restore_test
+# R2 のキーから(R2_* が必要)
+infra/scripts/restore.sh ningyoutukai/2026/10/ningyoutukai-20261021-133830.dump restore_test
+```
+
+- 復元先の DB 名は必須。無ければ作る。`postgres` などの管理用 DB は指定できない。
+- 復元先に既存のテーブルがあるときは、`--force` を付けないと止まる(`--clean --if-exists` で上書きされるため)。
+- 復元後、`COMPARE_URL` があればテーブルごとの行数を比較し、不一致なら異常終了する。
+
+## ローカルでの確認手順
+
+開発用 DB(`api-db-1`、5433)は読み取り(ダンプ)だけに使い、復元は別のコンテナに対して行う。
+
+```sh
+# 1. 使い捨ての Postgres 17 を別ポートで起動
+docker run -d --name pg-restore -e POSTGRES_PASSWORD=test -p 5440:5432 postgres:17
+# 2. S3 互換サーバーを起動してバケットを作る(R2 の代わり。例: SeaweedFS)
+docker run -d --name s3-local -p 9100:8333 chrislusf/seaweedfs server -s3 -dir=/data
+curl -X PUT http://localhost:9100/ningyoutukai-backup
+# 3. ダンプ → 保存 → 復元
+export USE_DOCKER=1 DATABASE_URL=postgres://postgres:postgres@localhost:5433/ningyoutukai
+export R2_ENDPOINT=http://localhost:9100 R2_BUCKET=ningyoutukai-backup R2_ACCESS_KEY_ID=test R2_SECRET_ACCESS_KEY=test
+export RESTORE_SERVER_URL=postgres://postgres:test@localhost:5440/postgres COMPARE_URL=$DATABASE_URL
+infra/scripts/backup.sh                       # 保存先のキーが出力される
+infra/scripts/restore.sh <出力されたキー> restore_test
+# 4. 後片付け
+docker rm -f pg-restore s3-local
+```
+
+MinIO(`quay.io/minio/minio`)でも同じ手順で確認できる。Postgres イメージ単体の確認は次のとおり。
+
+```sh
+docker build -t ningyoutukai-postgres infra/postgres
+docker run -d --name pg-img -e POSTGRES_PASSWORD=test \
+  -e RESTORE_FROM_URL=<ダンプの URL> -p 5441:5432 ningyoutukai-postgres
+docker logs pg-img | grep restore-on-init   # 復元のログ
+```
+
+## R2 の準備(概要)
+
+1. Cloudflare ダッシュボードの R2 でバケット(例: `ningyoutukai-backup`)を作る。公開設定はしない。
+2. R2 の「API トークンを管理」から、そのバケットだけに「オブジェクトの読み取りと書き込み」を許可したトークンを作る。得られる Access Key ID / Secret Access Key を `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` に使う。
+3. アカウント ID を `R2_ACCOUNT_ID` に使う。エンドポイントは `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`。
+4. 削除(`PRUNE=1`)を使うなら、トークンの権限に削除が含まれることを確認する。誤削除に備え、バケットのライフサイクルルール(例: 90 日で期限切れ)を併用してもよい。
+5. 認証情報は Workers のシークレット(`wrangler secret put`)として管理し、リポジトリに書かない。
+
+## 定期実行(Cron)の方針
+
+Workers の Cron Trigger で毎日 1 回(例: 日本時間の深夜)バックアップを取る。
+
+1. Cron Trigger が Worker の `scheduled` ハンドラを起動する。
+2. Worker は Containers の Postgres に接続できる経路が必要。Worker 内では `pg_dump` を実行できないため、次のどちらかにする。
+   - ダンプ用のコンテナ(`postgres:17` に `backup.sh` を同梱)を Containers で起動して実行する。
+   - Postgres のコンテナ自身に `backup.sh` を同梱し、Worker からそのコンテナに実行を指示する。
+3. 実行内容は `backup.sh` と同じ(dump → R2 保存 → 整理)。R2 の認証情報と `DATABASE_URL` はシークレットで渡す。
+4. 失敗時に気付けるよう、`backup.sh` の終了コードを Worker で見て、失敗をログ・通知に残す。
+
+Worker 化は未着手。スクリプトは環境変数だけで動くようにしてあるため、コンテナに入れてそのまま呼べる。
+
+## 障害時の復旧手順
+
+Containers のディスクは永続化されないため、コンテナの再作成で DB は空になる。
+
+1. R2 の最新のダンプを確認する(`ningyoutukai/YYYY/MM/` 以下。ファイル名の日時が新しいもの)。
+2. 新しい Postgres コンテナを起動する。`RESTORE_FROM_URL` に、そのダンプの署名付き URL(例: `aws s3 presign` で発行、有効期限は短く)を渡すと、初回起動時に自動で復元される。
+3. 自動復元を使わない場合は、空の Postgres を起動してから `restore.sh <R2 のキー> ningyoutukai` を実行する。
+4. 復元後、`verify.sh` またはアプリの画面で行数・動作を確認する。ダンプ以降のデータは失われる(RPO はバックアップ間隔)。
+5. api のマイグレーションの状態(`drizzle.__drizzle_migrations`)もダンプに含まれる。復元後に `drizzle-kit migrate` を実行しても、適用済みのものは再適用されない。
+
+## タスクの状況
+
+docs/infra.md のタスク一覧を参照。このディレクトリで済んだのは Dockerfile、ダンプ、R2 への保存、リストア手順(動作確認まで)。未着手: Containers の設定(`wrangler` の `containers` 設定、インスタンスの種類、シークレット)、Workers 対応(api の Workers 化、Cron 用 Worker)、デプロイ設定、実際の R2 での動作確認。

@@ -2,11 +2,12 @@
   "name": "api",
   "version": "1.0.50",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "bun test",
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.2",
+    "@elysiajs/openapi": "^1.4.16",
     "better-auth": "^1.7.10",
     "dotenv": "^18.0.8",
     "drizzle-orm": "1.0.0-rc.4",
