@@ -2,9 +2,10 @@
 
 PostgreSQL のダンプ(バックアップ)とリストアの環境。方針は [docs/infra.md](../docs/infra.md) を参照。
 
-- PostgreSQL は Cloudflare Containers で動かす(コンテナは Postgres のみ)。
-- バックアップは `pg_dump` の出力を Cloudflare R2 にだけ置く。
-- Containers のディスクは永続化されないので、R2 のダンプから復旧する。
+- 本番の PostgreSQL は Neon(Hyperdrive 経由)。Cloudflare Containers の Postgres は採用しなかった(`docs/infra-do-container.md`)。
+- バックアップは `pg_dump` の出力を Cloudflare R2 にだけ置く。`DATABASE_URL` に Neon の **direct** 接続(`-pooler` なし)を渡して `scripts/backup.sh` を実行する。
+- 定期実行は GitHub Actions のスケジュール実行を第一案とする(`docs/deploy.md` の「R2 とバックアップ」)。
+- `postgres/`(Dockerfile)は Containers 用に作ったもので、本番では使わない。ローカルの検証用に残している。
 
 ## 構成
 
@@ -130,29 +131,18 @@ docker logs pg-img | grep restore-on-init   # 復元のログ
 4. 削除(`PRUNE=1`)を使うなら、トークンの権限に削除が含まれることを確認する。誤削除に備え、バケットのライフサイクルルール(例: 90 日で期限切れ)を併用してもよい。
 5. 認証情報は Workers のシークレット(`wrangler secret put`)として管理し、リポジトリに書かない。
 
-## 定期実行(Cron)の方針
+## 定期実行の方針
 
-Workers の Cron Trigger で毎日 1 回(例: 日本時間の深夜)バックアップを取る。
-
-1. Cron Trigger が Worker の `scheduled` ハンドラを起動する。
-2. Worker は Containers の Postgres に接続できる経路が必要。Worker 内では `pg_dump` を実行できないため、次のどちらかにする。
-   - ダンプ用のコンテナ(`postgres:17` に `backup.sh` を同梱)を Containers で起動して実行する。
-   - Postgres のコンテナ自身に `backup.sh` を同梱し、Worker からそのコンテナに実行を指示する。
-3. 実行内容は `backup.sh` と同じ(dump → R2 保存 → 整理)。R2 の認証情報と `DATABASE_URL` はシークレットで渡す。
-4. 失敗時に気付けるよう、`backup.sh` の終了コードを Worker で見て、失敗をログ・通知に残す。
-
-Worker 化は未着手。スクリプトは環境変数だけで動くようにしてあるため、コンテナに入れてそのまま呼べる。
+GitHub Actions のスケジュール実行で、毎日 1 回(例: 日本時間の深夜)`scripts/backup.sh` を動かす。Cloudflare の Cron Trigger は Worker の中で `pg_dump` を実行できないため、第一案にしない。ワークフローの例と、Neon の履歴との役割分担は `docs/deploy.md` の「R2 とバックアップ」。
 
 ## 障害時の復旧手順
 
-Containers のディスクは永続化されないため、コンテナの再作成で DB は空になる。
-
-1. R2 の最新のダンプを確認する(`ningyoutukai/YYYY/MM/` 以下。ファイル名の日時が新しいもの)。
-2. 新しい Postgres コンテナを起動する。`RESTORE_FROM_URL` に、そのダンプの署名付き URL(例: `aws s3 presign` で発行、有効期限は短く)を渡すと、初回起動時に自動で復元される。
-3. 自動復元を使わない場合は、空の Postgres を起動してから `restore.sh <R2 のキー> ningyoutukai` を実行する。
-4. 復元後、`verify.sh` またはアプリの画面で行数・動作を確認する。ダンプ以降のデータは失われる(RPO はバックアップ間隔)。
-5. api のマイグレーションの状態(`drizzle.__drizzle_migrations`)もダンプに含まれる。復元後に `drizzle-kit migrate` を実行しても、適用済みのものは再適用されない。
+1. まず Neon の履歴(ブランチの復元)で戻せるか確認する(プランで決まる期間内の誤操作ならこちらが速い)。
+2. R2 の最新のダンプを確認する(`ningyoutukai/YYYY/MM/` 以下。ファイル名の日時が新しいもの)。
+3. 新しい Postgres(新しい Neon のプロジェクト / ブランチ)を用意し、`restore.sh <R2 のキー> ningyoutukai` か `pg_restore --no-owner --no-acl` で復元する。ダンプ以降のデータは失われる(RPO はバックアップ間隔)。
+4. Hyperdrive の接続先を、新しい DB の direct 接続に更新する(`wrangler hyperdrive update`)。
+5. 復元後、`verify.sh` またはアプリの画面で行数・動作を確認する。マイグレーションの状態(`drizzle.__drizzle_migrations`)もダンプに含まれるので、復元後に `bun run db:migrate` を実行しても適用済みのものは再適用されない。
 
 ## タスクの状況
 
-docs/infra.md のタスク一覧を参照。このディレクトリで済んだのは Dockerfile、ダンプ、R2 への保存、リストア手順(動作確認まで)。未着手: Containers の設定(`wrangler` の `containers` 設定、インスタンスの種類、シークレット)、Workers 対応(api の Workers 化、Cron 用 Worker)、デプロイ設定、実際の R2 での動作確認。
+docs/infra.md のタスク一覧を参照。
