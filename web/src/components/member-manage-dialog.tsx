@@ -82,7 +82,7 @@ function MemberRow({
               onClick={() => remove.mutate()}
               className={buttonClass}
             >
-              外す
+              外す(確定)
             </button>
             <button
               type="button"
