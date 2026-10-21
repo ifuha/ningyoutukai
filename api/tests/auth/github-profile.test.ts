@@ -31,16 +31,9 @@ const newEmail = () => {
 const findAppUser = async (email: string) =>
   (await db.select().from(users).where(eq(users.email, email)))[0];
 
-describe("mapGithubProfile(GitHub のプロフィールの写し方)", () => {
-  test("ユーザー名(login)を、宣言済みのキー githubId で返す", () => {
-    expect(mapGithubProfile({ login: "octocat" })).toEqual({ githubId: "octocat" });
-  });
-
-  test("返すキーは、user.additionalFields で宣言したものだけ(違うキーは捨てられるため)", () => {
-    const declared = Object.keys(auth.options.user?.additionalFields ?? {});
-    for (const key of Object.keys(mapGithubProfile({ login: "x" }))) {
-      expect(declared).toContain(key);
-    }
+describe("mapGithubProfile(GitHub のプロフィールの扱い)", () => {
+  test("戻り値に githubId を入れない(input: false の項目は better-auth が捨てるため。保存は account フックが行う)", () => {
+    expect(mapGithubProfile({ id: 1, login: "octocat" })).toEqual({});
   });
 });
 
