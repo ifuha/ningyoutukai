@@ -3,9 +3,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { productMembers, products } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
-
-// Postgres の text は NUL 文字(\u0000)を保存できず、500 になるため、入力の時点で弾く
-const NO_NUL = "^[^\\u0000]*$";
+import { NO_NUL } from "../lib/validation";
 
 const productColumns = {
   productId: products.productId,

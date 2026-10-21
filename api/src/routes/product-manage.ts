@@ -4,8 +4,7 @@ import { db } from "../db";
 import { products } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
 import { getMembership } from "../lib/product-access";
-
-const NO_NUL = "^[^\\u0000]*$";
+import { NO_NUL } from "../lib/validation";
 
 const messageSchema =t.Object({ message: t.String() });
 
