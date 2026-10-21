@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { Sidebar } from '#/components/sidebar'
 import { api, type Invitation, type ProductSummary } from '#/lib/api'
 import { authClient } from '#/lib/auth-client'
+import { resetSessionExpired } from '#/lib/session-expired'
 
 type SessionUser = NonNullable<
   ReturnType<typeof authClient.useSession>['data']
@@ -30,6 +31,12 @@ export function AppShell({
   useEffect(() => {
     if (!isPending && !session?.user) void navigate({ to: '/', replace: true })
   }, [isPending, session?.user, navigate])
+
+  // ログインできている間は、401 の検知を、次のために戻しておく
+  const userId = session?.user.id
+  useEffect(() => {
+    if (userId) resetSessionExpired()
+  }, [userId])
 
   // 所属しているプロダクトの一覧(api に、ログインの cookie が届くかの確認も兼ねる)
   const products = useQuery({

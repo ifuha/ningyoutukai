@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { api } from '#/lib/api'
+import { errorMessage } from '#/lib/error-message'
 
 // 入力が `@` を含み、先頭が `@` でなければメール、それ以外は GitHub のユーザー名として送る
 // (先頭の `@` は、api が取り除く)
@@ -62,7 +63,7 @@ export function InviteMemberForm({ productId }: { productId: string }) {
       </div>
       {invite.isError && (
         <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
-          ERR {invite.error.message}
+          ERR {errorMessage(invite.error.message)}
         </p>
       )}
       {invited && !invite.isError && (
