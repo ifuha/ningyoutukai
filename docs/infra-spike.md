@@ -7,7 +7,7 @@ api(Bun + Elysia + better-auth + drizzle)を Cloudflare Workers で動かせる�
 | 問い | 結論 |
 | --- | --- |
 | api は Workers で動くか | **動く。** 小さな変更(`worker.ts` の追加、`db` をリクエストごとに作る仕組み)で、既存コードの挙動を変えずに動いた |
-| Workers から Containers の Postgres に直接つなげるか | **今の公式の仕組みでは、そのままはつなげない。** Workers から Containers へは、Durable Object 経由(`getContainer` / `ctx.container`)が入口で、`pg` のようなドライバが使う「Workers から出る生の TCP」では届かない。DO の中で `getTcpPort(5432).connect()` を使う方法はあるが、Postgres での動作確認の例は公式に無く、自作のプロキシが要る(未検証) |
+| Workers から Containers の Postgres に直接つなげるか | **今の公式の仕組みでは、そのままはつなげない。** Workers から Containers へは、Durable Object 経由(`getContainer` / `ctx.container`)が入口で、`pg` のようなドライバが使う「Workers から出る生の TCP」では届かない。DO の中で `getTcpPort(5432).connect()` を使い、そのストリームを Workers RPC で Worker に返して `pg` に渡す方法は、**ローカルで動くことを確認した**(約 +45 ms/リクエスト、トランザクションも可。詳細は [infra-do-container.md](./infra-do-container.md))。ただし `Container` クラスは HTTP 前提で使えず、自前の実装が要る |
 | 推奨する構成 | **Postgres はマネージド(Neon など)に置き、Workers から Hyperdrive 経由でつなぐ。** Containers の Postgres は、ディスクが永続化されないこともあり、本番の主 DB には向かない(詳細は後述) |
 
 ## 1. Elysia を Workers で動かす
@@ -67,7 +67,7 @@ Bun 固有の API は、api の本体では使っていない(`bun:test` はテ�
 - **ディスクは一時的(ephemeral)**: 「All disk is ephemeral by default」。コンテナが眠る/入れ替わると、イメージから新しいディスクで起動する。永続化の方法は、スナップショット(`durable_object` のスケジューリングでのみ。不変)か、FUSE で R2 などに置く(SSD の性能は出ない)だけで、Postgres のデータディレクトリには不安がある。
 - **接続の入口**: リクエストは Worker → Durable Object → コンテナ(`ctx.container` / `getContainer(env.X, id)`)。エンドユーザーからコンテナへ、非 HTTP の TCP/UDP を直接送ることはできない。
 - **生の TCP**: Durable Object の中では `this.ctx.container.getTcpPort(port).connect(addr)` で、生のソケットが使える(公式ブログでは gRPC などを通す例。「any TCP-based protocol」と書かれているが、データベースの例は無い)。ブログの「Workers/Containers の inbound TCP」は**プライベートベータ**。
-- 以上から、**普通の Worker が `pg` で `containers の Postgres` に直接つなぐ方法は、公式には用意されていない。** 通すには、Postgres 用の Durable Object を作り、その中でコンテナの 5432 へのソケットを中継する仕組みを自作する必要がある(未検証。DO はドライバの要求する Socket API とも違う)。さらに、ディスクが永続化されないため、コンテナが再起動するたびに R2 のダンプから復旧する運用になり、直前のダンプ以降のデータを失う。
+- 以上から、**普通の Worker が `pg` で `containers の Postgres` に直接つなぐ方法は、公式には用意されていない。** 通すには、Postgres 用の Durable Object を作り、その中でコンテナの 5432 へのソケットを中継する仕組みを自作する必要がある(後続のスパイクで実装して動作を確認した。[infra-do-container.md](./infra-do-container.md))。さらに、ディスクが永続化されないため、コンテナが再起動するたびに R2 のダンプから復旧する運用になり、直前のダンプ以降のデータを失う。
 
 ### 代替案の比較
 
@@ -76,7 +76,7 @@ Bun 固有の API は、api の本体では使っていない(`bun:test` はテ�
 | A. Neon + Hyperdrive(**推奨**) | 永続化、バックアップ、PITR が付く。Workers からの接続の実績が多い。Hyperdrive で接続を再利用できる。`pg` / drizzle がそのまま動く(ローカルで確認済み) | Cloudflare の外のサービスが増える。リージョンのレイテンシ(東京リージョンあり) | Hyperdrive は Workers の枠内。Neon は無料枠あり、有料は月 $5〜20 程度(使用量による)。Workers Paid $5(任意) |
 | B. Supabase + Hyperdrive | Postgres そのまま。管理画面、バックアップあり | 無料枠は非アクティブで停止する。PITR は有料プラン | 無料〜月 $25(Pro) |
 | C. Containers に api と Postgres を同居 | Workers と DB の間の接続問題が消える | api を Workers から外すことになり、「アプリは Workers」の方針と食い違う。ディスクが一時的なのは同じ | Workers Paid $5 + コンテナ(basic を常時で月 $7 前後) |
-| D. Containers の Postgres + DO で TCP 中継 | 方針(Containers に Postgres)を保てる | 自作の中継が必要で、未検証。ディスク非永続。ベータ機能に依存。運用負荷が最大 | Workers Paid $5 + コンテナ月 $7 前後 |
+| D. Containers の Postgres + DO で TCP 中継 | 方針(Containers に Postgres)を保てる。ローカルで動作確認済み | 自作の中継が必要。ディスク非永続(止まるとデータが消える)。接続ごとに約 +45 ms。運用負荷が最大 | Workers Paid $5 + コンテナ月 $7 前後 |
 | E. PlanetScale Postgres など | 運用が楽 | 価格が高めの傾向。Hyperdrive 経由は可 | 月 $5〜(プランによる) |
 
 (費用は概算。basic = 1 GiB / 4 GB を 30 日常時で、メモリ約 $6.5 + ディスク約 $0.7 から含まれる枠を引いた額。実際の請求額ではない。)
