@@ -133,7 +133,7 @@ docker logs pg-img | grep restore-on-init   # 復元のログ
 
 ## 定期実行の方針
 
-GitHub Actions のスケジュール実行で、毎日 1 回(例: 日本時間の深夜)`scripts/backup.sh` を動かす。Cloudflare の Cron Trigger は Worker の中で `pg_dump` を実行できないため、第一案にしない。ワークフローの例と、Neon の履歴との役割分担は `docs/deploy.md` の「R2 とバックアップ」。
+GitHub Actions のスケジュール実行で、毎日 1 回(例: 日本時間の深夜)`scripts/backup.sh` を動かす。Cloudflare の Cron Trigger は Worker の中で `pg_dump` を実行できないため、第一案にしない。ワークフローは `.github/workflows/backup.yml`。使い方、登録するシークレット、Neon の履歴との役割分担は `docs/deploy.md` の「R2 とバックアップ」。
 
 ## 障害時の復旧手順
 
