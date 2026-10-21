@@ -31,7 +31,7 @@ test("RESEND_API_KEY が空文字でも、送らず、宛先・件名・本文�
   const result = await mailer.send(mail);
   expect(result).toEqual({ ok: false, skipped: true });
   expect(fetchSpy).not.toHaveBeenCalled();
-  const out = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+  const out = logSpy.mock.calls.map((c: unknown[]) => String(c[0])).join("\n");
   expect(out).toContain("a@example.com, b@example.com");
   expect(out).toContain("招待のお知らせ");
   expect(out).toContain("http://localhost:3000/invite/xyz");
@@ -48,7 +48,7 @@ test("NODE_ENV=production では、本文をログに出さない(宛先と件�
   process.env.RESEND_API_KEY = "";
   process.env.NODE_ENV = "production";
   await mailer.send(mail);
-  const out = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+  const out = logSpy.mock.calls.map((c: unknown[]) => String(c[0])).join("\n");
   expect(out).toContain("a@example.com");
   expect(out).toContain("招待のお知らせ");
   expect(out).not.toContain("invite/xyz");
