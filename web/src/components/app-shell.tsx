@@ -5,6 +5,7 @@ import { Sidebar } from '#/components/sidebar'
 import { api, type Invitation, type ProductSummary } from '#/lib/api'
 import { authClient } from '#/lib/auth-client'
 import { resetSessionExpired } from '#/lib/session-expired'
+import { useDrawer } from '#/lib/use-drawer'
 
 type SessionUser = NonNullable<
   ReturnType<typeof authClient.useSession>['data']
@@ -27,6 +28,7 @@ export function AppShell({
 }) {
   const { data: session, isPending } = authClient.useSession()
   const navigate = useNavigate()
+  const drawer = useDrawer()
 
   useEffect(() => {
     if (!isPending && !session?.user) void navigate({ to: '/', replace: true })
@@ -57,21 +59,52 @@ export function AppShell({
   if (isPending || !session?.user) return <main className="dot-grid h-screen" />
 
   return (
-    <div className="flex h-screen">
-      <Sidebar
-        products={(products.data ?? []).map((p) => ({
-          id: p.productId,
-          name: p.productName,
-        }))}
-        invitations={invitations.data}
-        isLoading={products.isPending}
-        activeProductId={activeProductId}
-        onSelectProduct={(productId) =>
-          void navigate({ to: '/products/$productId', params: { productId } })
-        }
-        onCreateProduct={() => void navigate({ to: '/products/new' })}
-      />
-      <main className="dot-grid flex min-w-0 flex-1 overflow-y-auto px-4">
+    <div className="flex h-screen flex-col md:flex-row">
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-ink px-2 md:hidden">
+        <button
+          type="button"
+          ref={drawer.buttonRef}
+          onClick={() => drawer.setOpen(true)}
+          aria-label="メニューを開く"
+          aria-expanded={drawer.open}
+          aria-controls="app-sidebar"
+          className="flex size-10 items-center justify-center text-xl"
+        >
+          ☰
+        </button>
+        <p className="text-base font-semibold">人形使い</p>
+      </header>
+      {drawer.open && (
+        <div
+          aria-hidden="true"
+          onClick={drawer.close}
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+        />
+      )}
+      {/* スマホ幅: 画面の外に隠し、開くと左から重ねる。md 以上: 今までどおり左に常時表示 */}
+      <div
+        id="app-sidebar"
+        className={`fixed inset-y-0 left-0 z-40 max-w-[80vw] transition-transform md:visible md:static md:max-w-none md:translate-x-0 ${drawer.open ? 'translate-x-0' : 'invisible -translate-x-full'}`}
+      >
+        <Sidebar
+          products={(products.data ?? []).map((p) => ({
+            id: p.productId,
+            name: p.productName,
+          }))}
+          invitations={invitations.data}
+          isLoading={products.isPending}
+          activeProductId={activeProductId}
+          onSelectProduct={(productId) => {
+            drawer.close()
+            void navigate({ to: '/products/$productId', params: { productId } })
+          }}
+          onCreateProduct={() => {
+            drawer.close()
+            void navigate({ to: '/products/new' })
+          }}
+        />
+      </div>
+      <main className="dot-grid flex min-h-0 min-w-0 flex-1 overflow-y-auto px-4">
         <div
           className={`${align === 'top' ? 'mx-auto' : 'm-auto'} flex w-full justify-center py-6`}
         >
