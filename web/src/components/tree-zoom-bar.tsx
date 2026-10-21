@@ -19,7 +19,7 @@ export function TreeZoomBar({
   onReset: () => void
 }) {
   return (
-    <div className="flex items-center justify-end gap-1 pb-2 text-sm">
+    <div className="flex items-center justify-end gap-1 border border-ink/30 bg-surface/80 p-1 text-sm">
       <span className="w-12 text-right tabular-nums opacity-60">
         {percent}%
       </span>
