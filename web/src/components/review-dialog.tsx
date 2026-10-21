@@ -99,6 +99,7 @@ function ReviewRow({
           <div className="flex gap-3">
             <button
               type="button"
+              autoFocus
               disabled={complete.isPending || stale}
               onClick={() => complete.mutate()}
               className={buttonClass}
