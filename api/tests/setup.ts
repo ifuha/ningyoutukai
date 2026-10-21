@@ -19,3 +19,7 @@ process.env.WEB_ORIGIN ??= "http://localhost:3000";
 // 本番と同じく検証が働く状態にするため、最初の読み込みの前に development にしておく。
 // (better-auth は NODE_ENV を、最初に読み込んだときの 1 回しか見ない)
 process.env.NODE_ENV = "development";
+
+// .env に RESEND_API_KEY を入れても、テストが実際にメールを送らないようにする(mailer はキーが無いとログだけ出す)
+delete process.env.RESEND_API_KEY;
+delete process.env.MAIL_FROM;
