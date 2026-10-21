@@ -21,6 +21,11 @@ describe('fitView', () => {
   test('小さい中身は拡大しない', () => {
     expect(fitView({ cw: 800, ch: 600, w: 200, h: 100 }).scale).toBe(1)
   })
+  test('上下に重ねる見出し・操作バーの分を避けて収める', () => {
+    const v = fitView({ cw: 800, ch: 600, w: 200, h: 1000, top: 100, bottom: 50 })
+    expect(v.scale).toBeCloseTo((600 - 150 - 32) / 1000)
+    expect(v.y).toBe(116)
+  })
   test('背が高い中身は、高さにも合わせる', () => {
     expect(fitView({ cw: 800, ch: 400, w: 200, h: 1000 }).scale).toBeCloseTo(
       (400 - 32) / 1000,
@@ -89,6 +94,15 @@ describe('revealDelta', () => {
   test('上と下にはみ出すとき', () => {
     expect(revealDelta(box(100, -50), area).dy).toBe(66)
     expect(revealDelta(box(100, 700), area).dy).toBe(600 - 16 - 740)
+  })
+  test('上に重なる見出しの下に隠れる位置は、見出しの下まで動かす', () => {
+    expect(revealDelta(box(100, 60), area, 16, { top: 100 }).dy).toBe(56)
+    expect(revealDelta(box(100, 130), area, 16, { top: 100 }).dy).toBe(0)
+  })
+  test('下の操作バーに重なる位置も避ける', () => {
+    expect(revealDelta(box(100, 540), area, 16, { bottom: 50 }).dy).toBe(
+      600 - 16 - 50 - 580,
+    )
   })
   test('余白の内側(端ぎりぎり)も動かす', () => {
     expect(revealDelta(box(4, 100), area).dx).toBe(12)

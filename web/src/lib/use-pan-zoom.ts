@@ -208,6 +208,8 @@ export function usePanZoom(
     const { dx, dy } = revealDelta(
       { left: r.left - ox, top: r.top - oy, right: r.right - ox, bottom: r.bottom - oy },
       { width: el.clientWidth, height: el.clientHeight },
+      undefined,
+      { top: sizeRef.current?.top, bottom: sizeRef.current?.bottom },
     )
     if (dx !== 0 || dy !== 0) panBy(dx, dy)
   }

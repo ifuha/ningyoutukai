@@ -1,13 +1,14 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Size } from '#/lib/pan-zoom'
 
 // 領域(container)と中身(content)の大きさを測り、リサイズに追従する
 // 中身は、倍率をかける前の自然な大きさ(offsetWidth / offsetHeight は transform の影響を受けない)
 // 測定前(サーバー描画・初回)は null を返すので、呼び出し側は中身を隠しておく
-export function useCanvasSize() {
+// top / bottom: 領域に重ねている見出し・操作バーの高さ(全体表示で避ける)
+export function useCanvasSize(top = 0, bottom = 0) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const contentRef = useRef<HTMLDivElement | null>(null)
-  const [size, setSize] = useState<Size | null>(null)
+  const [measured, setMeasured] = useState<Size | null>(null)
 
   const measure = useCallback(() => {
     const container = containerRef.current
@@ -20,7 +21,7 @@ export function useCanvasSize() {
       h: content.offsetHeight,
     }
     if (next.w === 0 || next.h === 0 || next.cw === 0 || next.ch === 0) return
-    setSize((prev) =>
+    setMeasured((prev) =>
       prev &&
       prev.cw === next.cw &&
       prev.ch === next.ch &&
@@ -39,5 +40,9 @@ export function useCanvasSize() {
     return () => observer.disconnect()
   }, [measure])
 
+  const size = useMemo(
+    () => (measured ? { ...measured, top, bottom } : null),
+    [measured, top, bottom],
+  )
   return { containerRef, contentRef, size }
 }

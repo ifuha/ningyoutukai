@@ -3,7 +3,15 @@
 
 export type View = { x: number; y: number; scale: number }
 // cw / ch: 領域の大きさ、w / h: 中身の自然な大きさ(倍率をかける前)
-export type Size = { cw: number; ch: number; w: number; h: number }
+// top / bottom: 領域の上下に重ねている見出し・操作バーの高さ(全体表示で、その下に潜らないよう避ける。省略は 0)
+export type Size = {
+  cw: number
+  ch: number
+  w: number
+  h: number
+  top?: number
+  bottom?: number
+}
 
 // 全体表示のときの、領域の端からの余白(px)
 export const FIT_PADDING = 16
@@ -14,12 +22,13 @@ export const MAX_ZOOM = 4
 export const MIN_VISIBLE = 80
 
 // 領域に全体が収まる倍率(拡大はしない = 最大 1)と、その中央寄せの位置
-export function fitView({ cw, ch, w, h }: Size): View {
+export function fitView({ cw, ch, w, h, top = 0, bottom = 0 }: Size): View {
+  const availH = ch - top - bottom - FIT_PADDING * 2
   const scale = Math.max(
     0.01,
-    Math.min(1, (cw - FIT_PADDING * 2) / w, (ch - FIT_PADDING * 2) / h),
+    Math.min(1, (cw - FIT_PADDING * 2) / w, availH / h),
   )
-  return { x: (cw - w * scale) / 2, y: FIT_PADDING, scale }
+  return { x: (cw - w * scale) / 2, y: top + FIT_PADDING, scale }
 }
 
 export function clampScale(scale: number, fitScale: number): number {
@@ -58,20 +67,27 @@ export function zoomAt(
 // フォーカスした要素を見える位置まで動かす
 export const REVEAL_MARGIN = 16
 
-// 要素の矩形(領域の左上を原点とした座標)を、領域の内側(余白 margin)に収めるための移動量 { dx, dy }
+// 要素の矩形(領域の左上を原点とした座標)を、領域の内側(余白 margin。上下は、重ねている見出しなどの inset の分も避ける)に収めるための移動量 { dx, dy }
 // すでに収まっていれば 0。領域より大きい要素は、左上の端を余白の位置に合わせる
 export function revealDelta(
   rect: { left: number; top: number; right: number; bottom: number },
   area: { width: number; height: number },
   margin = REVEAL_MARGIN,
+  inset: { top?: number; bottom?: number } = {},
 ): { dx: number; dy: number } {
-  const axis = (start: number, end: number, length: number) => {
-    if (end - start > length - margin * 2 || start < margin) return margin - start
-    if (end > length - margin) return length - margin - end
+  // lo / hi: 見えてよい範囲(重ねている見出しなどの下は含めない)
+  const axis = (start: number, end: number, lo: number, hi: number) => {
+    if (end - start > hi - lo || start < lo) return lo - start
+    if (end > hi) return hi - end
     return 0
   }
   return {
-    dx: axis(rect.left, rect.right, area.width),
-    dy: axis(rect.top, rect.bottom, area.height),
+    dx: axis(rect.left, rect.right, margin, area.width - margin),
+    dy: axis(
+      rect.top,
+      rect.bottom,
+      margin + (inset.top ?? 0),
+      area.height - margin - (inset.bottom ?? 0),
+    ),
   }
 }
