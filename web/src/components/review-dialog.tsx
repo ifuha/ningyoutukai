@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatLimit } from '#/components/member-card'
 import { Modal } from '#/components/modal'
@@ -47,6 +48,8 @@ function ReviewRow({
   item: PendingReview
 }) {
   const { member, task } = item
+  // 完了にする前の確認(要件: 完了にするときは確認画面が出る)
+  const [confirming, setConfirming] = useState(false)
   const queryClient = useQueryClient()
   const complete = useMutation({
     mutationFn: () =>
@@ -80,13 +83,42 @@ function ReviewRow({
         </div>
         <button
           type="button"
-          disabled={complete.isPending || stale}
-          onClick={() => complete.mutate()}
+          disabled={complete.isPending || stale || confirming}
+          onClick={() => setConfirming(true)}
           className={buttonClass}
         >
           完了を確定
         </button>
       </div>
+      {confirming && (
+        <div className="space-y-2 border-l-2 border-ink pl-3">
+          <p>
+            「{task.taskName}」を完了にしますか?
+            完了にすると、{member.userName} さんの表示から消えます(データは残ります)。
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              disabled={complete.isPending || stale}
+              onClick={() => complete.mutate()}
+              className={buttonClass}
+            >
+              完了にする
+            </button>
+            <button
+              type="button"
+              disabled={complete.isPending}
+              onClick={() => {
+                setConfirming(false)
+                complete.reset()
+              }}
+              className={buttonClass}
+            >
+              やめる
+            </button>
+          </div>
+        </div>
+      )}
       {complete.isError && (
         <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
           ERR {complete.error.message}
