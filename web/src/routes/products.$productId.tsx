@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
+import { ManageMenu, type ManageMenuItem } from '#/components/manage-menu'
 import { MemberManageDialog } from '#/components/member-manage-dialog'
-import { TaskKindButton } from '#/components/task-kind-dialog'
+import { ProductManageDialog } from '#/components/product-manage-dialog'
+import { TaskKindDialog } from '#/components/task-kind-dialog'
 import { ProductTree } from '#/components/product-tree'
 import { pendingReviews, ReviewDialog } from '#/components/review-dialog'
 import {
@@ -42,6 +44,9 @@ function Product() {
   const [listMemberId, setListMemberId] = useState<string | null>(null)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [membersOpen, setMembersOpen] = useState(false)
+  const [kindsOpen, setKindsOpen] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [productManageOpen, setProductManageOpen] = useState(false)
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => api<ProductSummary>(`/api/product/${productId}`),
@@ -54,6 +59,17 @@ function Product() {
   })
 
   const isLeader = product.data?.role === 'leader'
+  // 「管理」メニューの項目。足すときは 1 行足す(リーダーだけなら isLeader の側に)
+  const manageItems: ManageMenuItem[] = [
+    { label: 'メンバー', onSelect: () => setMembersOpen(true) },
+    ...(isLeader
+      ? [
+          { label: 'タスクの種類', onSelect: () => setKindsOpen(true) },
+          { label: 'メンバーを招待', onSelect: () => setInviteOpen(true) },
+          { label: 'プロダクト管理', onSelect: () => setProductManageOpen(true) },
+        ]
+      : []),
+  ]
   const myId = tree.data?.viewerProductMemberId
   // 自分のタスクは詳細(リーダーも。編集は詳細から)、他人のタスクはリーダーだけ編集
   const canOpenTask = (m: TreeMember) => isLeader || m.productMemberId === myId
@@ -96,15 +112,7 @@ function Product() {
               )}
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              {tree.data && (
-                <button
-                  type="button"
-                  onClick={() => setMembersOpen(true)}
-                  className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
-                >
-                  メンバー
-                </button>
-              )}
+              {tree.data && <ManageMenu items={manageItems} />}
               {product.data?.role === 'leader' && (
                 <>
                   <button
@@ -123,8 +131,6 @@ function Product() {
                       確認待ち {pendingReviews(tree.data).length} 件
                     </button>
                   )}
-                  <TaskKindButton productId={productId} />
-                  <InviteMemberDialog productId={productId} />
                 </>
               )}
             <button
@@ -180,6 +186,29 @@ function Product() {
                 open={membersOpen}
                 onClose={() => setMembersOpen(false)}
               />
+              {isLeader && (
+                <>
+                  <TaskKindDialog
+                    productId={productId}
+                    open={kindsOpen}
+                    onClose={() => setKindsOpen(false)}
+                  />
+                  <InviteMemberDialog
+                    productId={productId}
+                    open={inviteOpen}
+                    onClose={() => setInviteOpen(false)}
+                  />
+                  <ProductManageDialog
+                    productId={productId}
+                    productName={
+                      product.data?.productName ?? tree.data.product.productName
+                    }
+                    memberCount={tree.data.members.length + 1}
+                    open={productManageOpen}
+                    onClose={() => setProductManageOpen(false)}
+                  />
+                </>
+              )}
               {product.data?.role === 'leader' && (
                 <ReviewDialog
                   productId={productId}
