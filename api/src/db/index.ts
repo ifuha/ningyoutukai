@@ -1,8 +1,11 @@
 import "dotenv/config";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool, type PoolConfig } from "pg";
 
-export function createDb(url = process.env.DATABASE_URL!) {
+// extra に `stream` などを渡すと、その設定で接続プールを作る(Durable Object 経由の接続用)
+export function createDb(url = process.env.DATABASE_URL!, extra?: PoolConfig) {
+  if (extra) return drizzle({ client: new Pool({ connectionString: url, ...extra }) });
   return drizzle(url);
 }
 
