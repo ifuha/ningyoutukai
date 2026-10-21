@@ -26,7 +26,12 @@ function createRequestDb(env: Env) {
   if (env.PG_VIA_DO) {
     const pg = env.PG_VIA_DO.getByName("pg");
     // pg の接続ごとに、DO に TCP 接続を 1 本開かせる(トランザクションは 1 接続の中で完結する)
-    return createDb(env.DATABASE_URL, { ssl: false, stream: () => new DoSocket(() => pg.openPg()) });
+    return createDb(env.DATABASE_URL, {
+      ssl: false,
+      // 1 リクエストが同時に持てる外向きの接続は 6 本まで(Workers の上限)なので、プールは小さくしておく
+      max: 4,
+      stream: () => new DoSocket(() => pg.openPg()),
+    });
   }
   return createDb(env.HYPERDRIVE?.connectionString ?? env.DATABASE_URL);
 }
