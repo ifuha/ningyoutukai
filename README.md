@@ -8,7 +8,7 @@
 ## 必要なもの
 
 - [Bun](https://bun.sh/)(api 用)
-- Node.js / npm(web 用)
+- Node.js **24 系の最新のパッチ(24.22.1 以上)** / npm(web の開発・ビルドと、`wrangler`・`drizzle-kit` などの CLI 用。本番の実行は Cloudflare Workers で、Node は動かない)。バージョンは `.nvmrc`(24)で示している。セキュリティ修正が出るので、`node --version` で確認する。古い版のときは、Node の公式サイトのインストーラ、`nvm`、`fnm` などで更新する(Homebrew の `node` は 26 系に上がるので、`node@24` を使う)
 - Docker(PostgreSQL 用。**docker compose v2**、つまり `docker compose` コマンドが前提です。`docker-compose` では動作を確認していません)
 
 ## api の起動(ローカル開発)
