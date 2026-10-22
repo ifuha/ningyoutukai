@@ -20,6 +20,17 @@ docker_host_url() {
   echo "$1" | sed -E 's#(@|//)(localhost|127\.0\.0\.1)([:/])#\1host.docker.internal\3#'
 }
 
+# 接続 URL の前後の空白・改行・引用符を取り除き、postgres://ユーザー@ホスト/... の形かを検査して返す。
+# GitHub の秘密に引用符つきで貼ると、psql が URL と読めず「ユーザー ID が無い」という分かりにくいエラーになるため。
+# 値そのものは表示しない(エラーにも出さない)。
+clean_db_url() {
+  local url="$1"
+  url="$(printf '%s' "$url" | tr -d '\r\n' | sed -E "s/^[[:space:]\"']+//; s/[[:space:]\"']+\$//")"
+  [[ "$url" =~ ^postgres(ql)?://[^/@]+@[^/]+/[^[:space:]]+$ ]] \
+    || die "接続 URL が postgres://ユーザー:パスワード@ホスト/DB名 の形ではありません(前後の引用符・空白・途中の改行を確認してください)"
+  echo "$url"
+}
+
 # URL を接続先として使える形にする(USE_DOCKER=1 のときだけ読み替える)
 conn_url() {
   if [ "${USE_DOCKER:-0}" = "1" ]; then docker_host_url "$1"; else echo "$1"; fi
