@@ -16,13 +16,14 @@
 ```bash
 cd api
 bun install
-docker compose up -d --wait   # dev 用の PostgreSQL 18 を localhost:5434 で起動
+docker compose up -d --wait   # dev 用の PostgreSQL 18(localhost:5434)と、メール受信箱 Mailpit(http://localhost:8025)を起動
 cp .env.local.example .env.local   # 開発用の環境変数。空欄を下の説明に沿って埋める
 bun run db:migrate            # 開発用 DB にマイグレーション適用
 bun run dev                   # http://localhost:3001
 ```
 
 - コンテナは `ningyoutukai-dev-db`(プロジェクト名 `ningyoutukai-dev`、ボリューム `ningyoutukai_dev_pgdata`)。初回起動時に、開発用 DB `ningyoutukai` と、テスト用 DB `ningyoutukai_test` の 2 つができます。
+- メール受信箱 Mailpit(コンテナ `ningyoutukai-dev-mailpit`)も同時に起動します。api が送るメール(招待など)は外へは出ず、ここに届きます。**http://localhost:8025** で見られます(メールは永続化しないので、コンテナを止めると消えます)。api は Mailpit の HTTP の送信 API で送るので、SMTP のポート(1025)は使いません。ポート 1025 / 8025 が使用中なら、`api/docker-compose.yml` の `ports` の左側を空いているポートに変え、8025 を変えたら `.env.local` の `MAILPIT_URL` も揃えてください。
 - 停止: `docker compose down`(データも消す場合は `docker compose down -v`)
 - API のポートを変える場合は環境変数 `PORT` を指定してください。
 - Swagger UI: http://localhost:3001/swagger (OpenAPI の定義は `/swagger/json`)。Elysia のルートが自動で載ります。
@@ -55,7 +56,8 @@ infra/scripts/dev-db-migrate.sh ningyoutukai         # 開発用 DB に移す(�
 | `BETTER_AUTH_URL` | api 自身の URL(省略時 `http://localhost:3001`)。OAuth のコールバック URL の元になります |
 | `WEB_ORIGIN` | web の URL(省略時 `http://localhost:3000`)。CORS の許可と、ログイン後の戻り先として信頼する URL(better-auth の `trustedOrigins`)に使います |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`、`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | GitHub / Google でログインするための OAuth の情報。ローカル用には、**開発用の OAuth アプリ**を作って、その値を入れます(本番用とは分ける。コールバック URL は `http://localhost:3001/api/auth/callback/<provider>`)。未設定だとログインのボタンが動きません。取得と登録の手順は [docs/oauth-setup.md](./docs/oauth-setup.md) |
-| `RESEND_API_KEY` / `MAIL_FROM` | メール通知(Resend)用。**ローカルでは空のまま**にします。`RESEND_API_KEY` が空(未設定)なら、メールは送らず、宛先・件名・本文をログに出すだけです。`MAIL_FROM` は送信元(例: `人形使い <noreply@example.com>`)で、ローカルでは不要です |
+| `MAILPIT_URL` | ローカルのメール受信箱 Mailpit の URL。`.env.local.example` の既定は `http://localhost:8025`。設定されていれば、メールは Mailpit(`POST /api/v1/send`)にだけ送られ、外には出ません。**Resend より優先**します。`NODE_ENV=production` では無視します(本番では設定しない)。送信に失敗しても API は失敗せず、ログに出すだけです |
+| `RESEND_API_KEY` / `MAIL_FROM` | メール通知(Resend)用。**ローカルでは `RESEND_API_KEY` を空のまま**にします。`MAILPIT_URL` が無く `RESEND_API_KEY` も空(未設定)なら、メールは送らず、宛先・件名・本文をログに出すだけです。`MAIL_FROM` は送信元(例: `人形使い <noreply@example.com>`)で、Mailpit に送るときも使います(省略時は `人形使い <noreply@localhost>`) |
 
 メール通知の注意(本番): Resend の無料の試用(送信元 `onboarding@resend.dev`)では、Resend に登録したアドレス以外には送れません。実際の利用者に送るには、Resend で独自ドメインを認証し、そのドメインのアドレスを `MAIL_FROM` に指定してください。
 
