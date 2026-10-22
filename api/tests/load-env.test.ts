@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadEnv } from "../src/lib/load-env";
+import { loadEnv, overrideWithEnvLocal } from "../src/lib/load-env";
 
 // 本物の process.env には触れず、渡したオブジェクトに読み込む
 let dir: string;
@@ -49,6 +49,26 @@ test("ファイルが無くてもエラーにしない", () => {
   const env: Record<string, string | undefined> = {};
   expect(() => loadEnv(env, dir)).not.toThrow();
   expect(env).toEqual({});
+});
+
+test("overrideWithEnvLocal: Bun が先に入れた .env の値を、.env.local で上書きする", () => {
+  writeFileSync(join(dir, ".env.local"), "DATABASE_URL=local\nNEW=1\n");
+  const env: Record<string, string | undefined> = { DATABASE_URL: "from-bun-env" };
+  overrideWithEnvLocal(env, [], dir);
+  expect(env).toEqual({ DATABASE_URL: "local", NEW: "1" });
+});
+
+test("overrideWithEnvLocal: 守る指定のキーは上書きしない", () => {
+  writeFileSync(join(dir, ".env.local"), "TEST_DATABASE_URL=local\n");
+  const env: Record<string, string | undefined> = { TEST_DATABASE_URL: "from-shell" };
+  overrideWithEnvLocal(env, ["TEST_DATABASE_URL"], dir);
+  expect(env.TEST_DATABASE_URL).toBe("from-shell");
+});
+
+test("overrideWithEnvLocal: .env.local が無ければ何もしない", () => {
+  const env: Record<string, string | undefined> = { A: "1" };
+  expect(() => overrideWithEnvLocal(env, [], dir)).not.toThrow();
+  expect(env).toEqual({ A: "1" });
 });
 
 test(".env.local だけ、.env だけでも読める", () => {
