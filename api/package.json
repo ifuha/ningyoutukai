@@ -1,6 +1,9 @@
 {
   "name": "api",
   "version": "1.0.50",
+  "engines": {
+    "node": ">=24.22.1 <25"
+  },
   "scripts": {
     "test": "bun test",
     "dev": "bun run --watch src/index.ts",
