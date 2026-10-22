@@ -62,7 +62,10 @@ jobs:
       - uses: actions/checkout@v7 # v7.0.1。要ピン留め(docs/deploy.md の「GitHub Actions のワークフロー」)
       - uses: actions/setup-node@v7 # v7.1.0。要ピン留め
         with:
-          node-version: lts/*
+          # メジャーは .nvmrc(24)で固定する。lts/* だと、LTS が更新されたときに、メジャーが勝手に上がる。
+          # check-latest: ランナーのキャッシュが古くても、24 系の最新のパッチ(セキュリティ修正)を取る
+          node-version-file: .nvmrc
+          check-latest: true
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
