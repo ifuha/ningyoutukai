@@ -3,6 +3,7 @@ import { openapi } from "@elysiajs/openapi";
 import { Elysia } from "elysia";
 import { auth, webOrigin } from "./auth";
 import { errorHandler } from "./lib/error-handler";
+import { calendarRoutes } from "./routes/calendar";
 import { invitationRoutes } from "./routes/invitation";
 import { memberRoutes } from "./routes/member";
 import { productRoutes } from "./routes/product";
@@ -25,6 +26,7 @@ export const app = new Elysia()
     })
   )
   .use(errorHandler)
+  .use(calendarRoutes)
   .use(productRoutes)
   .use(productTreeRoutes)
   .use(taskRoutes)

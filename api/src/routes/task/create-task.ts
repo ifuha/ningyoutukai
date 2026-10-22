@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { taskTypes, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { mailer } from "../../lib/mailer";
+import { addTaskDeadlineToGoogleCalendar } from "../../lib/google-calendar";
 import {
   getMemberContact,
   getMembership,
@@ -69,8 +70,30 @@ export const createTask = new Elysia({ name: "task-create-task" })
         })
         .returning(taskColumns);
 
-      // 担当者へ通知(失敗してもタスク作成は成功させる。mailer は例外を投げない)
+      // カレンダー登録と通知に使う担当者の連絡先。
       const contact = await getMemberContact(created.productMemberId);
+
+      // Google Calendar は補助機能として同期する。未連携・Google API 障害でもタスク作成は成功させる。
+      if (created.timeLimit && body.timeLimit && contact?.email) {
+        try {
+          const calendarResult = await addTaskDeadlineToGoogleCalendar({
+            email: contact.email,
+            taskId: created.taskId,
+            taskName: created.taskName,
+            // 日時入力を維持し、開始・終了を期限時刻にそろえて登録する
+            dueAt: created.timeLimit.toISOString(),
+          });
+          if (calendarResult === "failed") {
+            console.warn(`[task-create] Google Calendar 同期失敗: ${created.taskId}`);
+          } else if (calendarResult === "not-connected") {
+            console.info(`[task-create] 担当者がGoogle Calendar未連携のため同期をスキップ: ${created.taskId}`);
+          }
+        } catch (error) {
+          console.warn(`[task-create] Google Calendar 同期失敗: ${created.taskId}`, error);
+        }
+      }
+
+      // 担当者へ通知(失敗してもタスク作成は成功させる。mailer は例外を投げない)
       if (contact) {
         const lines = [`タスク「${created.taskName}」があなたに割り振られました。`];
         if (created.timeLimit) lines.push(`期限: ${created.timeLimit.toISOString()}`);
