@@ -39,7 +39,9 @@ export function Sidebar({
   isLoading?: boolean
 }) {
   return (
-    <aside className="flex h-screen w-60 shrink-0 flex-col overflow-y-auto bg-side px-4 pt-[26px] pb-6">
+    <aside className="flex h-screen w-60 shrink-0 flex-col bg-side">
+      {/* ロゴ・招待・プロダクト一覧だけがスクロールし、「プロダクト作成」は下に固定する */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-[26px]">
       <p className="text-[28px] leading-normal font-semibold">
         人形使い
       </p>
@@ -76,18 +78,20 @@ export function Sidebar({
               </li>
             ))
           )}
-          <li>
-            <button
-              type="button"
-              onClick={() => onCreateProduct?.()}
-              className="flex h-12 w-full items-center justify-center gap-3 border border-dashed border-ink text-base font-medium hover:bg-side-item"
-            >
-              <PlusIcon />
-              プロダクト作成
-            </button>
-          </li>
         </ul>
       </nav>
+      </div>
+
+      <div className="shrink-0 px-4 pt-3 pb-6">
+        <button
+          type="button"
+          onClick={() => onCreateProduct?.()}
+          className="flex h-12 w-full items-center justify-center gap-3 border border-dashed border-ink text-base font-medium hover:bg-side-item"
+        >
+          <PlusIcon />
+          プロダクト作成
+        </button>
+      </div>
     </aside>
   )
 }

@@ -20,7 +20,8 @@ export function AppShell({
 }: {
   activeProductId?: string
   // 'center': 縦横とも中央(既定)。'top': 縦は上から、横だけ中央
-  align?: 'center' | 'top'
+  // 'full': 余白もスクロールもなし。中身がメイン領域いっぱいに広がる(ツリーのキャンバス用)
+  align?: 'center' | 'top' | 'full'
   children: (ctx: {
     user: SessionUser
     products: UseQueryResult<ProductSummary[]>
@@ -104,6 +105,11 @@ export function AppShell({
           }}
         />
       </div>
+      {align === 'full' ? (
+        <main className="dot-grid min-h-0 min-w-0 flex-1 overflow-hidden">
+          {children({ user: session.user, products })}
+        </main>
+      ) : (
       <main className="dot-grid flex min-h-0 min-w-0 flex-1 overflow-y-auto px-4">
         <div
           className={`${align === 'top' ? 'mx-auto' : 'm-auto'} flex w-full justify-center py-6`}
@@ -111,6 +117,7 @@ export function AppShell({
           {children({ user: session.user, products })}
         </div>
       </main>
+      )}
     </div>
   )
 }

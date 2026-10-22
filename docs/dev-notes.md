@@ -49,15 +49,15 @@ Figma のログイン画面のデザインが、まだ完成していない。�
 
 ### 動かして確認する方法
 
-1. DB: `api` ディレクトリで `docker compose up -d --wait`
-2. マイグレーション: `api` ディレクトリで `bunx drizzle-kit migrate`(初回と、スキーマを変えたあと)
-3. api: `api` ディレクトリで `bun run dev`(ポート 3001)。`api/.env` を変えたら、api を再起動する
+1. DB: `api` ディレクトリで `docker compose up -d --wait`(dev 用の Postgres 18、ポート 5434。開発用 DB とテスト用 DB ができる)
+2. 環境変数: `api/.env.local.example` を `api/.env.local` にコピーして埋める(初回のみ)。マイグレーション: `api` ディレクトリで `bun run db:migrate`(初回と、スキーマを変えたあと)
+3. api: `api` ディレクトリで `bun run dev`(ポート 3001)。`api/.env.local` を変えたら、api を再起動する
 4. web: `web` ディレクトリで `npm run dev`(ポート 3000)
 5. `http://localhost:3000/` を開く
 
-実際にログインするには、`api/.env` に `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`、`GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` が必要。未設定だと、ボタンを押しても、api が「プロバイダが見つかりません」を返す(画面の見た目の確認には、影響しない)。
+実際にログインするには、`api/.env.local` に(開発用の OAuth アプリの値を。本番用とは分ける) `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`、`GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` が必要。未設定だと、ボタンを押しても、api が「プロバイダが見つかりません」を返す(画面の見た目の確認には、影響しない)。
 
-メール通知は、`api/.env` の `RESEND_API_KEY` が未設定なら送らず、ログだけ出す(`api/src/lib/mailer.ts`)。`.env` の説明は、ルートの [README.md](../README.md) を見る。
+メール通知は、`RESEND_API_KEY` が空(未設定)なら送らず、宛先・件名・本文をログに出す(`api/src/lib/mailer.ts`)。ローカルでは空のままにする。`.env.local` の説明は、ルートの [README.md](../README.md) を見る。
 
 ## 認証まわり
 
@@ -129,8 +129,34 @@ Figma のログイン画面のデザインが、まだ完成していない。�
 - `md`(768px)未満では、サイドバーを画面の外に隠し(`invisible`、フォーカスも届かない)、本体の上に薄いバー(「☰」と「人形使い」)を出す。「☰」で、幅 240px(最大で画面の 80%)のドロワーとして左から重ねて開く。`md` 以上は、今までどおり左に常時表示。`AppShell` の中だけの変更で、`Sidebar` は変えていない。
 - 閉じるのは、背景のオーバーレイのクリック、Esc、プロダクトの選択 / 作成の押下、`md` 以上への変化(`lib/use-drawer.ts`)。開いている間は `body` をスクロールさせない。閉じたら「☰」にフォーカスを戻す。フォーカスの閉じ込めはしていない。
 
-## ツリーの拡大・縮小(`web/`)
+## ツリーのキャンバス: 自由なパンとズーム(`web/`)
 
-- `ProductTree` の右上に `TreeZoomBar`(「−」「＋」「全体表示」と倍率 %)。倍率 `zoom` は、`useFitScale` の幅合わせを 1.0 とした相対値で、1.25 倍ずつ、0.5〜4 の範囲。画面内の状態のみ(保存しない)。ツリーの再取得では変わらず、`key={productId}` で、プロダクトを切り替えると 1.0 に戻る。
-- 実際の倍率は `fit × zoom`(表示の % もこれ)。スクロールバーは出さない(ツリーの領域は `overflow-hidden`)。拡大して中身が領域より広いときだけ、ドラッグ(マウス左ボタン)・スワイプ(タッチ)・領域にフォーカスして左右キーで、横に動かせる(`useDragPan`、`scrollLeft` を更新するので端で止まる)。縦はページのスクロールのまま(`touch-action: pan-y`)。5px 未満の動きはクリック扱いで、動かしたあとの解放では click を捨てる。「全体表示」で収まれば位置も戻る。中身は `left-0` 相当 + `transform-origin: top left` で置き、狭いときだけ `left` で中央に寄せる。
-- 拡大縮小の前後で、見えている範囲の横の中央を保つ。Ctrl/⌘ + ホイールも、ツリー上だけ `preventDefault` して拡大縮小する。
+- 課題: 従来は、拡大して中身が領域より広いときだけ `scrollLeft` で横に動かせた(ドラッグ・スワイプ・左右キーのみ)。トラックパッドの二本指スクロールは効かず、縦にも動かせず、収まっているときは何も動かせなかった。
+- 仕様: ツリーの領域を、デザインツールや地図のように、自由にパンとズームができるキャンバスにした。スクロールバーは出さない(`overflow: hidden`)。状態は `{ x, y, scale }` で、中身に `translate(x, y) scale(scale)`(`transform-origin: 0 0`)をかける。画面内の状態のみ(保存しない)。ツリーの再取得(タスクの変更など)では変わらず、`key={productId}` で、プロダクトを切り替えると全体表示に戻る。
+- 初期表示と fit: 領域(余白 16px を除く)にツリー全体が収まる倍率(最大 1)で、横は中央、縦は上寄せ。ユーザーが動かすまでは fit を保ち、リサイズにも追従する。動かしたら、その位置と倍率を保つ(リサイズでは変えない)。「全体表示」(`0` キー)で、位置も倍率も fit に戻る。初回の測定が終わるまでは `visibility: hidden`(ちらつき防止)。
+- 倍率: fit を基準にした相対倍率で、0.25 倍〜4 倍。表示の % は、実際にかかっている倍率(fit × 相対倍率)。ボタンと `+` / `-` は 1.25 倍ずつ、領域の中央を中心にする。
+- 移動の範囲: 中身が完全に画面の外へ消えないよう、中身の一辺が、領域の内側に最低 80px(中身がそれより小さければ、その大きさ)残るように制限する。
+- 入力(`lib/use-pan-zoom.ts`):
+
+  | 操作 | 入力 |
+  | --- | --- |
+  | 移動 | マウスの左ボタンのドラッグ(カードの上でも可)/ タッチの 1 本指ドラッグ / wheel の二本指スクロール(`deltaX` / `deltaY`、Ctrl・⌘ なし)/ 領域にフォーカスして矢印キー(Shift で 5 倍) |
+  | 拡大縮小 | Ctrl・⌘ + wheel(トラックパッドのピンチも、ブラウザが ctrlKey 付きの wheel で送る)はカーソルが中心 / タッチの 2 本指ピンチ(2 点の距離の比で倍率、ピンチの中点が中心)/ `+` `-` `0` キー / 操作バー |
+
+- ドラッグは 5px 未満ならクリック扱いで、カードの中のボタン(タスク名、「他 N 件」)はそのまま押せる。動かしたあとの解放では click を捨てる。ポインターのキャプチャは、動かし始めてから行う。
+- wheel は、領域の上だけ `preventDefault`(`passive: false` で直接つける)。領域には `overscroll-behavior: contain` と `touch-action: none` をつけ、端でページが動かないようにした。キャンバスが全面になったので、プロダクト画面のページ自体はスクロールしない。
+- フォーカス追従: Tab で領域内のボタンにフォーカスが移ったとき、画面からはみ出していれば、余白 16px で見える位置まで動かす(`revealDelta`、ズームはしない、移動範囲の制限は通す)。キーボード由来(`:focus-visible`)のときだけで、マウスで押したときは動かさない。領域は `overflow: clip` にして、ネイティブの scrollIntoView で `scrollLeft` がずれて、状態と表示が食い違うのを防ぐ(念のため、`scroll` で 0 に戻す)。
+- 全面のキャンバス: プロダクト画面では、キャンバスが、メイン領域(サイドバー / スマホ幅の「☰」のバーを除く、画面の右側全体)いっぱいに広がる(`AppShell` の `align="full"`: 余白なし、`overflow: hidden`、ページはスクロールしない)。見出し(プロダクト名、役割)とボタン群は上に、操作バーは右下に、説明は左下に、キャンバスの上へ重ねる。重ねた要素は `pointer-events: none` の親に、ボタンだけ `pointer-events: auto` で、それ以外の部分の入力はキャンバスに通る。見出しの行は半透明の背景(`bg-surface/80`)。枠線はなく、背景のドット柄(`dot-grid`)はそのまま(動かない)。
+- ボタンと `+` `-` キーのズームの中心は、見える領域(見出しの下から操作バーの上まで)と中身の共通部分の中央(`visibleCenter`。共通部分が無ければ見える領域の中央)。移動範囲の制限(中身の一辺が 80px 残る)も、見出しの裏ではなく、この見える領域に対して行う(`clampPan` が `Size.top` / `bottom` を使う)。カーソル・ピンチのズームは、そのままカーソル・中点が中心。操作の説明は、狭い幅(`sm` 未満)では操作バーと重なるので隠す。
+- オーバーレイを避ける: 見出しの高さは `ResizeObserver` で測り(初回の描画前)、`Size.top`、操作バー分の固定の 48px は `Size.bottom` として、全体表示(`fitView`)の余白と、フォーカス追従(`revealDelta` の `inset`)に足す。ツリーが見出しの下に潜らず、Tab で見出しの下に隠れる位置までパンしない。ズームの中心の計算は、点 p を固定して s→s' にするとき `x' = p.x - (p.x - x) * (s'/s)`(y も同様)。
+- 計算(fit、ズームの中心、倍率と移動範囲の制限)は `lib/pan-zoom.ts` の純粋関数で、`lib/pan-zoom.test.ts` を `cd web && bun test` で確認できる(`tsconfig.json` では `*.test.ts` を型チェックの対象から外している)。測定は `lib/use-canvas-size.ts`(`ResizeObserver`)。旧 `use-drag-pan.ts` と `use-fit-scale.ts` は削除した。
+
+## GitHub のユーザー名での招待(`api/`)
+
+- 不具合: GitHub でログインしても、`user.github_id`(better-auth)と `users.github_id`(アプリ)が空のままで、GitHub のユーザー名での招待が誰にも届かなかった。原因は、better-auth が `mapProfileToUser` の戻り値のうち `input: false` の項目(`githubId`)を捨てること(`parseAdditionalUserInputFromProviderProfile`)。`input: true` にすると、ログイン済みの人が `/update-user` で自分の `githubId` を書き換え、他人宛ての招待を受け取れてしまうので使わない。
+- 修正: `api/src/auth.ts` で、`mapProfileToUser` が GitHub の login を控え、account の作成・更新フック(`syncGithubLogin`)が `user.github_id` に保存する。ログインのたびに動くので、新規・再ログイン・ユーザー名の変更・Google が先のユーザーへの紐づけのすべてで入る。`users.github_id` へは、これまでどおり `getOrCreateAppUser` が次のリクエストで写す。再現は `api/tests/auth/github-oauth-callback.test.ts`(OAuth のコールバックを、GitHub への通信をスタブして通す)。
+- 仕様: GitHub のユーザー名での招待は、GitHub でログインしたことのある人にだけ届く。Google だけでログインした人には届かない(メールアドレスで招待する)。
+- 既存のデータの修復: 修正のデプロイ後、該当者が一度ログインし直せば直る。待てない場合は、`api/scripts/backfill-github-username.ts`(account の GitHub の数値 ID から、公開 API で login を取り、`github_id` を埋める)を使う。
+  - 確認: `cd api && DATABASE_URL=<接続文字列> bun ./scripts/backfill-github-username.ts`(既定は dry-run。更新対象と更新後の値を表示。メールは伏せる)
+  - 更新: 同じコマンドに `--apply` を付ける。何度実行しても同じ(冪等)。GitHub の API は認証なしで 1 時間 60 回 / IP まで。超えたら止まるので、時間を置いて再実行する。
+  - 招待の紐づけは不要: `user_id` が空の招待も、`invitee_identifier` と `users.github_id` の一致で届く。
