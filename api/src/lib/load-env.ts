@@ -1,4 +1,5 @@
-import { config } from "dotenv";
+import { existsSync, readFileSync } from "node:fs";
+import { config, parse } from "dotenv";
 
 /**
  * 環境変数のファイルを読み込む(`db/index.ts`、`auth.ts`、`drizzle.config.ts` が最初に import する)。
@@ -22,6 +23,23 @@ export function loadEnv(
     processEnv: processEnv as Record<string, string>,
     quiet: true,
   });
+}
+
+/**
+ * `bun test` では、Bun がテストの起動時に `.env` を `process.env` へ先に入れてしまう(`.env.local` は読まない)。
+ * そのため `loadEnv` だけでは `.env.local` が `.env` に負ける。`.env.local` の値で上書きして、優先順位を保つ。
+ * シェルで明示した値は守る(`protectedKeys`)。`.env.local` が無ければ何もしない。
+ */
+export function overrideWithEnvLocal(
+  processEnv: Record<string, string | undefined> = process.env,
+  protectedKeys: string[] = [],
+  dir = ".",
+): void {
+  const path = `${dir}/.env.local`;
+  if (!existsSync(path)) return;
+  for (const [key, value] of Object.entries(parse(readFileSync(path)))) {
+    if (!protectedKeys.includes(key)) processEnv[key] = value;
+  }
 }
 
 loadEnv();

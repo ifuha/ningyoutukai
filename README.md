@@ -72,6 +72,8 @@ bunx drizzle-kit migrate    # DB に適用
 
 `api` ディレクトリで `bun test`(または `bun run test`)。dev 用コンテナを起動してあれば、そのまま実行できます。
 
+- `bun test` は `.env` を先に読むので、`tests/setup.ts` が `.env.local` の値で上書きして、優先順位(シェル > `.env.local` > `.env`)を保ちます。`.env` に旧コンテナ(5433)の設定が残っていても、`.env.local`(5434)が使われます。
+
 - **テストは、開発用の DB ではなく、テスト用の DB(`ningyoutukai_test`)に対して実行されます。** `DATABASE_URL` が開発用の DB を指していても(`.env.local` から読まれても)、`tests/setup.ts` が DB 名に `_test` を付けたものへ切り替えます。`TEST_DATABASE_URL` を指定すれば、それが優先されます。
 - **安全装置**: 最終的な接続先の DB 名が `_test` で終わらないときは、テストの開始時に中止します(開発用の DB にテストが走るのを防ぐため)。
 - テストの前に、マイグレーション(`api/drizzle/`)が自動で適用されます。
