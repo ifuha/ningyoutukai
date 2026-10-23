@@ -4,7 +4,8 @@ import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { getMembership } from "../../lib/product-access";
-import { notCompleted, taskColumns, visibleTo } from "../../lib/task-view";
+import { MessageSchema } from "../../lib/response-schema";
+import { TaskSchema, notCompleted, taskColumns, visibleTo } from "../../lib/task-view";
 
 // タスク一覧取得 GET /api/product/:productId/task
 export const listTasks = new Elysia({ name: "task-list-tasks" })
@@ -36,6 +37,7 @@ export const listTasks = new Elysia({ name: "task-list-tasks" })
       requireUser: true,
       params: t.Object({ productId: t.String({ format: "uuid" }) }),
       query: t.Object({ includeCompleted: t.Optional(t.BooleanString()) }),
+      response: { 200: t.Array(TaskSchema), 404: MessageSchema },
       detail: { summary: "タスク一覧取得" },
     }
   );

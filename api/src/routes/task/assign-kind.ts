@@ -4,7 +4,8 @@ import { db } from "../../db";
 import { productMembers, taskTypes, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { getMembership } from "../../lib/product-access";
-import { taskColumns } from "../../lib/task-view";
+import { MessageSchema } from "../../lib/response-schema";
+import { TaskSchema, taskColumns } from "../../lib/task-view";
 
 const COMPLETED_ERROR = "完了済みのタスクは変更できません";
 
@@ -66,6 +67,7 @@ export const assignKindRoutes = new Elysia({ name: "task-assign-kind" })
         taskId: t.String({ format: "uuid" }),
         kindId: t.String({ format: "uuid" }),
       }),
+      response: { 200: TaskSchema, 403: MessageSchema, 404: MessageSchema, 409: MessageSchema },
       detail: { summary: "タスクに種類を割り当てる" },
     }
   );
