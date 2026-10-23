@@ -3,6 +3,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Sidebar } from '#/components/sidebar'
 import { api, type Invitation, type ProductSummary } from '#/lib/api'
+import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
 import { resetSessionExpired } from '#/lib/session-expired'
 import { useDrawer } from '#/lib/use-drawer'
@@ -44,7 +45,7 @@ export function AppShell({
   // 所属しているプロダクトの一覧(api に、ログインの cookie が届くかの確認も兼ねる)
   const products = useQuery({
     queryKey: ['products'],
-    queryFn: () => api<ProductSummary[]>('/api/product'),
+    queryFn: () => edenData(eden().api.product.get()),
     enabled: Boolean(session?.user),
     retry: false,
   })
