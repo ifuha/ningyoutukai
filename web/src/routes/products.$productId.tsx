@@ -20,11 +20,12 @@ import {
 } from '#/components/task-form-dialog'
 import {
   api,
+  ApiError,
   type ProductSummary,
-  type ProductTree as ProductTreeData,
   type TreeMember,
   type TreeTask,
 } from '#/lib/api'
+import { eden, edenData } from '#/lib/eden'
 
 // プロダクトの画面(`/products/$productId`)。ログイン必須。見出しと、ツリー(リーダーとメンバー、タスク)
 // 見た目は暫定(ターミナル風)。Figma の `tree` の設計ができたら入れ替える
@@ -54,7 +55,13 @@ function Product() {
   })
   const tree = useQuery({
     queryKey: ['products', productId, 'tree'],
-    queryFn: () => api<ProductTreeData>(`/api/product/${productId}/tree`),
+    queryFn: async () => {
+      const t = await edenData(eden().api.product({ productId }).tree.get())
+      // api の型では `leader` は null になりうる(手書きの型は null を考えていなかった)。
+      // 画面はリーダーがいる前提なので、いない場合は、描画で落ちる前にエラーにする
+      if (!t.leader) throw new ApiError(500, 'エラーが発生しました')
+      return { ...t, leader: t.leader }
+    },
     retry: false,
   })
 
