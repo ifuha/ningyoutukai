@@ -4,16 +4,8 @@ import { db } from "../db";
 import { products } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
 import { getMembership } from "../lib/product-access";
+import { MessageSchema, ProductSchema } from "../lib/response-schema";
 import { NO_NUL } from "../lib/validation";
-
-const messageSchema =t.Object({ message: t.String() });
-
-const productSchema = t.Object({
-  productId: t.String(),
-  productName: t.String(),
-  createdAt: t.Date(),
-  role: t.Union([t.Literal("leader"), t.Literal("member")]),
-});
 
 export const productManageRoutes = new Elysia({ name: "product-manage" })
   .use(authGuard)
@@ -44,7 +36,7 @@ export const productManageRoutes = new Elysia({ name: "product-manage" })
       params: t.Object({ productId: t.String({ format: "uuid" }) }),
       // NUL 文字は PostgreSQL が拒否して 500 になるため、pattern で弾いて 422 にする
       body: t.Object({ productName: t.String({ maxLength: 100, pattern: NO_NUL }) }),
-      response: { 200: productSchema, 400: messageSchema, 403: messageSchema, 404: messageSchema },
+      response: { 200: ProductSchema, 400: MessageSchema, 403: MessageSchema, 404: MessageSchema },
       detail: { summary: "プロダクト情報変更(リーダー)" },
     }
   )
@@ -69,7 +61,7 @@ export const productManageRoutes = new Elysia({ name: "product-manage" })
     {
       requireUser: true,
       params: t.Object({ productId: t.String({ format: "uuid" }) }),
-      response: { 204: t.Undefined(), 403: messageSchema, 404: messageSchema },
+      response: { 204: t.Undefined(), 403: MessageSchema, 404: MessageSchema },
       detail: { summary: "プロダクト削除(リーダー)" },
     }
   );
