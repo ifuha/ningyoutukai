@@ -118,6 +118,33 @@ v2.0 の中心は、**開発環境を整えること**。開発は**ローカル
 - **エラーの形。** いまの `ApiError`(`{ message }`)と、Eden のエラーの扱いを合わせる。
 - **同一オリジン。** web の Worker が `/api/*` を転送する構成で、ベース URL を空にできるか。
 
+##### 試作の結果(`feat/v2/eden-spike`、`GET /api/product` と `GET /api/product/:productId/tree` の 2 本)
+
+結論: **導入できる。** api を変えると web の `tsc` が失敗することを確認した(R14 の受け入れ条件)。ただし、下の注意を守ること。
+
+| 確かめる点 | 結果 |
+| --- | --- |
+| 型を読めるか | 読める。web の `src/lib/eden.ts` から `import type { app } from '../../../api/src/app'`(api のソースを直接 `import type`)。型の宣言ファイルを出す方法は、試していない(web が api の `node_modules` の型を読むのは同じなので、利点が小さい)。`tsc --noEmit` は 約 2.2 秒 → 約 2.2〜2.6 秒(CPU 時間は 3.3 秒 → 4.4 秒)。読むファイルが 1975 になり、うち api の `src` が 57 本。`types: ["vite/client"]` と Bun の型は衝突しなかった(api のソースは Node の型で足りる)。ビルドに api のコードは入らない(`dist` に `buildTree` などは無い。入るのは Eden の実行コードだけ) |
+| **`elysia` の複製** | **web と api に別々の `elysia` があると、`treaty<typeof app>` が型エラーになる**(同じ 1.4.30 でも、private な `dependencies` が別の宣言として扱われる)。`@elysiajs/eden` は `elysia` を peer に持つので、npm が web にも入れる。対処: `web/tsconfig.json` の `paths` に `"elysia": ["../api/node_modules/elysia"]` を足し、型を 1 つにした。web の `node_modules/elysia` は使われない |
+| 依存の置き場所 | `@elysiajs/eden` は `dependencies`(実行コードがバンドルに入るため。ほかの web の依存と同じ)。`elysia` は web に直接は入れない |
+| バージョンの食い違い | api の `elysia` は `latest`(`bun.lock` は 1.4.30)。Eden は peer が `>=1.4.19`(入れたのは 1.4.9)。`paths` で型は api の複製に固定されるので、web 側との食い違いは起きないが、`bun update` で `elysia` の次のメジャーが入ると Eden が追いつかない恐れがある。**api の `elysia` を `^1.4.30` に固定し、Eden は `^1.4.9`(1.4 系)にそろえる**ことを勧める |
+| CI | **web の job は `npm ci` だけなので、api の `node_modules` が無く、`tsc` が通らなくなる。** web の job に、`oven-sh/setup-bun` と `bun install`(api で)を足す必要がある。web の `npm run build` は影響なし(`import type` のみ) |
+| 日時の型 | 食い違いがある。**Eden の型は `Date`(スキーマが `t.Date()` の場合も、drizzle の `Date` からの推論の場合も)。実際の JSON は文字列。** さらに Eden は、既定(`parseDate: true`)だと、文字列を実行時に `Date` に変える。実測: タスク名が `2026-10-01` のとき、**`taskName` まで `Date` になった**(説明が `2026-11-01T00:00:00Z` のときは、文字列のまま)。対処: `parseDate: false` にし、型の側で `Date` を `string` に直す(`eden.ts` の `Json<T>`)。これで実際の値(文字列)と型が合い、手書きの型(`createdAt: string`)と同じ形になる |
+| 応答の型 | 試作の 2 本は具体的(`any`/`unknown` なし)。ツリーは `response` のスキーマ(`ProductTreeSchema`)、一覧は drizzle の `select` からの推論。**ツリーの `leader` は `Union([TreeNode, Null])` で、手書きの `ProductTree.leader`(null なし)と食い違っていた**(Eden にすると、コンパイルで見つかった)。試作では、`leader` が null ならエラーにして、画面の挙動は変えていない。本番では、api の型が正しいのか(リーダーが必ずいるなら `t.Null()` を外す)を決めること |
+| エラーの形 | `{ data, error }` を、`edenData()`(`eden.ts`)が `ApiError` に直す。401、404、422、500(本文 `{ message }`)は、いまの `api<T>()` と同じ `status` と `message`。通信できないときは、Eden が 503 と `Error` を返すので、`value instanceof Error` を見て、`ApiError(0, 'サーバーに接続できませんでした…')`(いまと同じ文)にする。本文が JSON でない 502/503 は `'エラーが発生しました'`(いまと同じ)。401 のセッション切れは、react-query の `handleApiError` が `ApiError.status === 401` を見るので、変更なし。実際の api(テスト用 DB、ポート 3102)で確認した |
+| 同一オリジン | Eden は空文字を `https://` に変えてしまうので、ベース URL が空のときは `window.location.origin` を使う(`createClient`)。`window` が無い SSR で壊れないよう、クライアントは最初の呼び出しで作る(`eden()`)。`http://localhost:3001` と空文字(`window.location.origin` を差した場合)の両方で動くことを確認した。`credentials: 'include'` は `fetch` の設定で渡す。Cloudflare Workers の web ビルド(`npm run build`)は通った |
+
+型の安全性の確認: `api/src/routes/product.ts` の `productColumns` で `productName` を `name` に変えると、web の `npx tsc --noEmit` が `app-shell.tsx` で失敗した(`Property 'productName' does not exist ...`)。元に戻すと通る。
+
+**全 27 本(認証の `/api/auth/*` を除く)を移すときの注意と見積もり**
+
+- ルートは 27 本。`response` のスキーマがあるのは 15 本(ツリー、メンバー取得・一覧・削除、タスク削除、プロダクト管理の更新・削除、タスクの種類の一覧・作成・更新・削除、招待の一覧・作成・承諾・拒否)。**無いのは 12 本**: プロダクトの作成・一覧・取得(`product.ts`)、カレンダーの状態(`calendar.ts`)、タスクの取得・作成・更新・一覧(`list-tasks`)・メンバー別一覧(`list-member-tasks`)・完了報告(`report-complete`)・完了確認(`confirm-complete`)・種類の割り当て(`assign-kind`)。これらも、ハンドラの戻り値と `status()` から型は推論される(試作の一覧は具体的だった)が、日時が `Date` になる、エラー本文の型が緩くなる、ハンドラの変更が応答の形を黙って変える、という弱点がある。移すときに `response` を足すのがよい(足すと、応答の検証も効くため、`errorHandler` の 500 になる場合がある。api のテストで確かめる)。
+- 日時の変換 `Json<T>` は共通の部品として使う。リクエスト側の `Date` を送る場合(`timeLimit` の送信など)は、Eden の型が `string | Date`(クエリ)か `Date`(本文)になるので、送る形(ISO 文字列)と合わせる確認が要る。
+- `204`(本文なし)を返すルート(削除など)は、いまの `api<void>()` は `undefined` を返す。Eden の `data` が空文字などになる恐れがある(試作では未確認)ので、移すときに実際の api で見る。
+- 手書きの型(`ProductSummary`、`TreeMember` など)を消すと、`UseQueryResult<ProductSummary[]>` などの型の注釈も要る(`Awaited<ReturnType<...>>` か、api 側の `Static` 型を、`import type` で使う)。
+- 見積もり: 呼び出しは 約 20 か所(`api<`)。1 か所あたり 10〜20 分(画面の確認を含む)で、画面ごとに 4〜6 本の PR。`response` の追加とテストの修正に 0.5〜1 日。CI(`setup-bun`)と `paths` の整備に 1〜2 時間。
+- 懸念: `tsc` の遅さは今のところ問題なし(約 +0.4 秒)。ルートが増えると、Eden の型は重くなる(Elysia の型は深い)ので、移したあとにもう一度測る。web の型検査が api の `node_modules` に依存する(api を `install` しないと web の `tsc` が通らない)。
+
 ## 6. 決めること
 
 ### 決まったこと(最初の案 D1〜D6 への回答)
