@@ -88,6 +88,8 @@ cd web
 npm install
 ```
 
+web は api の型(Eden。`web/src/lib/eden.ts`)と、api の `elysia` の型を読むため、`web` の型検査(`npx tsc --noEmit`)やビルドの前に、`api` でも `bun install` を済ませておく必要があります(上の「api の起動」)。api と web で `elysia` の版がずれないよう、api の `elysia` は `^1.4.30` に固定しています。更新するときは、`@elysiajs/eden`(web)との組み合わせを確かめてください。
+
 認証(better-auth)は **api 側**で動いています(`/api/auth/*`、ユーザー・セッションは DB に保存)。web は `authClient` から api に接続します。
 
 api の URL を変えたいときだけ、`web/.env` に次を書きます(省略時は `http://localhost:3001`。`web/src/lib/api.ts` 参照)。
