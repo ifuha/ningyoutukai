@@ -85,6 +85,9 @@ export const auth = betterAuth({
     githubId: { type: "string", required: false, input: false },
   },
 },
+  // Google / GitHub のアクセストークン・リフレッシュトークンを、DB に暗号化して保存する(鍵は BETTER_AUTH_SECRET 由来)。
+  // 読み書きは google-calendar.ts も同じ方式で行う。既存の平文の行は、そのまま読める
+  account: { encryptOAuthTokens: true },
   databaseHooks: {
     account: {
       create: { after: syncGithubLogin },
