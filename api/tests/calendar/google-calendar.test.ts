@@ -1,10 +1,12 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { addTaskDeadlineToGoogleCalendar } from "../../src/lib/google-calendar";
+import { addTaskDeadlineToGoogleCalendar, hasGoogleCalendarConnection } from "../../src/lib/google-calendar";
 import { cleanup, createOutsider } from "../task/helpers";
 import {
   CALENDAR_SCOPE,
   EVENTS_URL,
   TOKEN_URL,
+  decryptStored,
+  encryptForStore,
   findAccount,
   headerOf,
   insertAccount,
@@ -132,8 +134,8 @@ describe("アクセストークンの更新", () => {
     expect(headerOf(f.calls[1]!.init, "authorization")).toBe("Bearer access-new");
 
     const row = await findAccount(u.accountId);
-    expect(row.accessToken).toBe("access-new");
-    expect(row.refreshToken).toBe("refresh-1"); // 返ってこなければ、そのまま
+    expect(await decryptStored(row.accessToken)).toBe("access-new");
+    expect(row.refreshToken).toBe("refresh-1"); // 返ってこなければ、そのまま(平文で入れた行は平文のまま) // 返ってこなければ、そのまま
     const exp = row.accessTokenExpiresAt!.getTime();
     expect(exp).toBeGreaterThanOrEqual(before + 3600_000 - 2000);
     expect(exp).toBeLessThanOrEqual(Date.now() + 3600_000 + 2000);
@@ -151,8 +153,8 @@ describe("アクセストークンの更新", () => {
 
     expect(f.calls.map((c) => c.url)).toEqual([TOKEN_URL, EVENTS_URL]);
     const row = await findAccount(u.accountId);
-    expect(row.accessToken).toBe("access-new");
-    expect(row.refreshToken).toBe("refresh-2");
+    expect(await decryptStored(row.accessToken)).toBe("access-new");
+    expect(await decryptStored(row.refreshToken)).toBe("refresh-2");
   });
   it("期限まで 60 秒より先なら更新しない", async () => {
     const u = await connectedUser({ accessTokenExpiresAt: future(120_000) });
@@ -170,9 +172,9 @@ describe("アクセストークンの更新", () => {
     expect(await run(u.email)).toBe("created");
     expect(f.calls.map((c) => c.url)).toEqual([TOKEN_URL, EVENTS_URL]);
   });
-  it("更新に失敗(400)したら failed で、予定は作らず、例外も投げない。DB は変わらない", async () => {
+  it("更新に失敗(invalid_grant 以外の 400)したら failed で、予定は作らず、例外も投げない。DB は変わらない", async () => {
     const u = await connectedUser({ accessTokenExpiresAt: future(-1000) });
-    const f = mockFetch(() => json({ error: "invalid_grant" }, 400));
+    const f = mockFetch(() => json({ error: "invalid_request" }, 400));
     restoreFetch = f.restore;
 
     expect(await run(u.email)).toBe("failed");
@@ -188,6 +190,10 @@ describe("アクセストークンの更新", () => {
     restoreFetch = f.restore;
     expect(await run(u.email)).toBe("failed");
     expect(f.calls).toHaveLength(0);
+    // 原因が分かるよう警告を出す(値は出さない)
+    const warned = warnSpy.mock.calls.map((c: unknown[]) => String(c[0]));
+    expect(warned.some((m: string) => m.includes("GOOGLE_CLIENT_ID") && m.includes("not set"))).toBe(true);
+    expect(warned.join("\n")).not.toContain("refresh-1");
   });
   it("token の応答に access_token が無ければ failed", async () => {
     const u = await connectedUser({ accessTokenExpiresAt: future(-1000) });
@@ -212,7 +218,7 @@ describe("予定の作成が失敗したとき", () => {
     expect(f.calls.map((c) => c.url)).toEqual([EVENTS_URL, TOKEN_URL, EVENTS_URL]);
     expect(headerOf(f.calls[0]!.init, "authorization")).toBe("Bearer access-old");
     expect(headerOf(f.calls[2]!.init, "authorization")).toBe("Bearer access-new");
-    expect((await findAccount(u.accountId)).accessToken).toBe("access-new");
+    expect(await decryptStored((await findAccount(u.accountId)).accessToken)).toBe("access-new");
   });
   it("401 が続いても、再試行は 1 回だけで failed", async () => {
     const u = await connectedUser();
@@ -242,5 +248,117 @@ describe("予定の作成が失敗したとき", () => {
     restoreFetch = f.restore;
     expect(await run(u.email)).toBe("failed");
     expect(f.calls.map((c) => c.url)).toEqual([EVENTS_URL]);
+  });
+});
+
+describe("トークンの暗号化保存", () => {
+  it("更新後のトークンは暗号化されて保存され(生の値は平文と異なる)、復号すると元に戻る", async () => {
+    const u = await connectedUser({ accessTokenExpiresAt: future(-1000) });
+    const f = mockFetch((c) =>
+      c.url === TOKEN_URL
+        ? json({ access_token: "access-new", expires_in: 3600, refresh_token: "refresh-2" })
+        : json({}),
+    );
+    restoreFetch = f.restore;
+    expect(await run(u.email)).toBe("created");
+
+    const row = await findAccount(u.accountId);
+    expect(row.accessToken).not.toBe("access-new");
+    expect(row.accessToken).not.toContain("access-new");
+    expect(row.refreshToken).not.toBe("refresh-2");
+    expect(await decryptStored(row.accessToken)).toBe("access-new");
+    expect(await decryptStored(row.refreshToken)).toBe("refresh-2");
+  });
+  it("暗号化済みの行も読める(復号したトークンで API を呼ぶ)", async () => {
+    const u = await connectedUser({
+      accessToken: await encryptForStore("access-enc"),
+      refreshToken: await encryptForStore("refresh-enc"),
+    });
+    const f = mockFetch(() => json({}));
+    restoreFetch = f.restore;
+    expect(await run(u.email)).toBe("created");
+    expect(headerOf(f.calls[0]!.init, "authorization")).toBe("Bearer access-enc");
+  });
+  it("暗号化済みのリフレッシュトークンで更新する(token エンドポイントには復号した値を送る)", async () => {
+    const u = await connectedUser({
+      accessToken: null,
+      accessTokenExpiresAt: null,
+      refreshToken: await encryptForStore("refresh-enc"),
+    });
+    const f = mockFetch((c) =>
+      c.url === TOKEN_URL ? json({ access_token: "access-new", expires_in: 3600 }) : json({}),
+    );
+    restoreFetch = f.restore;
+    expect(await run(u.email)).toBe("created");
+    expect(tokenBody(f.calls[0]!.init).get("refresh_token")).toBe("refresh-enc");
+  });
+  it("暗号化前に保存された平文の行も、エラーにならず読める(更新すると暗号化される)", async () => {
+    const u = await connectedUser({ accessTokenExpiresAt: future(-1000) });
+    const f = mockFetch((c) =>
+      c.url === TOKEN_URL ? json({ access_token: "access-new", expires_in: 3600 }) : json({}),
+    );
+    restoreFetch = f.restore;
+    expect(await run(u.email)).toBe("created");
+    expect(tokenBody(f.calls[0]!.init).get("refresh_token")).toBe("refresh-1");
+    // 更新されなかった refreshToken は平文のまま(再連携まで)
+    expect((await findAccount(u.accountId)).refreshToken).toBe("refresh-1");
+  });
+  it("復号できない(鍵が違う)トークンは使わず、消して再連携を促す(例外は投げない)", async () => {
+    const { symmetricEncrypt } = await import("better-auth/crypto");
+    const other = await symmetricEncrypt({ key: "another-fake-secret-for-test-0123456789", data: "refresh-x" });
+    const u = await connectedUser({ refreshToken: other });
+    const f = mockFetch(() => json({}));
+    restoreFetch = f.restore;
+    expect(await run(u.email)).toBe("not-connected");
+    expect(f.calls).toHaveLength(0);
+    const row = await findAccount(u.accountId);
+    expect(row.refreshToken).toBeNull();
+    expect(row.accessToken).toBeNull();
+  });
+});
+
+describe("リフレッシュトークンの失効(invalid_grant)", () => {
+  it("invalid_grant ならトークンを消し、failed を返す。状態 API は connected:false になる", async () => {
+    const u = await connectedUser({ accessTokenExpiresAt: future(-1000) });
+    const f = mockFetch(() => json({ error: "invalid_grant" }, 400));
+    restoreFetch = f.restore;
+
+    expect(await run(u.email)).toBe("failed");
+
+    const row = await findAccount(u.accountId);
+    expect(row.accessToken).toBeNull();
+    expect(row.refreshToken).toBeNull();
+    expect(row.accessTokenExpiresAt).toBeNull();
+    expect(await hasGoogleCalendarConnection(u.email)).toBe(false);
+    // 次の同期は、通信せずに not-connected
+    expect(await run(u.email)).toBe("not-connected");
+    expect(f.calls).toHaveLength(1);
+  });
+  it("401 のあとの更新で invalid_grant でも消す", async () => {
+    const u = await connectedUser();
+    const f = mockFetch((c) =>
+      c.url === TOKEN_URL ? json({ error: "invalid_grant" }, 400) : json({ error: "unauth" }, 401),
+    );
+    restoreFetch = f.restore;
+    expect(await run(u.email)).toBe("failed");
+    expect((await findAccount(u.accountId)).refreshToken).toBeNull();
+  });
+  it.each([500, 503])("一時的な失敗(%i)では、トークンを消さない", async (status) => {
+    const u = await connectedUser({ accessTokenExpiresAt: future(-1000) });
+    const f = mockFetch(() => json({ error: "temporarily_unavailable" }, status));
+    restoreFetch = f.restore;
+    expect(await run(u.email)).toBe("failed");
+    const row = await findAccount(u.accountId);
+    expect(row.refreshToken).toBe("refresh-1");
+    expect(row.accessToken).toBe("access-old");
+  });
+  it("ネットワークの失敗(fetch が例外)でも、トークンを消さない", async () => {
+    const u = await connectedUser({ accessTokenExpiresAt: future(-1000) });
+    const f = mockFetch(() => {
+      throw new Error("network down");
+    });
+    restoreFetch = f.restore;
+    await run(u.email).catch(() => {});
+    expect((await findAccount(u.accountId)).refreshToken).toBe("refresh-1");
   });
 });

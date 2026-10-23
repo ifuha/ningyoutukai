@@ -1,5 +1,7 @@
 import { eq } from "drizzle-orm";
 import { spyOn } from "bun:test";
+import { symmetricDecrypt, symmetricEncrypt } from "better-auth/crypto";
+import { auth } from "../../src/auth";
 import { db } from "../../src/db";
 import { account } from "../../src/db/auth-schema";
 
@@ -28,6 +30,17 @@ export async function insertAccount(
 export async function findAccount(id: string) {
   const [row] = await db.select().from(account).where(eq(account.id, id));
   return row!;
+}
+
+/** DB に保存された(暗号化された)トークンを、better-auth と同じ鍵で復号する。null はそのまま */
+export async function decryptStored(value: string | null) {
+  if (value === null) return null;
+  return symmetricDecrypt({ key: (await auth.$context).secretConfig, data: value });
+}
+
+/** better-auth と同じ方式で暗号化する(暗号化済みの行を用意するため) */
+export async function encryptForStore(value: string) {
+  return symmetricEncrypt({ key: (await auth.$context).secretConfig, data: value });
 }
 
 export type FetchCall = { url: string; init: RequestInit };
