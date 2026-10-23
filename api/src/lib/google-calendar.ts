@@ -1,4 +1,6 @@
 import { and, eq } from "drizzle-orm";
+import { symmetricDecrypt, symmetricEncrypt } from "better-auth/crypto";
+import { auth } from "../auth";
 import { db } from "../db";
 import { account as authAccount, user as authUser } from "../db/auth-schema";
 
@@ -13,6 +15,42 @@ type GoogleAccount = {
   accessTokenExpiresAt: Date | null;
 };
 
+/**
+ * トークンは、better-auth の `account.encryptOAuthTokens` と同じ方式(鍵は BETTER_AUTH_SECRET 由来)で暗号化して保存する。
+ * `auth.api.getAccessToken` は、失効(invalid_grant)と一時的な失敗を区別せず、失効時にトークンも消せないため使わない。
+ * 暗号化前に保存済みの平文の行も読めるよう、暗号文らしくない値は、そのまま返す
+ * (判定は better-auth の `decryptOAuthToken` / `isLikelyEncrypted` と同じ)。
+ */
+async function secretKey() {
+  return (await auth.$context).secretConfig;
+}
+
+function looksEncrypted(token: string) {
+  return token.startsWith("$ba$") || (token.length % 2 === 0 && /^[0-9a-f]+$/i.test(token));
+}
+
+/** 復号できない(BETTER_AUTH_SECRET が変わった、など)ときは undefined */
+async function decryptToken(token: string | null): Promise<string | null | undefined> {
+  if (!token || !looksEncrypted(token)) return token;
+  try {
+    return await symmetricDecrypt({ key: await secretKey(), data: token });
+  } catch {
+    return undefined;
+  }
+}
+
+async function encryptToken(token: string) {
+  return symmetricEncrypt({ key: await secretKey(), data: token });
+}
+
+/** 連携を解除した状態にする(トークンを消す)。再連携すれば、また使える */
+async function clearTokens(accountId: string) {
+  await db
+    .update(authAccount)
+    .set({ accessToken: null, refreshToken: null, accessTokenExpiresAt: null })
+    .where(eq(authAccount.id, accountId));
+}
+
 async function findGoogleAccount(email: string): Promise<GoogleAccount | null> {
   const [row] = await db
     .select({
@@ -26,7 +64,17 @@ async function findGoogleAccount(email: string): Promise<GoogleAccount | null> {
     .innerJoin(authUser, eq(authAccount.userId, authUser.id))
     .where(and(eq(authUser.email, email), eq(authAccount.providerId, "google")))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+
+  const refreshToken = await decryptToken(row.refreshToken);
+  const accessToken = await decryptToken(row.accessToken);
+  if (refreshToken === undefined || accessToken === undefined) {
+    // 保存済みのトークンを復号できない。使えないので消して、再連携してもらう
+    console.warn("[google-calendar] stored tokens could not be decrypted; clearing them (BETTER_AUTH_SECRET changed?)");
+    await clearTokens(row.id);
+    return { ...row, accessToken: null, refreshToken: null, accessTokenExpiresAt: null };
+  }
+  return { ...row, accessToken, refreshToken };
 }
 
 function hasCalendarScope(scope: string | null) {
@@ -49,7 +97,10 @@ async function refreshAccessToken(account: GoogleAccount): Promise<string | null
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
+  if (!clientId || !clientSecret) {
+    console.warn("[google-calendar] GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET is not set; cannot refresh the access token");
+    return null;
+  }
 
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -62,6 +113,14 @@ async function refreshAccessToken(account: GoogleAccount): Promise<string | null
     }),
   });
   if (!response.ok) {
+    // リフレッシュトークンの失効(ユーザーが Google 側で連携を外した、など)。再連携が必要なのでトークンを消す。
+    // 500 やネットワークの失敗など、一時的なものでは消さない
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    if (response.status === 400 && body?.error === "invalid_grant") {
+      console.warn("[google-calendar] refresh token is no longer valid (invalid_grant); disconnecting");
+      await clearTokens(account.id);
+      return null;
+    }
     console.warn(`[google-calendar] token refresh failed (${response.status})`);
     return null;
   }
@@ -80,9 +139,9 @@ async function refreshAccessToken(account: GoogleAccount): Promise<string | null
   await db
     .update(authAccount)
     .set({
-      accessToken: tokens.access_token,
+      accessToken: await encryptToken(tokens.access_token),
       accessTokenExpiresAt: expiresAt,
-      ...(tokens.refresh_token ? { refreshToken: tokens.refresh_token } : {}),
+      ...(tokens.refresh_token ? { refreshToken: await encryptToken(tokens.refresh_token) } : {}),
     })
     .where(eq(authAccount.id, account.id));
 
