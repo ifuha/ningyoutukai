@@ -17,35 +17,3 @@ export class ApiError extends Error {
     this.status = status
   }
 }
-
-/** `GET /api/product/:productId/tree` のタスク 1 件 */
-export type TreeTask = {
-  taskId: string
-  taskName: string
-  description: string | null
-  /** ISO 8601。期限なしは null */
-  timeLimit: string | null
-  /** 値があれば、完了報告済み(リーダーの確認待ち) */
-  reportedAt: string | null
-  isVisible: boolean
-  taskType: { taskTypeId: string; taskTypeName: string } | null
-}
-
-/** ツリーの 1 人分(リーダーかメンバー)。`tasks` は期限が近い順 */
-export type TreeMember = {
-  productMemberId: string
-  userId: string
-  userName: string
-  avatarUrl: string | null
-  role: 'leader' | 'member'
-  tasks: TreeTask[]
-}
-
-/** `GET /api/product/:productId/tree` の応答 */
-export type ProductTree = {
-  product: { productId: string; productName: string }
-  leader: TreeMember
-  members: TreeMember[]
-  /** 呼び出したユーザー自身の productMemberId(自分のタスクの判定に使う) */
-  viewerProductMemberId: string
-}
