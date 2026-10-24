@@ -1,8 +1,16 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '#/components/modal'
-import { api, type TaskKind } from '#/lib/api'
+import { api } from '#/lib/api'
+import { eden, edenData, type Json } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
+
+type ListResult = Awaited<
+  ReturnType<ReturnType<ReturnType<typeof eden>['api']['product']>['task_kinds']['get']>
+>
+
+// 1 件分の種類。型は api の応答から取る
+type TaskKind = Json<NonNullable<Extract<ListResult, { error: null }>['data']>>[number]
 
 const buttonClass =
   'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
@@ -212,7 +220,7 @@ export function TaskKindDialog({
 }) {
   const kinds = useQuery({
     queryKey: ['products', productId, 'task_kinds'],
-    queryFn: () => api<TaskKind[]>(`/api/product/${productId}/task_kinds`),
+    queryFn: () => edenData(eden().api.product({ productId }).task_kinds.get()),
     enabled: open,
     retry: false,
   })
