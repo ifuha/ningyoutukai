@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Sidebar } from '#/components/sidebar'
-import { api, type Invitation } from '#/lib/api'
+import { type ProductSummary } from '#/lib/api'
 import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
 import { resetSessionExpired } from '#/lib/session-expired'
@@ -57,7 +57,7 @@ export function AppShell({
   // 自分宛ての保留中の招待(サイドバーに出す。ホームの「招待」と、同じクエリを共有する)
   const invitations = useQuery({
     queryKey: ['invitations'],
-    queryFn: () => api<Invitation[]>('/api/invitation'),
+    queryFn: () => edenData(eden().api.invitation.get()),
     enabled: Boolean(session?.user),
     retry: false,
   })
