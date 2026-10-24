@@ -46,14 +46,12 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
   const [mode, setMode] = useState<'view' | 'edit' | 'confirm'>('view')
   const [name, setName] = useState(kind.taskTypeName)
   const base = `/api/product/${productId}/task_kinds/${kind.taskTypeId}`
+  const target = () =>
+    eden().api.product({ productId }).task_kinds({ kindId: kind.taskTypeId })
 
   const rename = useMutation({
     mutationFn: () =>
-      api(base, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskTypeName: name }),
-      }),
+      edenData(target().patch({ taskTypeName: name })),
     onSuccess: () => {
       setMode('view')
       invalidate(true)
@@ -163,11 +161,7 @@ function AddForm({ productId }: { productId: string }) {
   const [name, setName] = useState('')
   const add = useMutation({
     mutationFn: () =>
-      api(`/api/product/${productId}/task_kinds`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskTypeName: name }),
-      }),
+      edenData(eden().api.product({ productId }).task_kinds.post({ taskTypeName: name })),
     onSuccess: () => {
       setName('')
       invalidate(false)
