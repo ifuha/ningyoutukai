@@ -27,6 +27,7 @@ const taskKeys = [
   "taskTypeId",
   "productMemberId",
   "isVisible",
+  "status",
 ].sort();
 
 describe("応答の形", () => {
@@ -52,6 +53,7 @@ describe("応答の形", () => {
       taskTypeId: kind.taskTypeId,
       productMemberId: a.members[0]!.memberId,
       isVisible: false,
+      status: "in_progress",
     });
 
     // 同じタスクを update-task で更新した応答と、キーが一致する

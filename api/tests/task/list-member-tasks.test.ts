@@ -172,6 +172,7 @@ describe("GET /api/product/:productId/member/:memberId/task 可視性", () => {
         taskTypeId: null,
         productMemberId: members[0]!.memberId,
         isVisible: true,
+        status: "in_progress",
       },
     ]);
   });

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
@@ -9,11 +9,13 @@ import {
   getMemberContact,
   getMembership,
 } from "../../lib/product-access";
+import { nextStep } from "../../lib/task-flow";
 import { taskStillExists } from "../../lib/task-race";
 import { MessageSchema } from "../../lib/response-schema";
 import { TaskSchema, canSee, taskColumns } from "../../lib/task-view";
 
 // タスク完了報告 POST /api/product/:productId/task/:taskId/complete-report
+// 状態: 作業中(in_progress) → 確認待ち(reported)。差し戻し中(rejected)からの再提出も同じ API で受ける
 export const reportComplete = new Elysia({ name: "task-report-complete" })
   .use(authGuard)
   .post(
@@ -45,19 +47,20 @@ export const reportComplete = new Elysia({ name: "task-report-complete" })
         return status(403, { message: "担当者のみ完了を報告できます" });
       }
 
-      if (task.completedAt) return status(409, { message: "すでに完了しています" });
-      if (task.reportedAt) return status(409, { message: "すでに報告済みです" });
+      if (task.status === "completed") {
+        return status(409, { message: "すでに完了しています" });
+      }
+      // 報告できる状態は、作業中と差し戻し中だけ。残るのは確認待ち(報告済み)
+      const step = nextStep(task.status, "report");
+      if (!step.ok) return status(409, { message: "すでに報告済みです" });
 
-      // 同時リクエストで二重に報告されないよう、未報告・未完了の条件を付けて更新する
+      // 同時リクエストで二重に報告されないよう、「読んだときの状態のまま」の条件を付けて更新する。
+      // reportedAt は「最後に報告した日時」(再提出でも更新する)
       const [updated] = await db
         .update(tasks)
-        .set({ reportedAt: new Date() })
+        .set({ status: step.next, reportedAt: new Date() })
         .where(
-          and(
-            eq(tasks.taskId, task.taskId),
-            isNull(tasks.reportedAt),
-            isNull(tasks.completedAt)
-          )
+          and(eq(tasks.taskId, task.taskId), eq(tasks.status, task.status))
         )
         .returning(taskColumns);
       if (!updated) {

@@ -69,7 +69,7 @@ describe("正常系", () => {
     expect(Object.keys(json).sort()).toEqual(
       [
         "taskId", "taskName", "description", "timeLimit", "reportedAt",
-        "completedAt", "taskTypeId", "productMemberId", "isVisible",
+        "completedAt", "taskTypeId", "status", "productMemberId", "isVisible",
       ].sort()
     );
     expect(json).toMatchObject({

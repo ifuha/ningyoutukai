@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, tasks } from "../../db/schema";
@@ -10,6 +10,9 @@ import { MessageSchema } from "../../lib/response-schema";
 import { TaskSchema, taskColumns } from "../../lib/task-view";
 
 // タスク完了確定 PATCH /api/product/:productId/task/:taskId/complete
+// 状態: 完了(completed)にする。
+// v1 の挙動を維持している: 未報告(in_progress)のタスクも、リーダーは直接完了にできる。
+// 「報告済み(reported)のときだけ承認できる」にするかは未決定(docs/v2.0/message-feature.md の Q17)
 export const confirmComplete = new Elysia({ name: "task-confirm-complete" })
   .use(authGuard)
   .patch(
@@ -29,13 +32,15 @@ export const confirmComplete = new Elysia({ name: "task-confirm-complete" })
         .where(and(eq(tasks.taskId, params.taskId), eq(productMembers.productId, params.productId)));
       if (!task) return status(404, { message: "タスクが見つかりません" });
 
-      if (task.completedAt) return status(409, { message: "すでに完了しています" });
+      if (task.status === "completed") {
+        return status(409, { message: "すでに完了しています" });
+      }
 
-      // completedAt が空のときだけ更新する(同時に呼ばれても二重に完了にしない)
+      // 「読んだときの状態のまま」のときだけ更新する(同時に呼ばれても二重に完了にしない)
       const [updated] = await db
         .update(tasks)
-        .set({ completedAt: new Date() })
-        .where(and(eq(tasks.taskId, task.taskId), isNull(tasks.completedAt)))
+        .set({ status: "completed", completedAt: new Date() })
+        .where(and(eq(tasks.taskId, task.taskId), eq(tasks.status, task.status)))
         .returning(taskColumns);
       if (!updated) {
         // 確認から更新までの間に削除された場合

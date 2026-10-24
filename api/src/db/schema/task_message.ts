@@ -1,6 +1,5 @@
-import { snakeCase, boolean, index, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { snakeCase, index, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { productMembers } from "./product_members";
-import { taskTypes } from "./task_types";
 import { tasks } from "./tasks";
 
 export const messageKind = ["comment", "report", "resubmit", "reject", "approve"] as const;
