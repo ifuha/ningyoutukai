@@ -19,9 +19,7 @@ import {
   type TaskFormTarget,
 } from '#/components/task-form-dialog'
 import {
-  api,
   ApiError,
-  type ProductSummary,
   type TreeMember,
   type TreeTask,
 } from '#/lib/api'
@@ -50,7 +48,7 @@ function Product() {
   const [productManageOpen, setProductManageOpen] = useState(false)
   const product = useQuery({
     queryKey: ['products', productId],
-    queryFn: () => api<ProductSummary>(`/api/product/${productId}`),
+    queryFn: () => edenData(eden().api.product({ productId }).get()),
     retry: false,
   })
   const tree = useQuery({

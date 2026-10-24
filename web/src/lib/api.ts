@@ -43,14 +43,6 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T
 }
 
-/** `GET /api/product`(自分が所属するプロダクトの一覧)の 1 件 */
-export type ProductSummary = {
-  productId: string
-  productName: string
-  createdAt: string
-  role: 'leader' | 'member'
-}
-
 /** `GET /api/product/:productId/tree` のタスク 1 件 */
 export type TreeTask = {
   taskId: string
