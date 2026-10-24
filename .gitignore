@@ -9,3 +9,6 @@ api/.wrangler/
 
 # macOS が作るファイル(ワークツリーの削除が「未追跡のファイルがある」と止まる原因になる)
 .DS_Store
+
+# ルート直下で依存を入れたときの node_modules(web と api の .gitignore にも入っている)
+node_modules/
