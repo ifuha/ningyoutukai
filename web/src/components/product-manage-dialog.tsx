@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '#/components/modal'
-import { api } from '#/lib/api'
+import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
 const buttonClass =
@@ -29,11 +29,9 @@ function RenameBlock({
   const [name, setName] = useState(productName)
   const rename = useMutation({
     mutationFn: () =>
-      api(`/api/product/${productId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productName: name.trim() }),
-      }),
+      edenData(
+        eden().api.product({ productId }).patch({ productName: name.trim() }),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['products'] })
       void queryClient.invalidateQueries({ queryKey: ['products', productId] })
@@ -92,7 +90,7 @@ function DeleteBlock({
   const [confirming, setConfirming] = useState(false)
   const [typed, setTyped] = useState('')
   const remove = useMutation({
-    mutationFn: () => api(`/api/product/${productId}`, { method: 'DELETE' }),
+    mutationFn: () => edenData(eden().api.product({ productId }).delete()),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['products'] })
       void navigate({ to: '/home' })
