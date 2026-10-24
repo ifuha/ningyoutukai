@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '#/components/modal'
-import { api } from '#/lib/api'
 import { eden, edenData, type Json } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
@@ -45,7 +44,6 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
   const invalidate = useInvalidate(productId)
   const [mode, setMode] = useState<'view' | 'edit' | 'confirm'>('view')
   const [name, setName] = useState(kind.taskTypeName)
-  const base = `/api/product/${productId}/task_kinds/${kind.taskTypeId}`
   const target = () =>
     eden().api.product({ productId }).task_kinds({ kindId: kind.taskTypeId })
 
@@ -58,7 +56,7 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
     },
   })
   const remove = useMutation({
-    mutationFn: () => api(base, { method: 'DELETE' }),
+    mutationFn: () => edenData(target().delete()),
     onSuccess: () => invalidate(true),
   })
   const busy = rename.isPending || remove.isPending
