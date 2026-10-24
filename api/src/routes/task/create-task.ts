@@ -17,7 +17,8 @@ import {
   taskNameSchema,
   timeLimitSchema,
 } from "../../lib/task-input";
-import { taskColumns } from "../../lib/task-view";
+import { MessageSchema } from "../../lib/response-schema";
+import { TaskSchema, taskColumns } from "../../lib/task-view";
 
 // タスクを追加 POST /api/product/:productId/task
 export const createTask = new Elysia({ name: "task-create-task" })
@@ -117,6 +118,7 @@ export const createTask = new Elysia({ name: "task-create-task" })
         taskTypeId: t.Optional(t.String({ format: "uuid" })),
         isVisible: t.Optional(t.Boolean()),
       }),
+      response: { 201: TaskSchema, 400: MessageSchema, 403: MessageSchema, 404: MessageSchema },
       detail: { summary: "タスクを追加" },
     }
   );

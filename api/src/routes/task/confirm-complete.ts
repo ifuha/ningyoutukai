@@ -6,7 +6,8 @@ import { authGuard } from "../../lib/auth-guard";
 import { mailer } from "../../lib/mailer";
 import { getMemberContact, getMembership } from "../../lib/product-access";
 import { taskStillExists } from "../../lib/task-race";
-import { taskColumns } from "../../lib/task-view";
+import { MessageSchema } from "../../lib/response-schema";
+import { TaskSchema, taskColumns } from "../../lib/task-view";
 
 // タスク完了確定 PATCH /api/product/:productId/task/:taskId/complete
 export const confirmComplete = new Elysia({ name: "task-confirm-complete" })
@@ -62,6 +63,7 @@ export const confirmComplete = new Elysia({ name: "task-confirm-complete" })
         productId: t.String({ format: "uuid" }),
         taskId: t.String({ format: "uuid" }),
       }),
+      response: { 200: TaskSchema, 403: MessageSchema, 404: MessageSchema, 409: MessageSchema },
       detail: { summary: "タスク完了確定(リーダー)" },
     }
   );

@@ -10,7 +10,8 @@ import {
   getMembership,
 } from "../../lib/product-access";
 import { taskStillExists } from "../../lib/task-race";
-import { canSee, taskColumns } from "../../lib/task-view";
+import { MessageSchema } from "../../lib/response-schema";
+import { TaskSchema, canSee, taskColumns } from "../../lib/task-view";
 
 // タスク完了報告 POST /api/product/:productId/task/:taskId/complete-report
 export const reportComplete = new Elysia({ name: "task-report-complete" })
@@ -86,6 +87,7 @@ export const reportComplete = new Elysia({ name: "task-report-complete" })
         productId: t.String({ format: "uuid" }),
         taskId: t.String({ format: "uuid" }),
       }),
+      response: { 200: TaskSchema, 403: MessageSchema, 404: MessageSchema, 409: MessageSchema },
       detail: { summary: "タスク完了報告" },
     }
   );

@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { productMembers, products } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
+import { MessageSchema, ProductSchema } from "../lib/response-schema";
 import { NO_NUL } from "../lib/validation";
 
 const productColumns = {
@@ -39,6 +40,7 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
     {
       requireUser: true,
       body: t.Object({ productName: t.String({ maxLength: 100, pattern: NO_NUL }) }),
+      response: { 201: ProductSchema, 400: MessageSchema },
       detail: { summary: "プロダクト作成" },
     }
   )
@@ -51,7 +53,11 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
         .from(productMembers)
         .innerJoin(products, eq(productMembers.productId, products.productId))
         .where(eq(productMembers.userId, user.userId)),
-    { requireUser: true, detail: { summary: "プロダクト一覧取得" } }
+    {
+      requireUser: true,
+      response: { 200: t.Array(ProductSchema) },
+      detail: { summary: "プロダクト一覧取得" },
+    }
   )
   // プロダクト取得: 所属していないプロダクトは存在を漏らさないよう 404
   .get(
@@ -72,6 +78,7 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
     {
       requireUser: true,
       params: t.Object({ productId: t.String({ format: "uuid" }) }),
+      response: { 200: ProductSchema, 404: MessageSchema },
       detail: { summary: "指定したプロダクトを取得" },
     }
   );

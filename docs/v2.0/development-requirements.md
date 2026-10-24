@@ -134,6 +134,8 @@ v2.0 の中心は、**開発環境を整えること**。開発は**ローカル
 | エラーの形 | `{ data, error }` を、`edenData()`(`eden.ts`)が `ApiError` に直す。401、404、422、500(本文 `{ message }`)は、いまの `api<T>()` と同じ `status` と `message`。通信できないときは、Eden が 503 と `Error` を返すので、`value instanceof Error` を見て、`ApiError(0, 'サーバーに接続できませんでした…')`(いまと同じ文)にする。本文が JSON でない 502/503 は `'エラーが発生しました'`(いまと同じ)。401 のセッション切れは、react-query の `handleApiError` が `ApiError.status === 401` を見るので、変更なし。実際の api(テスト用 DB、ポート 3102)で確認した |
 | 同一オリジン | Eden は空文字を `https://` に変えてしまうので、ベース URL が空のときは `window.location.origin` を使う(`createClient`)。`window` が無い SSR で壊れないよう、クライアントは最初の呼び出しで作る(`eden()`)。`http://localhost:3001` と空文字(`window.location.origin` を差した場合)の両方で動くことを確認した。`credentials: 'include'` は `fetch` の設定で渡す。Cloudflare Workers の web ビルド(`npm run build`)は通った |
 
+応答スキーマの追加(`refactor/v2/api-response-schemas`): 試作の時点で `response` が無かった 12 本(プロダクトの作成・一覧・取得、カレンダーの状態、タスクの取得・作成・更新・一覧・メンバー別一覧・完了報告・完了確認・種類の割り当て)に、`response`(成功の本文と `{ message }` のエラー)を足した。これで `api/src/routes/` の全ルートが `response` を持つ。共通の部品は `lib/response-schema.ts`(`MessageSchema`、`ProductSchema`)と `lib/task-view.ts`(`TaskSchema`)。日時は既存の流儀どおり `t.Date()`(JSON では文字列)。応答の形・ステータス・文言は変えていない(api のテストと、形を確かめる `tests/task/response-schema.test.ts` で確認)。web の `tsc` と `Json<T>` は変更なしで通る。
+
 型の安全性の確認: `api/src/routes/product.ts` の `productColumns` で `productName` を `name` に変えると、web の `npx tsc --noEmit` が `app-shell.tsx` で失敗した(`Property 'productName' does not exist ...`)。元に戻すと通る。
 
 **全 27 本(認証の `/api/auth/*` を除く)を移すときの注意と見積もり**

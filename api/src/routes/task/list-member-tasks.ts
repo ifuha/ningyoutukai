@@ -4,7 +4,8 @@ import { db } from "../../db";
 import { tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { getMembership, isMemberOfProduct } from "../../lib/product-access";
-import { notCompleted, taskColumns, visibleTo } from "../../lib/task-view";
+import { MessageSchema } from "../../lib/response-schema";
+import { TaskSchema, notCompleted, taskColumns, visibleTo } from "../../lib/task-view";
 
 // 指定したメンバーのタスクを取得 GET /api/product/:productId/member/:memberId/task
 export const listMemberTasks = new Elysia({ name: "task-list-member-tasks" })
@@ -38,6 +39,7 @@ export const listMemberTasks = new Elysia({ name: "task-list-member-tasks" })
         productId: t.String({ format: "uuid" }),
         memberId: t.String({ format: "uuid" }),
       }),
+      response: { 200: t.Array(TaskSchema), 404: MessageSchema },
       detail: { summary: "指定したメンバーのタスクを取得" },
     }
   );

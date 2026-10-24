@@ -12,7 +12,8 @@ import {
   timeLimitSchema,
 } from "../../lib/task-input";
 import { taskStillExists } from "../../lib/task-race";
-import { taskColumns } from "../../lib/task-view";
+import { MessageSchema } from "../../lib/response-schema";
+import { TaskSchema, taskColumns } from "../../lib/task-view";
 
 const COMPLETED_ERROR = "完了済みのタスクは変更できません";
 
@@ -97,6 +98,13 @@ export const updateTask = new Elysia({ name: "task-update-task" })
         timeLimit: t.Optional(t.Union([timeLimitSchema(), t.Null()])),
         isVisible: t.Optional(t.Boolean()),
       }),
+      response: {
+        200: TaskSchema,
+        400: MessageSchema,
+        403: MessageSchema,
+        404: MessageSchema,
+        409: MessageSchema,
+      },
       detail: { summary: "タスク情報変更" },
     }
   );
