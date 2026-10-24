@@ -1,6 +1,6 @@
 import { formatLimit } from '#/components/member-card'
 import { Modal } from '#/components/modal'
-import type { TreeMember, TreeTask } from '#/lib/api'
+import type { TreeMember, TreeTask } from '#/lib/tree'
 
 // その人の全タスクの一覧(カードには 3 件までしか出ないので、その続きを見る・選ぶ画面)。並びはツリー API の順(期限が近い順)
 // `onEditTask` を渡すと、タスク名が押せる(`canOpenTask` があれば、それが true の人のだけ)。閲覧だけなら渡さない

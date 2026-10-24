@@ -18,11 +18,8 @@ import {
   TaskFormDialog,
   type TaskFormTarget,
 } from '#/components/task-form-dialog'
-import {
-  ApiError,
-  type TreeMember,
-  type TreeTask,
-} from '#/lib/api'
+import { ApiError } from '#/lib/api'
+import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 
 // プロダクトの画面(`/products/$productId`)。ログイン必須。見出しと、ツリー(リーダーとメンバー、タスク)

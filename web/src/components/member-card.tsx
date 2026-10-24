@@ -1,4 +1,4 @@
-import type { TreeMember, TreeTask } from '#/lib/api'
+import type { TreeMember, TreeTask } from '#/lib/tree'
 
 const MAX_TASKS = 3
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const

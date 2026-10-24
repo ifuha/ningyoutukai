@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ApiError, type TreeMember, type TreeTask } from '#/lib/api'
+import { ApiError } from '#/lib/api'
+import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 

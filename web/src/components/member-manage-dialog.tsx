@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Modal } from '#/components/modal'
 import { eden, edenData } from '#/lib/eden'
-import { ApiError, type ProductTree, type TreeMember } from '#/lib/api'
+import { ApiError } from '#/lib/api'
+import type { ProductTree, TreeMember } from '#/lib/tree'
 
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
 

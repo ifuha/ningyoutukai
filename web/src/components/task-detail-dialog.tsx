@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
 import { Modal } from '#/components/modal'
-import { type TreeMember, type TreeTask } from '#/lib/api'
+import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 
 const buttonClass =
