@@ -31,6 +31,7 @@ process.env.NODE_ENV = "development";
 // .env に RESEND_API_KEY を入れても、テストが実際にメールを送らないようにする(mailer はキーが無いとログだけ出す)
 delete process.env.RESEND_API_KEY;
 delete process.env.MAIL_FROM;
+delete process.env.MAILPIT_URL; // 同様に、ローカルの受信箱(Mailpit)にも送らない
 
 // ---- テスト用 DB への切り替えと、マイグレーション(R2) ----
 // DATABASE_URL が環境にあっても、.env.local から読まれても、テストは必ずテスト用 DB(`_test` で終わる)を使う。

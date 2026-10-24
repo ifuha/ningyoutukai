@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { symmetricDecrypt } from "better-auth/crypto";
 import { eq, inArray } from "drizzle-orm";
 import { auth } from "../../src/auth";
 import { db } from "../../src/db";
@@ -147,6 +148,19 @@ describe("GitHub ログインのコールバック(外部通信はスタブ)", (
     const accounts = await db.select().from(account).where(eq(account.userId, created.id));
     expect(accounts.map((a) => a.providerId).sort()).toEqual(["github", "google"]);
     expect((await authRow(email)).githubId).toBe(login);
+  });
+
+  test("コールバックで保存されるアクセストークンは暗号化され、復号すると元に戻る(平文では入らない)", async () => {
+    const login = `octo-${uid()}`;
+    const email = `cb-${crypto.randomUUID()}@example.com`;
+    await loginWithGithub({ numericId: 1006, login, email });
+    const created = await authRow(email);
+    const [row] = await db.select().from(account).where(eq(account.userId, created.id));
+    expect(row!.accessToken).toBeTruthy();
+    expect(row!.accessToken).not.toBe("gho_fake");
+    expect(row!.accessToken).not.toContain("gho_fake");
+    const { secretConfig } = await auth.$context;
+    expect(await symmetricDecrypt({ key: secretConfig, data: row!.accessToken! })).toBe("gho_fake");
   });
 
   test("ログイン済みの人が /update-user で githubId を書き換えても、保存されない(他人宛ての招待を横取りさせない)", async () => {

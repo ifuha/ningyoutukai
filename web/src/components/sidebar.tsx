@@ -1,5 +1,5 @@
 import { SidebarInvitation } from '#/components/sidebar-invitation'
-import type { Invitation } from '#/lib/api'
+import type { Invitation } from '#/lib/invitation'
 
 export type SidebarProduct = { id: string; name: string }
 

@@ -6,7 +6,7 @@ import type {
   ProductTree as ProductTreeData,
   TreeMember,
   TreeTask,
-} from '#/lib/api'
+} from '#/lib/tree'
 import { useCanvasSize } from '#/lib/use-canvas-size'
 import { usePanZoom } from '#/lib/use-pan-zoom'
 
