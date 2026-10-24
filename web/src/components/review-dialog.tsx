@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatLimit } from '#/components/member-card'
 import { Modal } from '#/components/modal'
+import { eden, edenData } from '#/lib/eden'
 import {
-  api,
   ApiError,
   type ProductTree,
   type TreeMember,
@@ -53,9 +53,11 @@ function ReviewRow({
   const queryClient = useQueryClient()
   const complete = useMutation({
     mutationFn: () =>
-      api(`/api/product/${productId}/task/${task.taskId}/complete`, {
-        method: 'PATCH',
-      }),
+      edenData(
+        eden()
+          .api.product({ productId })
+          .task({ taskId: task.taskId }).complete.patch(),
+      ),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: ['products', productId, 'tree'],
