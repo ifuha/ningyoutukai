@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { api } from '#/lib/api'
+import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
 // 入力が `@` を含み、先頭が `@` でなければメール、それ以外は GitHub のユーザー名として送る
@@ -18,11 +18,9 @@ export function InviteMemberForm({ productId }: { productId: string }) {
 
   const invite = useMutation({
     mutationFn: (invitee: string) =>
-      api(`/api/product/${productId}/invitation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(toBody(invitee)),
-      }),
+      edenData(
+        eden().api.product({ productId }).invitation.post(toBody(invitee)),
+      ),
     onSuccess: (_data, invitee) => {
       setInvited(invitee)
       setValue('')
