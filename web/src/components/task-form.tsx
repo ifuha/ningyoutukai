@@ -1,12 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  api,
-  ApiError,
-  type TaskKind,
-  type TreeMember,
-  type TreeTask,
-} from '#/lib/api'
+import { ApiError, type TreeMember, type TreeTask } from '#/lib/api'
+import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
 // 期限は日本時間(+09:00)として扱う。`datetime-local` の値(`2026-12-01T09:00`)と ISO を行き来する
@@ -55,19 +50,17 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
 
   const kinds = useQuery({
     queryKey: ['products', productId, 'task_kinds'],
-    queryFn: () => api<TaskKind[]>(`/api/product/${productId}/task_kinds`),
+    queryFn: () => edenData(eden().api.product({ productId }).task_kinds.get()),
     retry: false,
   })
 
   const save = useMutation({
     mutationFn: async () => {
-      const json = { 'Content-Type': 'application/json' }
+      const product = eden().api.product({ productId })
       if (!initial) {
         // 作成: 空の項目は送らない
-        await api(`/api/product/${productId}/task`, {
-          method: 'POST',
-          headers: json,
-          body: JSON.stringify({
+        await edenData(
+          product.task.post({
             taskName: taskName.trim(),
             productMemberId: memberId,
             ...(description !== '' && { description }),
@@ -75,24 +68,29 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
             ...(kindId !== '' && { taskTypeId: kindId }),
             isVisible,
           }),
-        })
+        )
         return
       }
       // 編集: 変更した項目だけ送る(期限と説明は、空にすると null で消す)
-      const changes: Record<string, unknown> = {}
+      const changes: {
+        taskName?: string
+        description?: string | null
+        timeLimit?: string | null
+        isVisible?: boolean
+      } = {}
       if (taskName.trim() !== initial.taskName) changes.taskName = taskName.trim()
       if (description !== (initial.description ?? '')) changes.description = description
       if (timeLimit !== toInputValue(initial.timeLimit)) {
         changes.timeLimit = timeLimit === '' ? null : toIso(timeLimit)
       }
       if (isVisible !== initial.isVisible) changes.isVisible = isVisible
-      const base = `/api/product/${productId}/task/${initial.taskId}`
+      const task = product.task({ taskId: initial.taskId })
       if (Object.keys(changes).length > 0) {
-        await api(base, { method: 'PATCH', headers: json, body: JSON.stringify(changes) })
+        await edenData(task.patch(changes))
       }
       // 種類は別の api。割り当てのみで、外す(なしに戻す)api はないので、選んだときだけ呼ぶ
       if (kindId !== '' && kindId !== (initial.taskType?.taskTypeId ?? '')) {
-        await api(`${base}/task_kinds/${kindId}`, { method: 'PATCH' })
+        await edenData(task.task_kinds({ kindId }).patch())
       }
     },
     onSuccess: onDone,
@@ -104,8 +102,9 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
   // 削除は 2 段階(「削除」→ 確認)。404 は、すでに消えているので、閉じるだけでよい
   const [confirmingRemove, setConfirmingRemove] = useState(false)
   const remove = useMutation({
+    // 削除ボタンは編集(`initial` あり)のときだけ出る
     mutationFn: () =>
-      api<void>(`/api/product/${productId}/task/${initial?.taskId}`, { method: 'DELETE' }),
+      edenData(eden().api.product({ productId }).task({ taskId: initial!.taskId }).delete()),
     onSuccess: onDone,
     onError: (err) => {
       if (err instanceof ApiError && err.status === 404) onDone()
