@@ -6,3 +6,4 @@ export * from "./product_invitations";
 export * from "./task_types";
 export * from "./tasks";
 export * from "./relations";
+export * from "./task_message";
