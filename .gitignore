@@ -6,3 +6,6 @@ infra/.env
 # Cloudflare Workers(wrangler dev)のローカル用の値と作業ファイル
 api/.dev.vars
 api/.wrangler/
+
+# macOS が作るファイル(ワークツリーの削除が「未追跡のファイルがある」と止まる原因になる)
+.DS_Store
