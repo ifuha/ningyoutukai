@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
 import { Modal } from '#/components/modal'
-import { api, type TreeMember, type TreeTask } from '#/lib/api'
+import { type TreeMember, type TreeTask } from '#/lib/api'
+import { eden, edenData } from '#/lib/eden'
 
 const buttonClass =
   'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
@@ -23,9 +24,11 @@ function Detail({
   const queryClient = useQueryClient()
   const report = useMutation({
     mutationFn: () =>
-      api(`/api/product/${productId}/task/${task.taskId}/complete-report`, {
-        method: 'POST',
-      }),
+      edenData(
+        eden()
+          .api.product({ productId })
+          .task({ taskId: task.taskId })['complete-report'].post(),
+      ),
     // 失敗(409 など)では取り直さない。完了済みでツリーから消えると、エラーを出す前にモーダルごと閉じるため
     onSuccess: () => {
       void queryClient.invalidateQueries({
