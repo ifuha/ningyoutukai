@@ -23,6 +23,8 @@ beforeAll(async () => {
   });
 });
 beforeEach(() => {
+  // 全テストを 1 つのプロセスで動かすため、先に動いた別のテストファイルの呼び出しが残る。実行順に依らないよう、毎回数え直す
+  sendSpy.mockClear();
   restoreEnv = withGoogleEnv();
   warnSpy = spyOn(console, "warn").mockImplementation(() => {});
 });
