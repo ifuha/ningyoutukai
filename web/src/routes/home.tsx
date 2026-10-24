@@ -2,7 +2,7 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AppShell } from '#/components/app-shell'
-import { api } from '#/lib/api'
+import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
 
 // ホーム(`/home`)。ログイン必須。未ログインなら、ログイン画面(`/`)へ戻す(`AppShell` が行う)。
@@ -20,7 +20,7 @@ function Home() {
   const [calendarLinkError, setCalendarLinkError] = useState(false)
   const calendar = useQuery({
     queryKey: ['google-calendar-status'],
-    queryFn: () => api<{ connected: boolean }>('/api/calendar/status'),
+    queryFn: () => edenData(eden().api.calendar.status.get()),
     enabled: Boolean(session?.user),
     retry: false,
   })

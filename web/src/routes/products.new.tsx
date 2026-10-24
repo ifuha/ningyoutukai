@@ -3,8 +3,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { Prompt, Terminal } from '#/components/terminal'
-import { api, type ProductSummary } from '#/lib/api'
+import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
+
+const createProduct = (productName: string) =>
+  edenData(eden().api.product.post({ productName }))
 
 // プロダクト作成(`/products/new`)。ログイン必須。仮の見た目(ターミナル風)
 export const Route = createFileRoute('/products/new')({
@@ -37,13 +40,9 @@ function NewProduct() {
     submitting.current = true
     setPending(true)
     setError(null)
-    let created: ProductSummary
+    let created: Awaited<ReturnType<typeof createProduct>>
     try {
-      created = await api<ProductSummary>('/api/product', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productName }),
-      })
+      created = await createProduct(productName)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました')
       submitting.current = false
