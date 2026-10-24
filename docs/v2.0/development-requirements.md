@@ -76,7 +76,7 @@ v2.0 の中心は、**開発環境を整えること**。開発は**ローカル
 | R11 | Should | **本番のログと障害の把握。** `wrangler tail` や Workers Logs の見方が手順書にある | 障害のとき、原因をたどれる |
 | R12 | Should(D10 で決定。v2.0 の最初に行う) | **ローカルのメール受信箱。** Mailpit のようなコンテナで、送るはずだったメールの見た目を確認できる | メールの内容を、ブラウザで見られる |
 | R13 | Must | **費用を無料枠に収める。** 追加の費用が出る項目は、事前に費用を示して確認する | 構成の各項目に、費用の目安と、無料枠の上限が書かれている |
-| R14 | Should | **web の API 呼び出しを Eden(Elysia の型共有)にする。** いまは `web/src/lib/api.ts` で、api の応答の形を手書きの型にして `as T` で当てており、api を変えても web の型エラーにならない。api の型を web が直接使い、変更が型エラーとして web に出るようにする | 全 API の呼び出しが Eden 経由になり、手書きの応答の型(`ProductSummary` など)が無くなる。api の応答やリクエストの形を変えると、web の `tsc` が失敗する。同一オリジン(ベース URL が空)とエラーの扱い(`ApiError`)は、いまと同じ挙動 |
+| R14 | Should | **web の API 呼び出しを Eden(Elysia の型共有)にする。** いまは `web/src/lib/api.ts` で、api の応答の形を手書きの型にして `as T` で当てており、api を変えても web の型エラーにならない。api の型を web が直接使い、変更が型エラーとして web に出るようにする | 全 API の呼び出しが Eden 経由になり、手書きの応答の型(`ProductSummary` など)が無くなる。api の応答やリクエストの形を変えると、web の `tsc` が失敗する。同一オリジン(ベース URL が空)とエラーの扱い(`ApiError`)は、いまと同じ挙動<br>**完了:** 全 API の呼び出し(認証の `/api/auth/*` を除く)が Eden 経由。手書きの応答の型と旧 `api<T>()` を削除し、型は `lib/eden.ts` の `Json<T>` と、`lib/invitation.ts`、`lib/tree.ts` などで api の応答から取る。日付は `parseDate: false`(文字列のまま)、エラーは `edenData()` が `ApiError` にする、204 は `undefined`、CI の web ジョブに `setup-bun` と api の `bun install` を足した(下の「試作の結果」と節末の記録) |
 | R15 | Should | **ログイン後のデータ取得の調査(調査のみ)。** ログインしてからデータが出るまでが、体感で約 3.1 秒かかる(報告)。どこに時間がかかっているかを調べ、結果を記録する。**最適化の実装は、この要件に含めない**(調査の結果を見て、別に決める) | ログインの内訳(アプリのログインボタン、認可画面、プロバイダからの戻りの callback、`/home` 以降の取得)ごとの時間が、記録されている。縮められる部分と、外部のプロバイダとの通信など縮められない部分が、分けて書かれている |
 
 ## 5. 作業の分け方(案)
@@ -90,7 +90,7 @@ v2.0 の中心は、**開発環境を整えること**。開発は**ローカル
 | 2. 認証とメール | ローカル用の OAuth アプリの手順。ローカルでメールを送らない切り替え(R3、R4)。**ローカルのメール受信箱 Mailpit と、Mailpit の HTTP API で送る送信方式を足す(R12、D10)** | `feat/v2/local-auth-mail`、`feat/v2/local-mailpit` | ローカルでログインでき、メールが送られない。送るはずだったメールを、Mailpit の画面で見られる |
 | 3. テスト → デプロイ | デプロイの手順とコマンド(またはワークフロー)。マイグレーションの前のバックアップ(R5、R6、R10) | `ci/v2/deploy-workflow` | 手順どおりに、本番にデプロイできる |
 | 4. 運用 | シード、復元訓練、ログ、手順書(R7〜R9、R11) | `docs/v2/runbook` | 手順書だけで、ローカルの環境を再構築できる |
-| 5. Eden への移行 | まず試作(2 本: `GET /api/product`、プロダクトのツリー)で下の確認点を見る。問題がなければ、画面ごとに置き換え、手書きの型を消す(R14) | `feat/v2/eden-spike`、`refactor/v2/eden-<画面>` | 全 API の呼び出しが Eden 経由。api の変更が web の `tsc` で検出される |
+| 5. Eden への移行 | まず試作(2 本: `GET /api/product`、プロダクトのツリー)で下の確認点を見る。問題がなければ、画面ごとに置き換え、手書きの型を消す(R14) | `feat/v2/eden-spike`、`refactor/v2/eden-<画面>` | **完了。** 全 API の呼び出しが Eden 経由。api の変更が web の `tsc` で検出される(`refactor/v2/eden-*`、`refactor/v2/eden-cleanup`) |
 | 6. 取得の調査 | ログイン後のデータ取得の時間の内訳を計測し、結果を記録する。実装はしない(R15) | `docs/v2/performance-investigation` | 内訳の表と、縮められる部分の見立てが、文書にある |
 
 #### ログイン後のデータ取得の調査の進め方(R15)
@@ -138,15 +138,13 @@ v2.0 の中心は、**開発環境を整えること**。開発は**ローカル
 
 型の安全性の確認: `api/src/routes/product.ts` の `productColumns` で `productName` を `name` に変えると、web の `npx tsc --noEmit` が `app-shell.tsx` で失敗した(`Property 'productName' does not exist ...`)。元に戻すと通る。
 
-**全 27 本(認証の `/api/auth/*` を除く)を移すときの注意と見積もり**
+**全 27 本の移行の実績(完了)**
 
-- ルートは 27 本。`response` のスキーマがあるのは 15 本(ツリー、メンバー取得・一覧・削除、タスク削除、プロダクト管理の更新・削除、タスクの種類の一覧・作成・更新・削除、招待の一覧・作成・承諾・拒否)。**無いのは 12 本**: プロダクトの作成・一覧・取得(`product.ts`)、カレンダーの状態(`calendar.ts`)、タスクの取得・作成・更新・一覧(`list-tasks`)・メンバー別一覧(`list-member-tasks`)・完了報告(`report-complete`)・完了確認(`confirm-complete`)・種類の割り当て(`assign-kind`)。これらも、ハンドラの戻り値と `status()` から型は推論される(試作の一覧は具体的だった)が、日時が `Date` になる、エラー本文の型が緩くなる、ハンドラの変更が応答の形を黙って変える、という弱点がある。移すときに `response` を足すのがよい(足すと、応答の検証も効くため、`errorHandler` の 500 になる場合がある。api のテストで確かめる)。
-- 日時の変換 `Json<T>` は共通の部品として使う。リクエスト側の `Date` を送る場合(`timeLimit` の送信など)は、Eden の型が `string | Date`(クエリ)か `Date`(本文)になるので、送る形(ISO 文字列)と合わせる確認が要る。
-- `204`(本文なし)を返すルート(削除など)は、旧 `api<void>()` は `undefined` を返す。**確認済み(`fix/v2/eden-data-edge-cases`)。** 実際の api(テスト用 DB、ポート 3104)で、タスクの削除とタスクの種類の削除を Eden で呼ぶと、`status` は 204、`data` は **空文字 `''`**、`error` は `null` だった(`undefined` や `null` ではない)。Eden の型では `data` は `undefined`。対処: `edenData()` が `status === 204` のとき `undefined` を返し、戻り値の型も `void` にした(`NonNullable<undefined>` が `never` になるのを避けた)。同じルートの 404 と 401 は、`data` が `null`、`error` が `{ status, value: { message } }` で、いつもの形。
-- エラー応答の本文が壊れているとき。**確認済み。** 偽のサーバー(`Bun.serve`)で確かめた。`Content-Type: application/json` なのに本文が壊れている(`{oops`)、または空だと、**Eden は `{ data, error }` を返さず、呼び出しが `SyntaxError` で reject される**(`status` も失われる)。成功の応答(200)で本文が壊れているときも同じ(これは旧 `api<T>()` と同じく例外のままにした)。それ以外は throw せず、`error.value` に生の文字列が入る: 502 の HTML 本文、`text/plain` の 500、`Content-Type` の無い空の本文は `''`。JSON で `message` が無い場合は、そのオブジェクト。通信断(接続拒否)は、503 と `value` が `Error`(`Unable to connect...`)。対処: `createClient` の `fetcher` で、エラー応答の JSON が読めないときだけ、`Content-Type` を `text/plain` に付け替える(`eden.ts` の `fetchWithSafeErrorBody`)。Eden が文字列として扱うので `status` が残り、`edenData()` が `ApiError(status, 'エラーが発生しました')` を投げる(旧 `api<T>()` と同じ)。Eden の `onResponse` で本文を直す案は、戻り値が成功の `data` として扱われるため、使えなかった。テストは `web/src/lib/eden.test.ts`(本物の Eden クライアントと偽の `fetch`)。
-- 手書きの型(`ProductSummary`、`TreeMember` など)を消すと、`UseQueryResult<ProductSummary[]>` などの型の注釈も要る(`Awaited<ReturnType<...>>` か、api 側の `Static` 型を、`import type` で使う)。
-- 見積もり: 呼び出しは 約 20 か所(`api<`)。1 か所あたり 10〜20 分(画面の確認を含む)で、画面ごとに 4〜6 本の PR。`response` の追加とテストの修正に 0.5〜1 日。CI(`setup-bun`)と `paths` の整備に 1〜2 時間。
-- 懸念: `tsc` の遅さは今のところ問題なし(約 +0.4 秒)。ルートが増えると、Eden の型は重くなる(Elysia の型は深い)ので、移したあとにもう一度測る。web の型検査が api の `node_modules` に依存する(api を `install` しないと web の `tsc` が通らない)。
+- 27 本すべてに `response` のスキーマがあり、呼び出しはすべて Eden 経由になった。手書きの応答の型(`ProductSummary`、`TreeMember` など)と旧 `api<T>()`、未使用の `TaskKind` は消した。残る手書きは `ApiError` と `API_URL`(`lib/api.ts`)だけ。
+- 型の置き場所: 一覧・詳細は、呼び出し元で `Json<...>` を使うか、`lib/invitation.ts`、`lib/tree.ts` のように 1 か所で取る。ツリーの `leader` は api の型が null を許すので、`lib/tree.ts` で非 null にし、null なら取得時にエラーにする。
+- 日時は `Json<T>` で `string` に直す(`parseDate: false`)。リクエストの `timeLimit` は ISO 文字列で送る(`eden-task-request.test.ts` で確認)。
+- 204 は `edenData()` が `undefined`(`void`)にする。壊れたエラー本文は `fetchWithSafeErrorBody` で `ApiError(status, 'エラーが発生しました')` にする(`eden.test.ts`)。
+- 懸念として残るのは、web の型検査が api の `node_modules` に依存すること(CI は対応済み、README に記載)と、ルートが増えたときの `tsc` の遅さ(いまは約 +0.4 秒)。
 
 ## 6. 決めること
 
