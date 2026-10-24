@@ -3,12 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatLimit } from '#/components/member-card'
 import { Modal } from '#/components/modal'
 import { eden, edenData } from '#/lib/eden'
-import {
-  ApiError,
-  type ProductTree,
-  type TreeMember,
-  type TreeTask,
-} from '#/lib/api'
+import { ApiError } from '#/lib/api'
+import type { ProductTree, TreeMember, TreeTask } from '#/lib/tree'
 
 export type PendingReview = { member: TreeMember; task: TreeTask }
 

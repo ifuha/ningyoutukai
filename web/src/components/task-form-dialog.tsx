@@ -1,6 +1,6 @@
 import { Modal } from '#/components/modal'
 import { TaskForm } from '#/components/task-form'
-import type { TreeMember, TreeTask } from '#/lib/api'
+import type { TreeMember, TreeTask } from '#/lib/tree'
 
 /** 開くフォーム。`edit` があれば編集、なければ作成 */
 export type TaskFormTarget = { edit?: { task: TreeTask; member: TreeMember } }
