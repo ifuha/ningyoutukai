@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm/_relations";
 import { productInvitations } from "./product_invitations";
 import { productMembers } from "./product_members";
 import { products } from "./products";
+import { sections } from "./sections";
 import { taskTypes } from "./task_types";
 import { tasks } from "./tasks";
 import { users } from "./users";
@@ -13,8 +14,17 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 export const productsRelations = relations(products, ({ many }) => ({
   members: many(productMembers),
+  sections: many(sections),
   taskTypes: many(taskTypes),
   invitations: many(productInvitations),
+}));
+
+export const sectionsRelations = relations(sections, ({ one, many }) => ({
+  product: one(products, {
+    fields: [sections.productId],
+    references: [products.productId],
+  }),
+  members: many(productMembers),
 }));
 
 export const productMembersRelations = relations(productMembers, ({ one, many }) => ({
@@ -25,6 +35,10 @@ export const productMembersRelations = relations(productMembers, ({ one, many })
   user: one(users, {
     fields: [productMembers.userId],
     references: [users.userId],
+  }),
+  section: one(sections, {
+    fields: [productMembers.sectionId],
+    references: [sections.sectionId],
   }),
   tasks: many(tasks),
 }));
