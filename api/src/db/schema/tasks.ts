@@ -2,9 +2,7 @@ import { snakeCase, boolean, index, text, timestamp, uuid, check } from "drizzle
 import { productMembers } from "./product_members";
 import { taskTypes } from "./task_types";
 import { sql } from "drizzle-orm";
-
-export const taskStatuses = ["in_progress", "reported", "rejected", "completed"] as const;
-export type TaskStatus = (typeof taskStatuses)[number];
+import { taskStatuses, type TaskStatus } from "../../lib/task-flow";
 
 export const tasks = snakeCase.table(
   "tasks",
@@ -26,11 +24,12 @@ export const tasks = snakeCase.table(
       .references(() => productMembers.productMemberId, { onDelete: "cascade" }),
     isVisible: boolean().notNull().default(true), // 他メンバーへの表示・非表示
   },
-      (table) => [
+  (table) => [
     check(
       "tasks_status_check",
-      sql`${table.status} IN ('in_progress','reported','rejected','completed')`,
+      // 値の一覧は task-flow.ts の taskStatuses から作る(生成される SQL は、直接書いたときと同じ)
+      sql`${table.status} IN (${sql.raw(taskStatuses.map((s) => `'${s}'`).join(","))})`,
     ),
-    index("tasks_member_idx").on(table.productMemberId)
-  ]
+    index("tasks_member_idx").on(table.productMemberId),
+  ],
 );

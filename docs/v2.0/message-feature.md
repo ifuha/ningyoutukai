@@ -177,6 +177,7 @@ export const taskMessages = snakeCase.table(
 | Q14 | 画面のどこに出すか(タスクの詳細、確認のダイアログ、ツリー) |
 | Q15 | 他のメンバーのメッセージを、リーダーが削除できるか(案: できる。コメントのみ)。リーダー自身のタスクを、誰が承認するか |
 | Q16 | 編集のあとに、リーダーがすでに承認したメッセージの内容が変わってもよいか(案: 完了後は編集不可にして防ぐ) |
+| Q17 | 承認(`PATCH …/complete`)の API で、確認待ち(`reported`)以外のタスクを、直接完了にできるか。v1 は未報告でも完了にできる。いまの実装は v1 のまま(未報告・差し戻し中でも完了にできる。`api/tests/task/status-flow.test.ts` が現状として固定している)。差し戻し中のタスクを承認で飛び越えられるのは、2 章の遷移表とずれる(案: v2.0 では `reported` のときだけ。ほかは 409) |
 
 ## 10. v2 要件文書(`docs/v2/…`)に貼る内容
 
@@ -208,3 +209,13 @@ export const taskMessages = snakeCase.table(
 | `PATCH …/task/:taskId/complete` | `status` を `completed` に更新する。本文は任意 |
 | `GET …/tree` | 各タスクに `status` を足す。完了済みを除く条件は、当面 `completedAt` のままでよい |
 | 新規タスクの作成 | 変更なし(`status` の初期値は `in_progress`) |
+
+### デプロイの順序
+
+`tasks.status` は、マイグレーションの 2 本目(バックフィル)で、既存のタスクに 1 回だけ入る。そのため、順序に注意する。
+
+1. マイグレーションを先に当てる(`status` の列と、バックフィルが入る)。
+2. **直後に**、新しいコードに入れ替える。
+3. 1 と 2 の間に、**旧いコード**が報告・承認すると、`reported_at` / `completed_at` だけが更新され、`status` は `in_progress` のまま残る。新しいコードは `status` だけを見るので、その行は「作業中」に見え、再び報告できてしまう。
+
+入れ替えまでの時間を短くする。間に報告・承認があった疑いがあるときは、`status` と日時の食い違いを数える(`completed_at` ありで `status <> 'completed'`、または `completed_at` なしで `reported_at` ありで `status <> 'reported'`)。あれば、その行だけを日時から直す。バックフィルの SQL は `WHERE status = 'in_progress'` で絞ってあるので、`rejected` など、新しいコードが入れた値は上書きしない。

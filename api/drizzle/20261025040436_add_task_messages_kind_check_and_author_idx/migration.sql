@@ -1,0 +1,2 @@
+CREATE INDEX "task_messages_author_idx" ON "task_messages" ("author_member_id");--> statement-breakpoint
+ALTER TABLE "task_messages" ADD CONSTRAINT "task_messages_kind_check" CHECK ("kind" IN ('comment','report','resubmit','reject','approve'));

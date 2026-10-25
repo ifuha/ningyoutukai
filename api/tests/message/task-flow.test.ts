@@ -78,6 +78,58 @@ describe("操作の権限", () => {
   });
 });
 
+describe("リーダー兼担当者(自分のタスクを自分に割り振ったとき)", () => {
+  const both: Actor = { productMemberId: "m1", isLeader: true, isAssignee: true };
+
+  // 現状の挙動を固定する。自分の報告を自分で承認してよいかは、未決定(docs/v2.0/message-feature.md の Q15)。
+  // 決まったら、このテストを書き換える
+  test("自分で報告して、自分で承認も差し戻しもできる(Q15 が未決定)", () => {
+    expect(canDoAction("report", both)).toBe(true);
+    expect(canDoAction("approve", both)).toBe(true);
+    expect(canDoAction("reject", both)).toBe(true);
+  });
+
+  test("コメント・閲覧も、リーダーと担当者の両方の権限で通る", () => {
+    expect(canComment(both, "reported")).toBe(true);
+    expect(canViewTask(both, { isVisible: false })).toBe(true);
+  });
+});
+
+describe("未知の status(DB の CHECK で防ぐ想定。コードの現状を固定する)", () => {
+  const unknown = "bogus" as unknown as TaskStatus;
+  const author = { authorMemberId: "m2", kind: "comment" as const, deletedAt: null };
+
+  test("状態遷移は、どの操作も拒否される", () => {
+    for (const action of ["report", "approve", "reject"] as const) {
+      expect(nextStep(unknown, action).ok).toBe(false);
+    }
+  });
+
+  // 「完了ではない」ものとして扱うので、コメントと編集は通る。tasks_status_check があるため、実際には起きない
+  test("コメントと編集は、完了ではないものとして扱われる", () => {
+    expect(canComment(assignee, unknown)).toBe(true);
+    expect(canEditMessage(assignee, author, unknown)).toBe(true);
+  });
+});
+
+describe("メッセージの削除済みの判定(JSON や DB 経由で型が揺れたとき)", () => {
+  const base = { authorMemberId: "m2", kind: "comment" as const };
+
+  test("deletedAt が日時の文字列や空文字なら、削除済みとして編集も削除もできない", () => {
+    for (const deletedAt of ["2026-01-01T00:00:00Z", ""]) {
+      const message = { ...base, deletedAt: deletedAt as never };
+      expect(canEditMessage(assignee, message, "reported")).toBe(false);
+      expect(canDeleteMessage(assignee, message, "reported")).toBe(false);
+    }
+  });
+
+  test("deletedAt が undefined(列の取りこぼし)なら、安全側に倒れて、編集も削除もできない", () => {
+    const message = { ...base, deletedAt: undefined as never };
+    expect(canEditMessage(assignee, message, "reported")).toBe(false);
+    expect(canDeleteMessage(assignee, message, "reported")).toBe(false);
+  });
+});
+
 describe("閲覧とコメント", () => {
   test("公開タスクは誰でも見られ、非公開はリーダーと担当者だけ", () => {
     expect(canViewTask(other, { isVisible: true })).toBe(true);
