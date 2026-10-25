@@ -93,12 +93,19 @@ describe("リーダーから見たツリー", () => {
     expect(tree.members).toHaveLength(2);
     expect(Object.keys(tree.members[0]).sort()).toEqual([
       "avatarUrl",
+      "positionX",
+      "positionY",
       "productMemberId",
       "role",
+      "sectionId",
       "tasks",
       "userId",
       "userName",
     ]);
+    // セクションに入っておらず、位置も持たないメンバーは、null(自動配置)
+    expect(tree.members[0].sectionId).toBeNull();
+    expect(tree.members[0].positionX).toBeNull();
+    expect(tree.members[0].positionY).toBeNull();
   });
 
   it("リーダー自身のタスクは leader に入る", async () => {
