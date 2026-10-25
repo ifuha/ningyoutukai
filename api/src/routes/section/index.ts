@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import { createSection } from "./create-section";
 import { listSections } from "./list-sections";
 
 /**
@@ -6,4 +7,6 @@ import { listSections } from "./list-sections";
  * 作成・更新・削除・メンバーの移動は、リーダーのみ。一覧は、プロダクトのメンバーなら誰でも。
  * エンドポイントごとにファイルを分けている。
  */
-export const sectionRoutes = new Elysia({ name: "section-routes" }).use(listSections);
+export const sectionRoutes = new Elysia({ name: "section-routes" })
+  .use(listSections)
+  .use(createSection);
