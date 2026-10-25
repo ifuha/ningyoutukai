@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { createSection } from "./create-section";
 import { listSections } from "./list-sections";
+import { updateSection } from "./update-section";
 
 /**
  * セクション機能(F1)の API。
@@ -9,4 +10,5 @@ import { listSections } from "./list-sections";
  */
 export const sectionRoutes = new Elysia({ name: "section-routes" })
   .use(listSections)
-  .use(createSection);
+  .use(createSection)
+  .use(updateSection);
