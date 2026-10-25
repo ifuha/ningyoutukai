@@ -1,0 +1,9 @@
+import { Elysia } from "elysia";
+import { listSections } from "./list-sections";
+
+/**
+ * セクション機能(F1)の API。
+ * 作成・更新・削除・メンバーの移動は、リーダーのみ。一覧は、プロダクトのメンバーなら誰でも。
+ * エンドポイントごとにファイルを分けている。
+ */
+export const sectionRoutes = new Elysia({ name: "section-routes" }).use(listSections);
