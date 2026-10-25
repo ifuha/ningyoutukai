@@ -1,4 +1,5 @@
 // タスクの状態遷移と、メッセージの権限判定。DB には触れない純粋関数。
+// 状態(taskStatuses)とメッセージの種類(messageKinds)の唯一の定義でもある(スキーマはここから import する)。
 // ルートは、この結果を HTTP のステータスに対応づけるだけにする。
 //   見えない                     → 404（存在を漏らさない）
 //   見えるが権限がない           → 403
@@ -13,12 +14,15 @@ export const taskStatuses = [
 ] as const;
 export type TaskStatus = (typeof taskStatuses)[number];
 
-export type MessageKind =
-  | "comment"
-  | "report"
-  | "resubmit"
-  | "reject"
-  | "approve";
+// メッセージの種類。DB のスキーマ(task_messages.kind の CHECK)も、ここから取る
+export const messageKinds = [
+  "comment",
+  "report",
+  "resubmit",
+  "reject",
+  "approve",
+] as const;
+export type MessageKind = (typeof messageKinds)[number];
 
 export type FlowAction = "report" | "approve" | "reject";
 

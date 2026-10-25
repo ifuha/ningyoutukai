@@ -1,9 +1,7 @@
 import { snakeCase, index, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { productMembers } from "./product_members";
 import { tasks } from "./tasks";
-
-export const messageKind = ["comment", "report", "resubmit", "reject", "approve"] as const;
-export type MessageKind = (typeof messageKind)[number];
+import type { MessageKind } from "../../lib/task-flow";
 
 export const taskMessages = snakeCase.table(
   "task_messages",
