@@ -2,6 +2,7 @@ import { eq, isNull, or, type SQL } from "drizzle-orm";
 import { t } from "elysia";
 import { tasks } from "../db/schema";
 import type { Membership } from "./product-access";
+import { taskStatuses } from "./task-flow";
 
 /** タスク API が返すタスクの形(全エンドポイントで共通) */
 export const taskColumns = {
@@ -14,6 +15,7 @@ export const taskColumns = {
   taskTypeId: tasks.taskTypeId,
   productMemberId: tasks.productMemberId,
   isVisible: tasks.isVisible,
+  status: tasks.status,
 };
 
 /** `taskColumns` の応答スキーマ(日時は、DB の Date のまま返す。JSON になると ISO 文字列になる) */
@@ -27,6 +29,7 @@ export const TaskSchema = t.Object({
   taskTypeId: t.Union([t.String(), t.Null()]),
   productMemberId: t.String(),
   isVisible: t.Boolean(),
+  status: t.UnionEnum([...taskStatuses]),
 });
 
 /**

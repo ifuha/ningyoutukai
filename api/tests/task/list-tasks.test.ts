@@ -99,7 +99,7 @@ describe("GET /api/product/:productId/task 可視性", () => {
     expect(Object.keys(row!).sort()).toEqual(
       [
         "taskId", "taskName", "description", "timeLimit", "reportedAt",
-        "completedAt", "taskTypeId", "productMemberId", "isVisible",
+        "completedAt", "taskTypeId", "status", "productMemberId", "isVisible",
       ].sort()
     );
     expect(row!.timeLimit).toBe("2030-01-02T03:04:05.000Z");

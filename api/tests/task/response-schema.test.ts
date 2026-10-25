@@ -31,6 +31,7 @@ const TASK_KEYS = [
   "isVisible",
   "productMemberId",
   "reportedAt",
+  "status",
   "taskId",
   "taskName",
   "taskTypeId",

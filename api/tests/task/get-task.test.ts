@@ -74,6 +74,7 @@ describe("GET /api/product/:productId/task/:taskId 取得", () => {
       taskTypeId: type.taskTypeId,
       productMemberId: p.members[0]!.memberId,
       isVisible: true,
+      status: "in_progress",
     });
   });
 
