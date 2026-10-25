@@ -2,13 +2,14 @@ import { asc, inArray } from "drizzle-orm";
 import { t } from "elysia";
 import type { db } from "../db";
 import { productMembers, sections } from "../db/schema";
-import { sectionColors } from "./section";
+import type { sectionColors } from "./section";
+import { sectionColorSchema } from "./section-input";
 
 /** セクション API が返すセクションの形(一覧・作成・更新で共通) */
 export const SectionSchema = t.Object({
   sectionId: t.String(),
   sectionName: t.String(),
-  color: t.UnionEnum([...sectionColors]),
+  color: sectionColorSchema(),
   x: t.Number(),
   y: t.Number(),
   width: t.Number(),
