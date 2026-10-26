@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { isTypingTarget, escapeAction, normalizeTool, toolAfterCreate } from '#/lib/canvas-tool'
+import { useEffect, useRef, useState } from 'react'
+import { isTypingTarget, normalizeTool, toolAfterCreate } from '#/lib/canvas-tool'
+import { escapeOwner, isOwnedByFoundation } from '#/lib/escape-priority'
 import { reconcileSelection, resolveBackgroundClick, isInteractiveTarget } from '#/lib/section-selection'
 import type { Point, Rect } from '#/lib/section-edit-geometry'
 import type { Section } from '#/lib/section'
@@ -15,6 +16,16 @@ import type { SectionActions } from '#/lib/use-section-actions'
 // 描く層(A)・編集枠(B)・カードのドラッグ(C)に渡す値(受け渡しの型 `section-interaction-types.ts` に合わせた props)を作る。
 // 部品(A・B・C)は、ここが返す値を、そのまま渡せば動く:
 //   `<SectionDrawLayer {...drawLayerProps} />`、`<SectionEditor {...editorPropsFor(section)} />`、`useCardDrag(cardDragOptions)`
+
+// 編集のメニュー(色・削除の確認)が開いているか(編集枠 B の DOM から見る)
+function isEditorMenuOpen(): boolean {
+  if (typeof document === 'undefined') return false
+  return (
+    document.querySelector(
+      '[data-section-menu] [role="menu"], [data-section-menu] [role="alertdialog"]',
+    ) !== null
+  )
+}
 
 export function useSectionInteraction({
   actions,
@@ -45,20 +56,35 @@ export function useSectionInteraction({
   }
   const clearSelection = () => setSelectedRaw(null)
 
-  // Esc: 「セクション」の道具なら「選択」へ戻る。セクションを選んでいれば、選択を外す。文字を打っているときは、何もしない
+  // ドラッグの最中か(カードのドラッグ・編集枠のドラッグや矢印キーの移動)。Esc の優先順位に使う。
+  // イベントの中から最新の値を読むので ref に持つ(再描画は要らない)
+  const busy = useRef({ cardDragging: false, editorDragging: false })
+  const setCardDragging = (dragging: boolean) => {
+    busy.current.cardDragging = dragging
+  }
+
+  // Esc: 1 回で、優先順位がいちばん高い 1 つだけが受ける(`escapeOwner`)。ここで動くのは、
+  //   「セクション」の道具なら「選択」へ戻る、セクションを選んでいれば選択を外す、の 2 つだけ。
+  //   カードのドラッグ・編集枠のドラッグ・名前の入力・メニューは、それぞれの部品が受ける(ここでは、選択を外さない)。
+  // キャプチャ段階で受ける: 部品の Esc(バブリング段階)より先に、Esc の前の状態で判断する
+  //   (部品が先に動いて状態が変わったあとで、選択まで外れないようにする)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      const action = escapeAction({
+      const owner = escapeOwner({
         tool,
         selectedSectionId,
         typing: isTypingTarget(e.target as { tagName?: string; isContentEditable?: boolean } | null),
+        cardDragging: busy.current.cardDragging,
+        editorDragging: busy.current.editorDragging,
+        menuOpen: isEditorMenuOpen(),
       })
-      if (action === 'back-to-select') setToolRaw('select')
-      else if (action === 'clear-selection') setSelectedRaw(null)
+      if (!isOwnedByFoundation(owner)) return
+      if (owner === 'draw') setToolRaw('select')
+      else setSelectedRaw(null)
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [tool, selectedSectionId])
 
   // キャンバスのクリック。クリックした点にあるセクションを選ぶ(重なるときは、小さい方)。どこにもなければ、選択を外す
@@ -88,8 +114,13 @@ export function useSectionInteraction({
     onCancel: () => setToolRaw('select'),
   }
 
-  // B: 各セクションの編集枠
-  const editorPropsFor = (section: Section): SectionEditorProps => ({
+  // B: 各セクションの編集枠。`onPreview` は、ドラッグ・矢印キーの移動の途中(四角あり)と終わり(null)を知らせる(Esc の優先順位に使う)
+  const editorPropsFor = (
+    section: Section,
+  ): SectionEditorProps & { onPreview: (rect: Rect | null) => void } => ({
+    onPreview: (rect) => {
+      busy.current.editorDragging = rect !== null
+    },
     section,
     selected: section.sectionId === selectedSectionId,
     canEdit,
@@ -124,5 +155,6 @@ export function useSectionInteraction({
     drawLayerProps,
     editorPropsFor,
     cardDragOptions,
+    setCardDragging,
   }
 }
