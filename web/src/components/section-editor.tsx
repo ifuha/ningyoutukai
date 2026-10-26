@@ -7,7 +7,6 @@ import type { Point, Rect } from '#/lib/section-edit-geometry'
 import {
   IDLE,
   NUDGE_SETTLE_MS,
-  TAG_RECT,
   bandBoxes,
   cancelDrag,
   dragPreview,
@@ -20,6 +19,7 @@ import {
   moveDrag,
   nudgeRect,
   pickColor,
+  pressDrag,
   confirmDelete,
   screenSize,
   settleNudge,
@@ -28,6 +28,7 @@ import {
   type DragState,
   type MenuState,
 } from '#/lib/section-editor-state'
+import { labelHitRect, menuButtonOffset } from '#/lib/section-label'
 import { sectionStyle } from '#/lib/section-style'
 
 // セクションの編集枠。`SectionBox`(セクションの見た目を描く)の上に重ねる、編集用の層
@@ -36,7 +37,9 @@ import { sectionStyle } from '#/lib/section-style'
 // できること(`canEdit` のときだけ。リーダーのみは、親が `canEdit` で渡す。false のときは、何も描かず、何も受けない)
 // - 選択: 枠の線の近く(帯)・札のクリックで `onSelect()`。四角の内側は、ポインタを通す(カードのドラッグ・キャンバスの移動を妨げない)
 //   ただし `interiorSelectable` のとき(カードより下の層に置くとき)は、内側のクリックでも選択できる
-// - 選択中: 8 つのハンドルで大きさを変える。札・枠の線の近く(帯)をドラッグして動かす
+// - 札・枠の線の近く(帯)は、未選択でも、押した時点で選択し、4px を超えて動かすと移動する(カードと同じ。パンは始めない)
+//   四角の内側の空いた場所のドラッグは、カードの下の層の `SectionMoveSurface` が受ける
+// - 選択中: 8 つのハンドルで大きさを変える
 // - ドラッグ中は、見た目だけを更新する(破線のプレビュー)。確定は、ポインタを離したときに 1 回だけ `onChange(rect)`。動かなかったら呼ばない。Esc で取り消し
 // - 名前: 札をダブルクリックで、その場で編集(Enter・外のクリックで `onRename`、Esc で取り消し)
 // - 色・削除: 札のとなりの「⋯」メニュー。削除は確認を挟む。選択中の Delete / Backspace でも、確認を開く
@@ -166,7 +169,7 @@ export function SectionEditor({
         e.preventDefault()
         setMenu((m) => menuReduce(m, { type: 'ask-delete' }))
       } else if (action.type === 'nudge') {
-        if (dragRef.current.phase === 'dragging') return
+        if (dragRef.current.phase !== 'idle') return
         e.preventDefault()
         const next = nudgeRect(nudgeRef.current ?? latest.current.base, action.delta)
         nudgeRef.current = next
@@ -176,7 +179,7 @@ export function SectionEditor({
         nudgeTimer.current = window.setTimeout(flushNudge, NUDGE_SETTLE_MS)
       } else {
         // Esc: ドラッグ中 → ドラッグの取り消し。矢印キーの移動の途中 → 取り消し。メニューが開いている → 閉じる
-        if (dragRef.current.phase === 'dragging') {
+        if (dragRef.current.phase !== 'idle') {
           updateDrag(cancelDrag())
         } else if (nudgeRef.current) {
           cancelNudge()
@@ -215,38 +218,46 @@ export function SectionEditor({
   const live = dragPreview(drag) ?? nudge ?? base
   const moving = drag.phase === 'dragging' || nudge !== null
   const style = sectionStyle(section.color)
+  // 名前をつかむ場所・名前の入力欄(`SectionBox` の文字の位置に合わせる。ドラッグ中の見た目の幅に追従する)
+  const tag = labelHitRect(live.width)
 
   // 移動・大きさの変更のつかみ場所に付ける、ポインタのイベント
+  // 押したら、その場でつかむ(カードと同じ)。**未選択でも、押した時点で選択し**、キャンバスの移動(パン)は始めない。
+  // 移動は、動きが 4px を超えたらドラッグになる(`pressDrag`。クリックだけなら、選択するだけ)。大きさの変更(ハンドル)は、すぐ始まる
   const grab = (kind: DragKind) => ({
     onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
       if (e.button !== 0 || !e.isPrimary) return
       downPoint.current = { x: e.clientX, y: e.clientY }
-      // 未選択のあいだは、選択はクリックで行う(キャンバスの移動を妨げない)
-      if (!latest.current.selected) return
       e.stopPropagation()
       e.preventDefault()
       flushNudge()
       e.currentTarget.setPointerCapture(e.pointerId)
-      updateDrag(startDrag(kind, latest.current.base, { x: e.clientX, y: e.clientY }, e.pointerId))
+      if (!latest.current.selected) latest.current.onSelect()
+      const client = { x: e.clientX, y: e.clientY }
+      updateDrag(
+        kind.type === 'move'
+          ? pressDrag(kind, latest.current.base, client, e.pointerId)
+          : startDrag(kind, latest.current.base, client, e.pointerId),
+      )
     },
     onPointerMove: (e: ReactPointerEvent<HTMLElement>) => {
-      if (dragRef.current.phase !== 'dragging') return
+      if (dragRef.current.phase === 'idle') return
       const next = moveDrag(dragRef.current, { x: e.clientX, y: e.clientY }, latest.current.scale, e.pointerId)
       if (next !== dragRef.current) updateDrag(next)
     },
     onPointerUp: (e: ReactPointerEvent<HTMLElement>) => {
       const result = endDrag(dragRef.current, e.pointerId)
-      if (result.state === dragRef.current) return // ほかのポインタ・ドラッグ中でない
+      if (result.state === dragRef.current) return // ほかのポインタ・待機中
       updateDrag(result.state)
       if (result.commit) latest.current.onChange(result.commit)
     },
     onPointerCancel: (e: ReactPointerEvent<HTMLElement>) => {
       const d = dragRef.current
-      if (d.phase === 'dragging' && d.pointerId === e.pointerId) updateDrag(cancelDrag())
+      if (d.phase !== 'idle' && d.pointerId === e.pointerId) updateDrag(cancelDrag())
     },
     onLostPointerCapture: (e: ReactPointerEvent<HTMLElement>) => {
       const d = dragRef.current
-      if (d.phase === 'dragging' && d.pointerId === e.pointerId) updateDrag(cancelDrag())
+      if (d.phase !== 'idle' && d.pointerId === e.pointerId) updateDrag(cancelDrag())
     },
     onClick: (e: { clientX: number; clientY: number }) => {
       if (latest.current.selected || !downPoint.current) return
@@ -276,7 +287,8 @@ export function SectionEditor({
         <div
           aria-hidden="true"
           data-section-preview
-          className={`absolute inset-0 border-2 border-dashed ${style.box}`}
+          className="absolute inset-0 border-2 border-dashed"
+          style={{ borderColor: style.line, backgroundColor: style.fill }}
         />
       )}
       {/* 選択中の印 */}
@@ -300,7 +312,7 @@ export function SectionEditor({
         />
       )}
 
-      {/* 枠の線の近くの、つかめる帯(選択のクリックと、選択中の移動) */}
+      {/* 枠の線の近くの、つかめる帯(押すと選択、ドラッグで移動) */}
       {bandBoxes(live, scale).map((b) => (
         <div
           key={b.side}
@@ -318,15 +330,15 @@ export function SectionEditor({
         />
       ))}
 
-      {/* 札: クリックで選択、選択中はドラッグで移動、ダブルクリックで名前の編集 */}
+      {/* 名前(枠の上の文字): 押すと選択、ドラッグで移動、ダブルクリックで名前の編集。つかむ場所と入力欄は、`SectionBox` の文字の位置に合わせる */}
       <div
         className="absolute z-20"
-        style={{ left: TAG_RECT.left, top: TAG_RECT.top, width: TAG_RECT.width, height: TAG_RECT.height }}
+        style={{ left: tag.left, top: tag.top, width: tag.width, height: tag.height }}
       >
         {renaming ? (
           <SectionNameEditor
             initial={section.sectionName}
-            className={style.tag}
+            className="bg-surface text-ink"
             onCommit={(name) => {
               setRenaming(false)
               onRename(name)
@@ -374,6 +386,7 @@ export function SectionEditor({
           color={section.color}
           menu={menu}
           scale={scale}
+          offset={menuButtonOffset(live.width)}
           onToggle={() => setMenu((m) => menuReduce(m, { type: 'toggle' }))}
           onPickColor={(chosen) => {
             const r = pickColor(section.color, chosen)

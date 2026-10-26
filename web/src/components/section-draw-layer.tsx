@@ -145,7 +145,7 @@ export function SectionDrawLayer({
         <div
           aria-hidden="true"
           data-section-draw-preview=""
-          className={`pointer-events-none absolute border-dashed ${style.box}`}
+          className="pointer-events-none absolute border-dashed"
           style={{
             // 層の左上が、親の原点から HUGE だけ左上にあるので、HUGE を足して、親の座標に合わせる
             left: preview.x + offsetX + HUGE,
@@ -153,6 +153,9 @@ export function SectionDrawLayer({
             width: preview.width,
             height: preview.height,
             borderWidth: lineWidth,
+            // 新しいセクションの既定の色(赤 #FF0004)の、破線の枠と 20% の塗り。置いたあとの見た目と同じ
+            borderColor: style.line,
+            backgroundColor: style.fill,
           }}
         >
           <span

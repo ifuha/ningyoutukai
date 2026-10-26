@@ -125,6 +125,34 @@ describe('SectionEditor: 位置と、見た目の大きさ', () => {
   })
 })
 
+describe('SectionEditor: 名前(枠の上の文字)をつかむ場所は、SectionBox の文字の位置に合う', () => {
+  // 名前をつかむ場所の外枠(`data-section-tag` の親)の style を取り出す
+  const tagBox = (html: string) => {
+    const i = html.indexOf('data-section-tag')
+    const open = html.lastIndexOf('<div', html.lastIndexOf('<div', i) - 1)
+    return /style="([^"]*)"/.exec(html.slice(open, i))?.[1] ?? ''
+  }
+  test('幅 300 のセクション: 左端から、上辺の 20px 上〜4px 下(幅 160、高さ 24)。文字の帯(16px 上〜上辺)を含む', () => {
+    expect(tagBox(render())).toBe('left:0;top:-20px;width:160px;height:24px')
+  })
+  test('狭いセクション(幅 80)は、メニューの分を空けて、幅 40', () => {
+    const narrow = { ...section, width: 80 }
+    expect(tagBox(render({ section: narrow }))).toBe('left:0;top:-20px;width:40px;height:24px')
+  })
+  test('名前のつかむ場所の上辺(-20)は、文字の帯の上辺(-16)より上にあり、旧い札(左へ 18px・120×32)の位置ではない', () => {
+    const html = render()
+    expect(html).not.toContain('left:18px;top:-16px')
+    expect(html).not.toContain('width:120px;height:32px')
+  })
+  test('選択中のメニューのボタンは、名前のつかむ場所の右どなり(幅 300 で、左 166px・上 -16px)', () => {
+    expect(render({ selected: true })).toContain('left:166px;top:-16px')
+    expect(render({ selected: true, section: { ...section, width: 80 } })).toContain('left:46px;top:-16px')
+  })
+  test('ドラッグ中でなければ、元の四角の幅で決まる(offsetX は名前の位置を変えない)', () => {
+    expect(tagBox(render({ offsetX: 50, offsetY: -20 }))).toBe('left:0;top:-20px;width:160px;height:24px')
+  })
+})
+
 describe('SectionColorPicker', () => {
   test('6 色が並び、いまの色だけが押された状態(aria-pressed)', () => {
     const html = renderToStaticMarkup(createElement(SectionColorPicker, { value: 'green', onPick: () => {} }))
@@ -134,11 +162,16 @@ describe('SectionColorPicker', () => {
     expect(/aria-label="緑"[^>]*aria-pressed="true"/.test(html) || /aria-pressed="true"[^>]*aria-label="緑"/.test(html)).toBe(true)
   })
 
-  test('色の見た目は、札の色(section-style)と同じ', () => {
+  test('見本の色は、枠の破線と同じ線の色(section-style)。赤は Figma の #FF0004', () => {
     const html = renderToStaticMarkup(createElement(SectionColorPicker, { value: 'red', onPick: () => {} }))
-    expect(html).toContain('bg-red-500')
-    expect(html).toContain('bg-sky-400')
-    expect(html).toContain('bg-blue-500')
+    const swatch = (color: string) =>
+      new RegExp(`data-swatch="${color}"[^>]*style="([^"]*)"`).exec(html)?.[1] ?? ''
+    expect(swatch('red')).toContain('background-color:#FF0004')
+    expect(swatch('lightblue')).toContain('background-color:#38BDF8')
+    expect(swatch('blue')).toContain('background-color:#3B82F6')
+    // 6 色すべてに、見本の色がある(札の色のクラスは使わない)
+    expect(count(html, 'data-swatch=')).toBe(6)
+    expect(html).not.toMatch(/\bbg-(red|yellow|green|purple|sky|blue)-\d+/)
   })
 })
 
@@ -150,6 +183,7 @@ describe('SectionEditorMenu', () => {
         color: 'red',
         menu: state,
         scale,
+        offset: { left: 166, top: -16 },
         onToggle: () => {},
         onPickColor: () => {},
         onAskDelete: () => {},
@@ -182,25 +216,26 @@ describe('SectionEditorMenu', () => {
     expect(html).not.toContain('セクションの色')
   })
 
-  test('拡大率を打ち消す(拡大率 2 で scale(0.5))。札のとなりに置く', () => {
+  test('拡大率を打ち消す(拡大率 2 で scale(0.5))。渡された位置に置く', () => {
     const html = menu('closed', 2)
     expect(html).toContain('scale(0.5)')
-    expect(html).toContain('left:144px;top:-16px') // 18 + 120 + 6、-16
+    expect(html).toContain('left:166px;top:-16px')
   })
 })
 
 describe('SectionNameEditor', () => {
   const editor = (initial: string) =>
     renderToStaticMarkup(
-      createElement(SectionNameEditor, { initial, className: 'bg-red-500', onCommit: () => {}, onCancel: () => {} }),
+      createElement(SectionNameEditor, { initial, className: 'bg-surface text-ink', onCommit: () => {}, onCancel: () => {} }),
     )
 
-  test('いまの名前が入った入力欄が出る', () => {
+  test('いまの名前が入った入力欄が出る(下の名前の文字を隠すため、背景を塗る)', () => {
     const html = editor('設計チーム')
     expect(html).toContain('<input')
     expect(html).toContain('aria-label="セクション名"')
     expect(html).toContain('value="設計チーム"')
-    expect(html).toContain('bg-red-500')
+    expect(html).toContain('bg-surface')
+    expect(html).toContain('text-ink')
   })
 
   test('50 文字を超える名前は、50 文字に収めて入る', () => {

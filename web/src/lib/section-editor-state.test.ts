@@ -8,7 +8,6 @@ import {
   SECTION_COLOR_LABELS,
   SECTION_COLOR_ORDER,
   SECTION_NAME_MAX,
-  TAG_RECT,
   bandBoxes,
   cancelDrag,
   cancelRename,
@@ -28,6 +27,7 @@ import {
   nameKeyAction,
   nudgeRect,
   pickColor,
+  pressDrag,
   safeScale,
   screenSize,
   settleNudge,
@@ -102,9 +102,6 @@ describe('ハンドルと、つかめる帯の配置', () => {
     const rightBand = bands.find((x) => x.side === 'right')!
     expect(rightBand.left).toBe(300 - b / 2)
     expect(rightBand.height).toBe(400 + b)
-  })
-  test('札の位置は、SectionBox の札と同じ(外側の左端から右へ 18、上の辺から上へ 16、120 × 32)', () => {
-    expect(TAG_RECT).toEqual({ left: 18, top: -16, width: 120, height: 32 })
   })
 })
 
@@ -215,6 +212,72 @@ describe('ドラッグ: 大きさの変更(8 つのハンドル)', () => {
     const r = endDrag(s, P)
     expect(r.commit).toEqual({ x: 100, y: 200, width: 320, height: 430 })
     expect(endDrag(drag({ type: 'resize', handle: 'se' }, { x: 0, y: 0 }), P).commit).toBeNull()
+  })
+})
+
+describe('ドラッグ: 押してから動き出すまで(クリックとドラッグの区別)', () => {
+  const press = (pointerId = P) => pressDrag({ type: 'move' }, R, { x: 1000, y: 1000 }, pointerId)
+  const at = (s: DragState, x: number, y: number, scale = 1, pointerId = P) =>
+    moveDrag(s, { x: 1000 + x, y: 1000 + y }, scale, pointerId)
+
+  test('押した直後は待機でも、ドラッグ中でもない。プレビューは出ない', () => {
+    const s = press()
+    expect(s.phase).toBe('pressed')
+    expect(dragPreview(s)).toBeNull()
+  })
+  test('しきい値(4px)以内の動きは、動かさない(クリックのまま)', () => {
+    const s = press()
+    expect(at(s, 4, 0)).toBe(s)
+    expect(at(s, 2, 2)).toBe(s)
+    expect(dragPreview(at(s, 3, 0))).toBeNull()
+  })
+  test('しきい値を超えたら、ドラッグになる。押した点を起点にするので、飛ばない', () => {
+    const s = at(press(), 5, 0)
+    expect(s.phase).toBe('dragging')
+    // 5px 動いた分だけ(しきい値の分を落とさない・上乗せしない)
+    expect(dragPreview(s)).toEqual({ x: 105, y: 200, width: 300, height: 400 })
+  })
+  test('ドラッグになったあとは、しきい値の内側に戻っても、そのまま動かせる(往復で元に戻せる)', () => {
+    let s = at(press(), 40, 30)
+    expect(dragPreview(s)).toEqual({ x: 140, y: 230, width: 300, height: 400 })
+    s = at(s, 1, 1)
+    expect(s.phase).toBe('dragging')
+    expect(dragPreview(s)).toEqual({ x: 101, y: 201, width: 300, height: 400 })
+  })
+  test('拡大率で割る(しきい値は画面の px、動かす量はキャンバスの座標)', () => {
+    const s = at(press(), 40, 0, 4)
+    expect(dragPreview(s)!.x).toBe(110)
+  })
+  test('クリックだけで離したときは、確定せず、待機に戻る', () => {
+    const r = endDrag(at(press(), 3, 0), P)
+    expect(r.commit).toBeNull()
+    expect(r.state).toEqual(IDLE)
+  })
+  test('ドラッグして離したときは、1 回だけ確定する', () => {
+    const r = endDrag(at(press(), 60, 0), P)
+    expect(r.commit).toEqual({ x: 160, y: 200, width: 300, height: 400 })
+    expect(r.state).toEqual(IDLE)
+    expect(endDrag(r.state, P).commit).toBeNull()
+  })
+  test('ドラッグになっても、元の位置に戻して離したら、確定しない', () => {
+    let s = at(press(), 60, 0)
+    s = at(s, 0, 0)
+    expect(endDrag(s, P).commit).toBeNull()
+  })
+  test('Esc(cancelDrag)で、押した直後でもドラッグ中でも、待機に戻る。確定しない', () => {
+    expect(endDrag(cancelDrag(), P).commit).toBeNull()
+    expect(cancelDrag()).toEqual(IDLE)
+  })
+  test('別のポインタ(2 本目の指)の動き・離しは、押した直後でも無視する', () => {
+    const s = press(7)
+    expect(at(s, 500, 500, 1, 8)).toBe(s)
+    const r = endDrag(s, 8)
+    expect(r.state).toBe(s)
+    expect(r.commit).toBeNull()
+  })
+  test('大きさの変更(ハンドル)は、これまでどおり、押してすぐ始まる(しきい値なし)', () => {
+    const s = startDrag({ type: 'resize', handle: 'e' }, R, { x: 1000, y: 1000 }, P)
+    expect(dragPreview(moveDrag(s, { x: 1001, y: 1000 }, 1, P))!.width).toBe(301)
   })
 })
 

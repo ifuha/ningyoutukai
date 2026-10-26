@@ -73,14 +73,15 @@ describe('ProductTree(位置もセクションもないとき = これまでの�
 })
 
 describe('ProductTree(セクション)', () => {
-  test('座標と大きさで四角を描き、色の見た目と名前の札を付ける', () => {
+  test('座標と大きさで四角を描き、色の見た目(破線の枠と 20% の塗り)と、枠の上の名前を付ける', () => {
     const html = render({
       tree: tree(L, [M1]),
       sections: [section({ x: 120, y: 80, width: 320, height: 200, color: 'blue', sectionName: '開発' })],
     })
     expect(html).toContain('data-section-id="s1"')
     expect(html).toContain('left:120px;top:80px;width:320px;height:200px')
-    expect(html).toContain('border-blue-500')
+    expect(html).toContain('border-color:#3B82F6')
+    expect(html).toContain('background-color:rgba(59, 130, 246, 0.2)')
     expect(html).toContain('開発')
   })
   test('セクションは、カードより前(後ろに敷く)に出力される', () => {
@@ -95,8 +96,8 @@ describe('ProductTree(セクション)', () => {
         section({ sectionId: 'b', color: 'green', sectionName: '運用' }),
       ],
     })
-    expect(html).toContain('border-red-500')
-    expect(html).toContain('border-green-500')
+    expect(html).toContain('border-color:#FF0004')
+    expect(html).toContain('border-color:#22C55E')
   })
   test('負の座標があるときは、自動配置を、その分だけずらす', () => {
     const html = render({ tree: tree(L, []), sections: [section({ x: -100, y: -30 })] })
@@ -279,9 +280,109 @@ describe('SectionBox(選択・ドロップ先の見た目)', () => {
     expect(box({})).not.toContain('data-selected')
     expect(box({})).not.toContain('outline-ink')
   })
-  test('カードのドロップ先(highlighted)は、枠を強調し、data-highlighted が付く', () => {
+  test('カードのドロップ先(highlighted)は、輪を足して塗りを濃くし、data-highlighted が付く', () => {
     expect(box({ highlighted: true })).toContain('data-highlighted="true"')
     expect(box({ highlighted: true })).toContain('ring-4')
     expect(box({})).not.toContain('data-highlighted')
+    expect(box({})).not.toContain('ring-4')
+    // 塗りは、通常 20%、ドロップ先は 35%(赤 #FF0004)
+    expect(box({})).toContain('background-color:rgba(255, 0, 4, 0.2)')
+    expect(box({ highlighted: true })).toContain('background-color:rgba(255, 0, 4, 0.35)')
+  })
+})
+
+describe('SectionBox(Figma の見た目: 破線・20% の塗り・枠の上の名前)', () => {
+  const box = (props: Record<string, unknown>) =>
+    renderToStaticMarkup(createElement(SectionBox, { section: section() as never, ...props } as never))
+  test('枠は破線で、色は赤 #FF0004、内側は同じ色の 20%', () => {
+    const html = box({})
+    expect(html).toContain('border-dashed')
+    expect(html).toContain('border-2')
+    expect(html).toContain('border-color:#FF0004')
+    expect(html).toContain('background-color:rgba(255, 0, 4, 0.2)')
+  })
+  test('名前は、色つきの札ではなく、枠の上の文字(札の背景色・固定の札の大きさが無い)', () => {
+    const html = box({ section: section({ sectionName: 'デザイン' }) as never })
+    const label = html.slice(html.indexOf('data-section-label'))
+    expect(label).toContain('デザイン')
+    expect(label).toContain('text-ink')
+    expect(html).not.toMatch(/\bbg-(red|yellow|green|purple|sky|blue)-\d+/)
+    expect(html).not.toContain('w-[120px]')
+    expect(html).not.toContain('h-8')
+  })
+  test('名前は、外側の上辺の 16px 上の帯に置く(枠線 2px の内側基準で、上 -18px・左 4px)', () => {
+    const html = box({})
+    expect(html).toContain('top:-18px')
+    expect(html).toContain('left:4px')
+    expect(html).toContain('height:16px')
+  })
+  test('長い名前は、省略記号にする(truncate)。名前の全文は title に残る', () => {
+    const html = box({ section: section({ sectionName: 'とてもとてもとてもとても長いセクションの名前' }) as never })
+    expect(html).toContain('truncate')
+    expect(html).toContain('title="とてもとてもとてもとても長いセクションの名前"')
+  })
+})
+
+describe('ProductTree(セクションの動かす面。カードの下・リーダーだけ)', () => {
+  const at = (html: string, needle: string) => html.indexOf(needle)
+  // 目印の属性を持つ要素の、開きタグ(`<div ...`)を取り出す
+  const openTag = (html: string, marker: string) => {
+    const i = html.indexOf(marker)
+    return html.slice(html.lastIndexOf('<div', i), html.indexOf('>', i) + 1)
+  }
+  const leaderHtml = render({
+    tree: tree(L, [M1]),
+    sections: [section()],
+    canEditSections: true,
+  })
+
+  test('リーダーなら、セクションごとに動かす面が出る(リーダーでなければ、出ない)', () => {
+    expect(leaderHtml).toContain('data-section-move-surface="s1"')
+    const viewer = render({ tree: tree(L, [M1]), sections: [section()], canEditSections: false })
+    expect(viewer).not.toContain('data-section-move-surface')
+  })
+
+  test('重ね順: セクションの四角 → 動かす面 → カード → 編集枠(DOM の順序。後に描くものが手前)', () => {
+    const box = at(leaderHtml, 'data-section-id="s1"')
+    const surface = at(leaderHtml, 'data-section-move-surface="s1"')
+    const card = at(leaderHtml, 'data-card-id=')
+    const editor = at(leaderHtml, 'data-section-editor="s1"')
+    expect(box).toBeGreaterThanOrEqual(0)
+    expect(surface).toBeGreaterThan(box)
+    expect(card).toBeGreaterThan(surface) // 面は、カードの下(カードのドラッグを奪わない)
+    expect(editor).toBeGreaterThan(card) // 編集枠(札・帯・ハンドル)は、カードの上
+  })
+
+  test('重なるセクションは、面積の大きい順に並べる(内側の小さいセクションが手前=先につかめる)', () => {
+    const big = section({ sectionId: 'big', width: 600, height: 600 })
+    const small = section({ sectionId: 'small', sectionName: '内側', x: 50, y: 50, width: 100, height: 100 })
+    // 配列の順(名前順など)に関わらず、面は大きい順
+    for (const sections of [[small, big], [big, small]]) {
+      const html = render({ tree: tree(L, [M1]), sections, canEditSections: true })
+      expect(at(html, 'data-section-move-surface="big"')).toBeGreaterThanOrEqual(0)
+      expect(at(html, 'data-section-move-surface="small"')).toBeGreaterThan(at(html, 'data-section-move-surface="big"'))
+    }
+  })
+
+  test('面を出すとき、自動配置の枠はポインタを通す。カードの包み(DragSlot)は受ける', () => {
+    // カードの間の空いた場所が、面のドラッグを遮らない
+    expect(openTag(leaderHtml, 'data-flow-layer')).toContain('pointer-events-none')
+    // カードの包みは、pointer-events-auto で、これまでどおり受ける
+    expect(leaderHtml).toContain('data-drag-slot')
+    expect(openTag(leaderHtml, 'data-drag-slot')).toContain('pointer-events-auto')
+  })
+
+  test('リーダーでなければ、自動配置の枠はこれまでどおり(ポインタを通さない設定を付けない)', () => {
+    const viewer = render({ tree: tree(L, [M1]), sections: [section()], canEditSections: false })
+    expect(openTag(viewer, 'data-flow-layer')).not.toContain('pointer-events-none')
+    expect(viewer).not.toContain('data-drag-slot')
+  })
+
+  test('位置を持つカードは、面より手前(DOM の順序で後)に描かれる', () => {
+    const placed = member('P', '位置ありC', 'member', { positionX: 40, positionY: 60 })
+    const html = render({ tree: tree(L, [placed]), sections: [section()], canEditSections: true })
+    const surface = at(html, 'data-section-move-surface="s1"')
+    const placedCard = at(html, 'left:40px')
+    expect(placedCard).toBeGreaterThan(surface)
   })
 })

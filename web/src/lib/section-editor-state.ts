@@ -30,11 +30,7 @@ export function inverseScaleStyle(scale: number): { transform: string; transform
 
 // ---------------------------------------------------------------- 配置の寸法
 
-/** 札(名前のラベル)の位置と大きさ。`SectionBox` の札と同じ(Figma の `Frame 71`: 120 × 32)。
- *  四角の外側の左端から 18px 右、上の辺から 16px 上(`SectionBox` は枠線 2px の内側を基準に -18 / 16 なので、外側基準では 18 / -16) */
-export const TAG_RECT = { left: 18, top: -16, width: 120, height: 32 } as const
-/** メニューのボタンの位置(札の右どなり) */
-export const MENU_BUTTON_OFFSET = { left: TAG_RECT.left + TAG_RECT.width + 6, top: TAG_RECT.top } as const
+// 名前(枠の上の文字)をつかむ場所と、メニューのボタンの位置は、`section-label.ts`(`SectionBox` の文字の位置と同じ寸法)
 /** リサイズのハンドルの、画面での見た目の大きさ(px) */
 export const HANDLE_PX = 12
 /** 枠の線の近くの、つかめる帯の、画面での太さ(px。線をまたいで、内と外に半分ずつ) */
@@ -117,6 +113,15 @@ export type DragKind = { type: 'move' } | { type: 'resize'; handle: ResizeHandle
 export type DragState =
   | { phase: 'idle' }
   | {
+      /** 押した直後。まだクリックかドラッグか決まっていない(動きが `CLICK_THRESHOLD_PX` を超えたら、ドラッグになる) */
+      phase: 'pressed'
+      pointerId: number
+      kind: DragKind
+      origin: Rect
+      /** 押したときの、画面の座標。ドラッグになったら、ここからの差分で動く(飛ばない) */
+      startClient: Point
+    }
+  | {
       phase: 'dragging'
       /** ドラッグを始めたポインタ。ほかの指(マルチタッチ)の動きは無視する */
       pointerId: number
@@ -135,8 +140,28 @@ export function startDrag(kind: DragKind, origin: Rect, client: Point, pointerId
   return { phase: 'dragging', pointerId, kind, origin, startClient: client, preview: origin }
 }
 
-/** ポインタが動いたとき。画面の差分を拡大率で割って、キャンバスの差分にする。別のポインタ・ドラッグ中でないときは、何もしない */
+/**
+ * 押した直後の状態にする(セクションの内側・札・帯を押したとき)。動きが `CLICK_THRESHOLD_PX` を超えるまでは、ドラッグにならない
+ * (クリックで選択するだけのときに、わずかな手ぶれで動いてしまわない)。大きさの変更のハンドルは、`startDrag` で、すぐ始める。
+ */
+export function pressDrag(kind: DragKind, origin: Rect, client: Point, pointerId: number): DragState {
+  return { phase: 'pressed', pointerId, kind, origin, startClient: client }
+}
+
+/**
+ * ポインタが動いたとき。画面の差分を拡大率で割って、キャンバスの差分にする。別のポインタ・待機中のときは、何もしない。
+ * 押した直後(`pressed`)は、動きがしきい値を超えたら、押した点を起点にドラッグになる(超えるまでは、そのまま)
+ */
 export function moveDrag(state: DragState, client: Point, scale: number, pointerId: number): DragState {
+  if (state.phase === 'pressed') {
+    if (state.pointerId !== pointerId || isClick(state.startClient, client)) return state
+    return moveDrag(
+      startDrag(state.kind, state.origin, state.startClient, state.pointerId),
+      client,
+      scale,
+      pointerId,
+    )
+  }
   if (state.phase !== 'dragging' || state.pointerId !== pointerId) return state
   const s = safeScale(scale)
   const delta = { x: (client.x - state.startClient.x) / s, y: (client.y - state.startClient.y) / s }
@@ -147,11 +172,17 @@ export function moveDrag(state: DragState, client: Point, scale: number, pointer
   return { ...state, preview }
 }
 
-/** ポインタが離されたとき。`commit` が、親に渡す四角(1 回だけ)。動かなかったとき(`rectsEqualWithin`)は `null` */
+/**
+ * ポインタが離されたとき。`commit` が、親に渡す四角(1 回だけ)。動かなかったとき(`rectsEqualWithin`)は `null`。
+ * 押した直後(`pressed`。しきい値を超えていない=クリック)に離したときも、確定せず、待機に戻る
+ */
 export function endDrag(
   state: DragState,
   pointerId: number,
 ): { state: DragState; commit: Rect | null } {
+  if (state.phase === 'pressed') {
+    return state.pointerId === pointerId ? { state: IDLE, commit: null } : { state, commit: null }
+  }
   if (state.phase !== 'dragging' || state.pointerId !== pointerId) return { state, commit: null }
   const commit = rectsEqualWithin(state.origin, state.preview) ? null : state.preview
   return { state: IDLE, commit }

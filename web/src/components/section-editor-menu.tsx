@@ -1,10 +1,11 @@
 import { Ellipsis } from 'lucide-react'
 import { SectionColorPicker } from '#/components/section-color-picker'
 import type { SectionColor } from '#/lib/section'
-import { MENU_BUTTON_OFFSET, inverseScaleStyle, type MenuState } from '#/lib/section-editor-state'
+import { inverseScaleStyle, type MenuState } from '#/lib/section-editor-state'
 
-// 選択中のセクションの、札のとなりの小さなメニュー(「⋯」)。色の変更と、削除(確認を挟む)
+// 選択中のセクションの、名前のとなりの小さなメニュー(「⋯」)。色の変更と、削除(確認を挟む)
 // 状態(`MenuState`)は、キーボードの Delete からも確認を開くので、親(`SectionEditor`)が持つ
+// 位置(`offset`)は、名前をつかむ場所の右どなり(`section-label.ts` の `menuButtonOffset`。セクションの幅で変わる)
 // キャンバスの拡大率を打ち消して、拡大率に関わらず読める大きさにする(左上を基準に 1 / scale)
 const buttonClass =
   'cursor-pointer border-2 border-ink px-2 py-1 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
@@ -14,6 +15,7 @@ export function SectionEditorMenu({
   color,
   menu,
   scale,
+  offset,
   onToggle,
   onPickColor,
   onAskDelete,
@@ -24,6 +26,8 @@ export function SectionEditorMenu({
   color: SectionColor
   menu: MenuState
   scale: number
+  /** ボタンの位置(四角の外側の左上が原点) */
+  offset: { left: number; top: number }
   onToggle: () => void
   onPickColor: (color: SectionColor) => void
   onAskDelete: () => void
@@ -36,7 +40,7 @@ export function SectionEditorMenu({
       // メニューの中の操作で、キャンバスの移動などが始まらないようにする
       onPointerDown={(e) => e.stopPropagation()}
       className="pointer-events-auto absolute z-40"
-      style={{ left: MENU_BUTTON_OFFSET.left, top: MENU_BUTTON_OFFSET.top, ...inverseScaleStyle(scale) }}
+      style={{ left: offset.left, top: offset.top, ...inverseScaleStyle(scale) }}
     >
       <button
         type="button"

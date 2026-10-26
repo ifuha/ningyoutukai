@@ -1,7 +1,11 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { MemberCard } from '#/components/member-card'
-import { SectionBox } from '#/components/section-box'
+import { CardGhost, DragSlot } from '#/components/member-card-drag'
+import { SectionDrawLayer } from '#/components/section-draw-layer'
+import { SectionEditor } from '#/components/section-editor'
+import { SectionLayer } from '#/components/section-layer'
+import { SectionMoveSurface } from '#/components/section-move-surface'
 import { SectionNotice } from '#/components/section-notice'
 import { TreeConnectors } from '#/components/tree-connectors'
 import { TreeToolbar } from '#/components/tree-toolbar'
@@ -25,6 +29,7 @@ import type {
   TreeTask,
 } from '#/lib/tree'
 import { useCanvasSize } from '#/lib/use-canvas-size'
+import { useCardDrag } from '#/lib/use-card-drag'
 import { boxWithin, useCardBoxes } from '#/lib/use-card-boxes'
 import { usePanZoom } from '#/lib/use-pan-zoom'
 
@@ -166,7 +171,28 @@ export function ProductTree({
     toCanvas,
     getCardRect,
   })
+  // C: カードのドラッグ(リーダーだけ。「セクション」の道具で描いている間は動かさない)
+  const cardDrag = useCardDrag(interaction.cardDragOptions)
+  const dragHandlersFor = (memberId: string) =>
+    interaction.cardDragOptions.enabled ? cardDrag.getDragHandlers(memberId) : undefined
+  // ドラッグの最中かを、Esc の優先順位(土台)に知らせる(ドラッグ中の Esc は、選択を外さず、ドラッグの取り消しだけ)
+  const { setCardDragging } = interaction
+  useEffect(() => {
+    setCardDragging(cardDrag.draggingId !== null)
+  }, [cardDrag.draggingId])
+  // ドラッグ中のカード(プレビュー位置に、影のカードを描く)
+  const ghostMember =
+    cardDrag.draggingId !== null
+      ? [leader, ...members].find((m) => m.productMemberId === cardDrag.draggingId)
+      : undefined
   const mode = interaction.tool
+  // 内側の「動かす面」(カードの下)を出すか。カードのドラッグと同じ条件(リーダーで、「セクション」の道具で描いているときを除く)
+  const moveSurfacesOn = interaction.cardDragOptions.enabled
+  // 重なるセクションは、面積が小さい方を手前(後に描く)にする(内側のセクションを、先につかめる。クリックでの選択と同じ規則)
+  const moveSurfaceSections = useMemo(
+    () => [...sections].sort((a, b) => b.width * b.height - a.width * a.height),
+    [sections],
+  )
   // 「セクション」の道具のときは、ドラッグでの移動を止める(描く層が受ける)。ホイール・ピンチ・キーは、そのまま使える
   const { onPointerDown, onPointerMove, onPointerUp, onPointerCancel, ...otherHandlers } = handlers
   const containerHandlers =
@@ -217,40 +243,63 @@ export function ProductTree({
           }}
         >
           <CanvasViewContext.Provider value={canvasView}>
-          {/* セクションの四角は、カードの後ろ(先に描く) */}
-          {sections.map((s) => (
-            <SectionBox
-              key={s.sectionId}
-              section={s}
-              offsetX={bounds.offsetX}
-              offsetY={bounds.offsetY}
-              selected={s.sectionId === interaction.selectedSectionId}
-            />
-          ))}
-          {/* 第 2 段階の部品は、ここに組み込む(`useSectionInteraction` が、渡す値を作る):
-              描く層(キャンバス全面)= <SectionDrawLayer {...interaction.drawLayerProps} />、
-              各セクションの編集枠 = <SectionEditor {...interaction.editorPropsFor(s)} />(SectionBox の代わり・上に重ねる)、
-              カードのドラッグ = useCardDrag(interaction.cardDragOptions)(MemberCard にハンドラを付ける)。
-              変換された層の座標は、キャンバス座標に bounds.offsetX / offsetY を足したもの */}
+          {/* セクションの四角は、カードの後ろ(先に描く)。選択中は輪郭、カードのドロップ先は強調 */}
+          <SectionLayer
+            sections={sections}
+            selectedSectionId={interaction.selectedSectionId}
+            hoverSectionId={cardDrag.hoverSectionId}
+            offsetX={bounds.offsetX}
+            offsetY={bounds.offsetY}
+          />
+          {/* 内側の「動かす面」(カードの下)。カードのない空いた場所のドラッグで、セクションを動かす(カードのように)。
+              リーダーだけ。面積の大きい順に並べるので、重なるときは、小さい(内側の)セクションが手前になる */}
+          {moveSurfacesOn &&
+            moveSurfaceSections.map((s) => {
+              const e = interaction.editorPropsFor(s)
+              return (
+                <SectionMoveSurface
+                  key={s.sectionId}
+                  section={e.section}
+                  canEdit={e.canEdit}
+                  scale={e.scale}
+                  onSelect={e.onSelect}
+                  onChange={e.onChange}
+                  onPreview={e.onPreview}
+                  offsetX={bounds.offsetX}
+                  offsetY={bounds.offsetY}
+                />
+              )
+            })}
+          {/* 重ね順(下から): セクションの四角 → 動かす面 → 親子の線 → 自動配置のカード → 位置を持つカード → 編集枠(B) → ドラッグ中のカードの影(C, z-40)
+              描く層(A, z-30)は、道具が「セクション」のときだけ全面を覆う。座標は、キャンバス座標に bounds.offsetX / offsetY を足したもの。
+              A・B・C に渡す値は、`useSectionInteraction` が作る(リーダーでなければ、すべて無効) */}
           {/* 位置を持つカードへの、実際の位置に合わせた親子の線(SVG)。セクションの上、カードの下 */}
           {leaderBox && connectorTargets.length > 0 && (
             <TreeConnectors parent={leaderBox} targets={connectorTargets} />
           )}
           {/* 自動配置(リーダーを上、メンバーを横に並べる)。位置を持つカードは含めない。負の座標があるときは、その分だけずらす */}
+          {/* 動かす面を出すときは、この枠自体はポインタを通す(枠の大きさ=カードの間の空いた場所が、面のドラッグを遮らないように)。
+              カードは、`DragSlot` の `pointer-events-auto` で、これまでどおり受ける */}
           <div
-            className="relative flex w-max flex-col items-center"
+            className={`relative flex w-max flex-col items-center ${moveSurfacesOn ? 'pointer-events-none' : ''}`}
+            data-flow-layer=""
             style={{
               marginLeft: bounds.offsetX || undefined,
               marginTop: bounds.offsetY || undefined,
             }}
           >
             {!leaderPlaced && (
-              <MemberCard
-                member={leader}
-                cardId={leader.productMemberId}
-                onEditTask={editFor(leader)}
-                onShowTasks={onShowTasks}
-              />
+              <DragSlot
+                handlers={dragHandlersFor(leader.productMemberId)}
+                dragging={cardDrag.draggingId === leader.productMemberId}
+              >
+                <MemberCard
+                  member={leader}
+                  cardId={leader.productMemberId}
+                  onEditTask={editFor(leader)}
+                  onShowTasks={onShowTasks}
+                />
+              </DragSlot>
             )}
             {members.length === 0 ? (
               !leaderPlaced && (
@@ -291,12 +340,17 @@ export function ProductTree({
                             <span className="absolute top-4 left-1/2 size-0 -translate-x-1/2 border-x-[5px] border-b-[7px] border-x-transparent border-b-ink/50" />
                           </span>
                         )}
-                        <MemberCard
-                          member={m}
-                          cardId={m.productMemberId}
-                          onEditTask={editFor(m)}
-                          onShowTasks={onShowTasks}
-                        />
+                        <DragSlot
+                          handlers={dragHandlersFor(m.productMemberId)}
+                          dragging={cardDrag.draggingId === m.productMemberId}
+                        >
+                          <MemberCard
+                            member={m}
+                            cardId={m.productMemberId}
+                            onEditTask={editFor(m)}
+                            onShowTasks={onShowTasks}
+                          />
+                        </DragSlot>
                       </li>
                     ))}
                   </ul>
@@ -311,14 +365,53 @@ export function ProductTree({
               className="absolute"
               style={{ left: x + bounds.offsetX, top: y + bounds.offsetY }}
             >
-              <MemberCard
-                member={member}
-                cardId={member.productMemberId}
-                onEditTask={editFor(member)}
-                onShowTasks={onShowTasks}
-              />
+              <DragSlot
+                handlers={dragHandlersFor(member.productMemberId)}
+                dragging={cardDrag.draggingId === member.productMemberId}
+              >
+                <MemberCard
+                  member={member}
+                  cardId={member.productMemberId}
+                  onEditTask={editFor(member)}
+                  onShowTasks={onShowTasks}
+                />
+              </DragSlot>
             </div>
           ))}
+          {/* ドラッグ中のカード(C)の影。プレビューの位置に描く。元のカードは、薄くして残す */}
+          {ghostMember && cardDrag.previewPosition && (
+            <CardGhost
+              member={ghostMember}
+              position={cardDrag.previewPosition}
+              offsetX={bounds.offsetX}
+              offsetY={bounds.offsetY}
+            />
+          )}
+          {/* 各セクションの編集枠(B)。選択・大きさの変更・移動・名前・色・削除。リーダーだけ(リーダーでなければ、何も出さない)。
+              カードの後(上)に置く: 外枠は pointer-events を通し、つかめる場所(枠の線の近くの帯、札、選択中のハンドル、「⋯」)だけが受けるので、
+              内側のカードのドラッグを妨げない。内側のクリックでの選択は、キャンバスのクリック(`handleCanvasClick`)が受ける
+              (`interiorSelectable` は、カードより下に置くときだけ使うので、使わない)。
+              `data-no-deselect` で包む: 編集枠の中のクリック(札・メニューの余白など)が、「背景のクリック」として選択を外さないようにする。
+              `display: contents` なので、配置には影響しない */}
+          {canEditSections && (
+            <div data-no-deselect className="contents">
+              {sections.map((s) => (
+                <SectionEditor
+                  key={s.sectionId}
+                  {...interaction.editorPropsFor(s)}
+                  offsetX={bounds.offsetX}
+                  offsetY={bounds.offsetY}
+                />
+              ))}
+            </div>
+          )}
+          {/* 「セクション」の道具で、キャンバスにドラッグして、セクションを置く層(A)。`active` でなければ、何も出さず、何も奪わない。
+              重ね順は z-30(カードとセクションの上、道具のバー(z-10 の外側の層)より下)。リーダーでなければ、`active` は false */}
+          <SectionDrawLayer
+            {...interaction.drawLayerProps}
+            offsetX={bounds.offsetX}
+            offsetY={bounds.offsetY}
+          />
           </CanvasViewContext.Provider>
         </div>
       </div>
