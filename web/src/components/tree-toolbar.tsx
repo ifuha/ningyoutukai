@@ -1,14 +1,16 @@
 import { Hand, MousePointer2, Search, SquareDashed, StickyNote, User } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import type { CanvasTool } from '#/lib/section-interaction-types'
 
 // ツリーの画面の下の中央に置く、道具のバー(Figma の `nav`)
 // 寸法(Figma): 枠 410 × 86(枠線 2px)、ボタン 60 × 60(アイコン 24px + 文字 12px)、ボタンと区切り線の間隔 6px、区切り線 2 × 30
 //   内側の幅 406 = ボタン 6 × 60 + 区切り線 2 × 2 + 間隔 7 × 6。縦は、内側 82 の中央にボタン(上下 11px)
 // 並びは「選択・移動 | メンバー・セクション・メモ | 検索」
-// 第 1 段階(表示のみ): 選択と移動は、押された見た目を切り替えるだけ(キャンバスのドラッグは、どちらでもこれまでどおり動く)。
-//   メンバーは、メンバーの管理を開く(リーダーのみ)。セクション・メモ・検索は、無効の見た目(準備中)
+// 選択・移動・セクションは、道具(モード)の切り替え(押された道具を強調する)。キャンバスのドラッグでの移動は、「セクション」以外ではこれまでどおり動く。
+//   セクションは、リーダーだけが使える(リーダーでなければ、押せない見た目)。選ぶと、キャンバスでドラッグして、セクションを置く(Esc か「選択」で戻る)
+//   メンバーは、メンバーの管理を開く(リーダーのみ)。メモ・検索は、無効の見た目(準備中)
 
-export type TreeMode = 'select' | 'pan'
+export type TreeMode = CanvasTool
 
 const buttonClass =
   'flex size-[60px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1 text-xs hover:bg-side-item focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent'
@@ -57,11 +59,14 @@ export function TreeToolbar({
   mode,
   onModeChange,
   onOpenMembers,
+  canEditSections = false,
 }: {
   mode: TreeMode
   onModeChange: (mode: TreeMode) => void
   /** メンバーの管理を開く。渡さない(リーダーでない)ときは、無効の見た目 */
   onOpenMembers?: () => void
+  /** セクションを置ける(リーダー)か。false のときは、「セクション」が押せない見た目 */
+  canEditSections?: boolean
 }) {
   return (
     <div
@@ -89,7 +94,14 @@ export function TreeToolbar({
         title={onOpenMembers ? 'メンバーの管理' : 'リーダーのみ'}
         onClick={onOpenMembers}
       />
-      <ToolButton icon={SquareDashed} label="セクション" disabled title="準備中" />
+      <ToolButton
+        icon={SquareDashed}
+        label="セクション"
+        pressed={mode === 'section'}
+        disabled={!canEditSections}
+        title={canEditSections ? 'セクションを置く(Esc で戻る)' : 'リーダーのみ'}
+        onClick={() => onModeChange('section')}
+      />
       <ToolButton icon={StickyNote} label="メモ" disabled title="準備中" />
       <Divider />
       <ToolButton icon={Search} label="検索" disabled title="準備中" />

@@ -2,7 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ProductTree } from './product-tree'
+import { SectionNotice } from './section-notice'
+import { SectionBox } from './section-box'
 import { TreeToolbar } from './tree-toolbar'
+import { TreeZoomBar } from './tree-zoom-bar'
 
 // 画面部品の、最小のスモークテスト(DOM なし。サーバーでのマークアップを検査する)
 // ブラウザでの測定(カードの実際の位置・高さ)と、SVG の線は、ここでは出ない(`tree-layout.test.ts` と `use-card-boxes.test.ts` で、計算を確かめる)
@@ -177,15 +180,108 @@ describe('TreeToolbar', () => {
     expect(bar({ mode: 'pan' })).toMatch(/aria-pressed="true"[^>]*>(?:(?!<button).)*移動/s)
     expect(bar({ mode: 'select' })).toMatch(/aria-pressed="true"[^>]*>(?:(?!<button).)*選択/s)
   })
-  test('セクション・メモ・検索は、無効(準備中)', () => {
+  test('メモ・検索は、無効(準備中)。セクションは、リーダーでなければ無効', () => {
     const html = bar({ onOpenMembers: () => {} })
-    expect(html.split('title="準備中"').length - 1).toBe(3)
-    expect(html.split('disabled=""').length - 1).toBe(3)
+    expect(html.split('title="準備中"').length - 1).toBe(2) // メモ・検索
+    expect(html.split('disabled=""').length - 1).toBe(3) // メモ・検索・セクション(リーダーでない)
+  })
+  test('セクションは、リーダー(canEditSections)のときだけ押せる', () => {
+    const leader = bar({ onOpenMembers: () => {}, canEditSections: true })
+    expect(leader.split('disabled=""').length - 1).toBe(2) // メモ・検索だけ
+    expect(leader).toContain('title="セクションを置く(Esc で戻る)"')
+    const notLeader = bar({ onOpenMembers: () => {}, canEditSections: false })
+    expect(notLeader).toContain('title="リーダーのみ"')
+  })
+  test('「セクション」の道具が選ばれているとき、セクションが押された状態になる', () => {
+    expect(bar({ mode: 'section', canEditSections: true })).toMatch(/aria-pressed="true"[^>]*>(?:(?!<button).)*セクション/s)
   })
   test('メンバーは、リーダーのときだけ押せる', () => {
     expect(bar({ onOpenMembers: () => {} }).split('disabled=""').length - 1).toBe(3)
     const member = bar({})
     expect(member.split('disabled=""').length - 1).toBe(4)
     expect(member).toContain('title="リーダーのみ"')
+  })
+})
+
+describe('ProductTree(表示の整理: 操作のヒントと、倍率の +/- を置かない)', () => {
+  const html = render({ tree: tree(L, [M1]) })
+  test('細かい操作のヒントの文字が出ない', () => {
+    expect(html).not.toContain('二本指スクロール')
+    expect(html).not.toContain('2 本指で拡大縮小')
+    expect(html).not.toContain('Ctrl+ホイール')
+  })
+  test('拡大・縮小のボタン(+ と −)が出ない。倍率と「全体表示」は残る', () => {
+    expect(html).not.toContain('aria-label="拡大"')
+    expect(html).not.toContain('aria-label="縮小"')
+    expect(html).toContain('全体表示')
+    expect(html).toContain('%')
+  })
+  test('キーボードでの操作の案内(aria-label)は残る', () => {
+    expect(html).toContain('+ と - で拡大縮小')
+  })
+})
+
+describe('TreeZoomBar', () => {
+  test('倍率(%)と「全体表示」だけ。+/- のボタンは無い', () => {
+    const html = renderToStaticMarkup(createElement(TreeZoomBar, { percent: 80, onReset: () => {} } as never))
+    expect(html).toContain('80%')
+    expect(html).toContain('全体表示')
+    expect(html.split('<button').length - 1).toBe(1)
+  })
+})
+
+describe('ProductTree(道具・カーソル・リーダー)', () => {
+  test('初期の道具は「移動」: つかむカーソル', () => {
+    expect(render({ tree: tree(L, [M1]) })).toContain('cursor-grab')
+  })
+  test('リーダーでなければ、「セクション」は押せない(セクションを選ぶこともできない)', () => {
+    const html = render({ tree: tree(L, [M1]), sections: [section()], canEditSections: false })
+    expect(html).toContain('title="リーダーのみ"')
+    expect(html).not.toContain('data-selected')
+  })
+  test('リーダー(canEditSections)なら、「セクション」が押せる', () => {
+    const html = render({ tree: tree(L, [M1]), canEditSections: true })
+    expect(html).toContain('title="セクションを置く(Esc で戻る)"')
+  })
+  test('通知(失敗の知らせ)がなければ、role="alert" は出ない。あれば、メッセージが出る', () => {
+    expect(render({ tree: tree(L, [M1]) })).not.toContain('role="alert"')
+    const html = render({
+      tree: tree(L, [M1]),
+      sectionActions: {
+        notice: { id: 1, message: '同じ名前のセクションがすでにあります' },
+        dismissNotice: () => {},
+        createSection: async () => null,
+        updateSection: async () => false,
+        deleteSection: async () => false,
+        moveMember: async () => false,
+      },
+    })
+    expect(html).toContain('role="alert"')
+    expect(html).toContain('同じ名前のセクションがすでにあります')
+  })
+})
+
+describe('SectionNotice', () => {
+  test('role="alert" で、メッセージと閉じるボタンが出る', () => {
+    const html = renderToStaticMarkup(createElement(SectionNotice, { id: 1, message: 'テスト', onDismiss: () => {} }))
+    expect(html).toContain('role="alert"')
+    expect(html).toContain('テスト')
+    expect(html).toContain('aria-label="閉じる"')
+  })
+})
+
+describe('SectionBox(選択・ドロップ先の見た目)', () => {
+  const box = (props: Record<string, unknown>) =>
+    renderToStaticMarkup(createElement(SectionBox, { section: section() as never, ...props } as never))
+  test('選択中は、輪郭と data-selected が付く。そうでなければ付かない', () => {
+    expect(box({ selected: true })).toContain('data-selected="true"')
+    expect(box({ selected: true })).toContain('outline-ink')
+    expect(box({})).not.toContain('data-selected')
+    expect(box({})).not.toContain('outline-ink')
+  })
+  test('カードのドロップ先(highlighted)は、枠を強調し、data-highlighted が付く', () => {
+    expect(box({ highlighted: true })).toContain('data-highlighted="true"')
+    expect(box({ highlighted: true })).toContain('ring-4')
+    expect(box({})).not.toContain('data-highlighted')
   })
 })

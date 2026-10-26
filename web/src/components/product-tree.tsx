@@ -1,12 +1,18 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { MemberCard } from '#/components/member-card'
 import { SectionBox } from '#/components/section-box'
+import { SectionNotice } from '#/components/section-notice'
 import { TreeConnectors } from '#/components/tree-connectors'
 import { TreeToolbar } from '#/components/tree-toolbar'
-import type { TreeMode } from '#/components/tree-toolbar'
 import { TreeZoomBar } from '#/components/tree-zoom-bar'
+import { boxToCanvasRect, CanvasViewContext, clientToCanvas } from '#/lib/canvas-view'
+import type { CanvasView } from '#/lib/section-interaction-types'
+import { cursorClass } from '#/lib/canvas-tool'
 import type { Section } from '#/lib/section'
+import { NO_SECTION_ACTIONS } from '#/lib/use-section-actions'
+import type { SectionActions } from '#/lib/use-section-actions'
+import { useSectionInteraction } from '#/lib/use-section-interaction'
 import {
   canvasBounds,
   connectorKind,
@@ -19,14 +25,14 @@ import type {
   TreeTask,
 } from '#/lib/tree'
 import { useCanvasSize } from '#/lib/use-canvas-size'
-import { useCardBoxes } from '#/lib/use-card-boxes'
+import { boxWithin, useCardBoxes } from '#/lib/use-card-boxes'
 import { usePanZoom } from '#/lib/use-pan-zoom'
 
 // セクションがないときに渡す、空の配列(毎回新しい配列を作らない)
 const NO_SECTIONS: Section[] = []
 
 // 下に重ねる道具のバー(高さ 86px、下から 12px)の分の余白(px)。全体表示は、この分を避ける
-// ズームバーと操作のヒントは、道具のバーと重ならないよう、その上に置く(下から TOOLBAR_INSET + 4px)
+// 右下の倍率表示と、通知は、道具のバーと重ならないよう、その上に置く(下から 104px)
 const BOTTOM_INSET = 100
 const ABOVE_TOOLBAR = 'bottom-[104px]'
 
@@ -38,8 +44,12 @@ const ABOVE_TOOLBAR = 'bottom-[104px]'
 // `onEditTask` を渡すと、タスクが押せて、押した人とタスクを渡す(`canOpenTask` があれば、それが true の人のタスクだけ)
 // `onShowTasks` を渡すと、「他 N 件」が押せて、その人を渡す(全員向け)
 // 下の中央の道具のバー(`TreeToolbar`)。`onOpenMembers` を渡すと(リーダーのみ)「メンバー」が押せて、メンバーの管理を開く
-// 選択 / 移動のモードは、第 1 段階では押された見た目だけ(ドラッグでの移動は、どちらでもこれまでどおり)。
-// 初期は「移動」(これまでの、つかむカーソルと同じ見た目)
+// 道具(モード)は「選択」「移動」「セクション」(`useSectionInteraction`)。初期は「移動」(これまでの、つかむカーソルと同じ見た目)。
+//   「セクション」を選ぶと、キャンバスのカーソルが十字になり、ドラッグでの移動は止まる(描く層が受ける)。Esc か「選択」で戻る
+//   `canEditSections`(リーダー)でなければ、「セクション」は押せず、セクションを選択もできない
+// 拡大縮小は、ホイール・ピンチ・キー(+ - 0)と、右下の「全体表示」(倍率の +/- のボタンと、操作のヒントの文字は置かない)
+// 変換された層の中は、`CanvasViewContext` で、拡大率と、画面の座標 → キャンバス座標の変換(`toCanvas`)を使える
+// `sectionActions`(`useSectionActions`)は、編集の操作と、失敗の通知。渡さなければ、編集はできない(表示だけ)
 // `sections` を渡すと、その座標と大きさで、色つきの四角を、カードの後ろに描く(F1。表示のみ)
 //   座標の原点は、自動配置(リーダーを上、メンバーを横に並べる、これまでの配置)の左上。負の座標があれば、全体をずらして収める
 // カードの位置(`positionX` / `positionY`): **カードの左上の座標**(中心ではない)。両方の値があるカードだけ、その座標に置く。
@@ -53,6 +63,8 @@ export function ProductTree({
   canOpenTask,
   onShowTasks,
   onOpenMembers,
+  canEditSections = false,
+  sectionActions = NO_SECTION_ACTIONS,
 }: {
   header?: ReactNode
   tree: ProductTreeData
@@ -61,9 +73,11 @@ export function ProductTree({
   canOpenTask?: (member: TreeMember) => boolean
   onShowTasks?: (member: TreeMember) => void
   onOpenMembers?: () => void
+  /** 自分がリーダーか(セクションの作成・大きさの変更・削除・カードの移動ができる) */
+  canEditSections?: boolean
+  sectionActions?: SectionActions
 }) {
   const { leader, members } = tree
-  const [mode, setMode] = useState<TreeMode>('pan')
   // 位置を持つカード(座標に置く)と、持たないカード(自動配置のまま)に分ける。リーダーも位置を持てる
   const leaderPlaced = hasPosition(leader)
   const { flow: flowMembers, placed: placedMembers } = splitByPosition(members)
@@ -111,8 +125,54 @@ export function ProductTree({
     headerHeight,
     BOTTOM_INSET,
   )
-  const { view, dragging, canZoomIn, canZoomOut, zoomIn, zoomOut, reset, handlers } =
-    usePanZoom(containerRef, size)
+  const { view, dragging, reset, handlers } = usePanZoom(containerRef, size)
+  const scale = view?.scale ?? 1
+  // 画面の座標 → キャンバス座標。中身(変換された層)の左上の画面上の位置は、パンを含んで測れる
+  const toCanvas = useCallback(
+    (client: { x: number; y: number }) => {
+      const el = contentRef.current
+      if (!el) return client
+      const r = el.getBoundingClientRect()
+      return clientToCanvas(client, { x: r.left, y: r.top }, scale, {
+        x: bounds.offsetX,
+        y: bounds.offsetY,
+      })
+    },
+    [contentRef, scale, bounds.offsetX, bounds.offsetY],
+  )
+  const canvasView = useMemo<CanvasView>(() => ({ scale, toCanvas }), [scale, toCanvas])
+  // カードの実際の位置と大きさ(キャンバス座標)。カードのドラッグが、どのカードでも(自動配置のカードも)測れるようにする
+  const getCardRect = useCallback(
+    (memberId: string) => {
+      const content = contentRef.current
+      if (!content) return null
+      for (const el of content.querySelectorAll<HTMLElement>('[data-card-id]')) {
+        if (el.dataset.cardId === memberId) {
+          return boxToCanvasRect(boxWithin(content, el), {
+            x: bounds.offsetX,
+            y: bounds.offsetY,
+          })
+        }
+      }
+      return null
+    },
+    [contentRef, bounds.offsetX, bounds.offsetY],
+  )
+  const interaction = useSectionInteraction({
+    actions: sectionActions,
+    canEdit: canEditSections,
+    sections,
+    scale,
+    toCanvas,
+    getCardRect,
+  })
+  const mode = interaction.tool
+  // 「セクション」の道具のときは、ドラッグでの移動を止める(描く層が受ける)。ホイール・ピンチ・キーは、そのまま使える
+  const { onPointerDown, onPointerMove, onPointerUp, onPointerCancel, ...otherHandlers } = handlers
+  const containerHandlers =
+    mode === 'section'
+      ? otherHandlers
+      : { ...otherHandlers, onPointerDown, onPointerMove, onPointerUp, onPointerCancel }
   // 線を SVG で描くときだけ、カードの実際の位置・高さを測る
   const boxes = useCardBoxes(contentRef, svgMembers.length > 0, cardsKey)
   const leaderBox = boxes?.get(leader.productMemberId)
@@ -134,10 +194,14 @@ export function ProductTree({
         role="region"
         aria-label="ツリー(ドラッグか矢印キーで移動、+ と - で拡大縮小、0 で全体表示)"
         tabIndex={0}
-        {...handlers}
-        className={`absolute inset-0 touch-none select-none overflow-clip overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${
-          mode === 'select' ? 'cursor-default' : dragging ? 'cursor-grabbing' : 'cursor-grab'
-        }`}
+        {...containerHandlers}
+        onClick={(e) =>
+          interaction.handleCanvasClick(
+            e.target instanceof Element ? e.target : null,
+            toCanvas({ x: e.clientX, y: e.clientY }),
+          )
+        }
+        className={`absolute inset-0 touch-none select-none overflow-clip overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${cursorClass(mode, dragging)}`}
       >
         <div
           ref={contentRef}
@@ -152,6 +216,7 @@ export function ProductTree({
             minHeight: bounds.minHeight || undefined,
           }}
         >
+          <CanvasViewContext.Provider value={canvasView}>
           {/* セクションの四角は、カードの後ろ(先に描く) */}
           {sections.map((s) => (
             <SectionBox
@@ -159,8 +224,14 @@ export function ProductTree({
               section={s}
               offsetX={bounds.offsetX}
               offsetY={bounds.offsetY}
+              selected={s.sectionId === interaction.selectedSectionId}
             />
           ))}
+          {/* 第 2 段階の部品は、ここに組み込む(`useSectionInteraction` が、渡す値を作る):
+              描く層(キャンバス全面)= <SectionDrawLayer {...interaction.drawLayerProps} />、
+              各セクションの編集枠 = <SectionEditor {...interaction.editorPropsFor(s)} />(SectionBox の代わり・上に重ねる)、
+              カードのドラッグ = useCardDrag(interaction.cardDragOptions)(MemberCard にハンドラを付ける)。
+              変換された層の座標は、キャンバス座標に bounds.offsetX / offsetY を足したもの */}
           {/* 位置を持つカードへの、実際の位置に合わせた親子の線(SVG)。セクションの上、カードの下 */}
           {leaderBox && connectorTargets.length > 0 && (
             <TreeConnectors parent={leaderBox} targets={connectorTargets} />
@@ -248,36 +319,29 @@ export function ProductTree({
               />
             </div>
           ))}
+          </CanvasViewContext.Provider>
         </div>
-        <p
-          aria-hidden="true"
-          className={`pointer-events-none absolute ${ABOVE_TOOLBAR} left-3 hidden text-xs opacity-50 sm:block`}
-        >
-          <span className="pointer-coarse:hidden">
-            ドラッグ・二本指スクロールで移動、Ctrl+ホイール・ピンチで拡大縮小
-          </span>
-          <span className="hidden pointer-coarse:inline">
-            1 本指で移動、2 本指で拡大縮小
-          </span>
-        </p>
       </div>
       <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2">
         <TreeToolbar
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={interaction.setTool}
           onOpenMembers={onOpenMembers}
+          canEditSections={canEditSections}
         />
       </div>
       <div className={`absolute right-3 ${ABOVE_TOOLBAR} z-10`}>
-        <TreeZoomBar
-          percent={Math.round((view?.scale ?? 1) * 100)}
-          canZoomIn={canZoomIn}
-          canZoomOut={canZoomOut}
-          onZoomIn={zoomIn}
-          onZoomOut={zoomOut}
-          onReset={reset}
-        />
+        <TreeZoomBar percent={Math.round(scale * 100)} onReset={reset} />
       </div>
+      {sectionActions.notice && (
+        <div className={`absolute left-1/2 ${ABOVE_TOOLBAR} z-20 -translate-x-1/2`}>
+          <SectionNotice
+            id={sectionActions.notice.id}
+            message={sectionActions.notice.message}
+            onDismiss={sectionActions.dismissNotice}
+          />
+        </div>
+      )}
     </div>
   )
 }

@@ -21,6 +21,9 @@ import {
 import { ApiError } from '#/lib/api'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
+import { canEditSections } from '#/lib/section-permissions'
+import { useSectionActions } from '#/lib/use-section-actions'
+import { useSections } from '#/lib/use-sections'
 
 // プロダクトの画面(`/products/$productId`)。ログイン必須。見出しと、ツリー(リーダーとメンバー、タスク)
 // 見た目は暫定(ターミナル風)。Figma の `tree` の設計ができたら入れ替える
@@ -60,12 +63,10 @@ function Product() {
     retry: false,
   })
 
-  // セクションの四角(F1。表示のみ)。補助の表示なので、取得に失敗しても、ツリーは出す(セクションだけ出ない)
-  const sections = useQuery({
-    queryKey: ['products', productId, 'sections'],
-    queryFn: () => edenData(eden().api.product({ productId }).section.get()),
-    retry: false,
-  })
+  // セクションの四角(F1)。補助の表示なので、取得に失敗しても、ツリーは出す(セクションだけ出ない)
+  const sections = useSections(productId)
+  // セクションの操作(作成・更新・削除・カードの移動)。画面の値を先に更新し、失敗したら元に戻して、通知する
+  const sectionActions = useSectionActions(productId)
 
   const isLeader = product.data?.role === 'leader'
   // 「管理」メニューの項目。足すときは 1 行足す(リーダーだけなら isLeader の側に)
@@ -173,6 +174,8 @@ function Product() {
                 header={header}
                 tree={tree.data}
                 sections={sections.data}
+                canEditSections={canEditSections(product.data?.role)}
+                sectionActions={sectionActions}
                 onEditTask={openTask}
                 canOpenTask={canOpenTask}
                 onShowTasks={(member) => setListMemberId(member.productMemberId)}
