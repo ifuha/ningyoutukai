@@ -7,11 +7,14 @@ import {
   startRename,
   type RenameState,
 } from '#/lib/section-editor-state'
+import { LABEL_TEXT_LEFT_PX, labelTypography } from '#/lib/section-label'
 
 // セクション名の、その場での編集(札の上に重ねる入力欄)
 // Enter か、外のクリック(フォーカスが外れたとき)で確定、Esc で取り消し。判定は `section-editor-state.ts` の関数
 // 渡す名前は、前後の空白を取り除いた、1〜50 文字(コードポイント)。空・空白だけ・変更なしのときは、渡さずに閉じる
 // 日本語の変換中の Enter は、確定ではなく、変換の確定なので、無視する
+// 文字の大きさ・行の高さ・左の余白は、`SectionBox` の名前と**同じ(キャンバスの単位の px。`section-label.ts`)**。
+//   この入力欄は、キャンバスの変換の内側に置かれるので、拡大・縮小に合わせて、名前と一緒に大きさが変わる(拡大率を打ち消さない)
 // `onCommit`(名前を渡す)か `onCancel`(何も渡さない)の、どちらかが、1 回だけ呼ばれる
 export function SectionNameEditor({
   initial,
@@ -74,7 +77,8 @@ export function SectionNameEditor({
       // 入力欄の中のクリック・ダブルクリックで、キャンバスの移動などが始まらないようにする
       onPointerDown={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
-      className={`pointer-events-auto size-full px-2 text-sm font-bold outline-2 -outline-offset-2 outline-ink ${className}`}
+      className={`pointer-events-auto size-full outline-2 -outline-offset-2 outline-ink ${className}`}
+      style={{ ...labelTypography(), paddingLeft: LABEL_TEXT_LEFT_PX, paddingRight: LABEL_TEXT_LEFT_PX }}
     />
   )
 }

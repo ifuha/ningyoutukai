@@ -8,6 +8,14 @@ export const LABEL_BAND_PX = 16
 export const LABEL_TEXT_LEFT_PX = 6
 /** 枠線の太さ(px)。`SectionBox` の `border-2` と同じ */
 export const SECTION_BORDER_PX = 2
+/**
+ * 名前の文字の大きさと行の高さ(px)。**キャンバスの単位**(拡大率を掛ける前の大きさ)。
+ * 名前は、キャンバスの変換(パン・ズームの `transform: scale`)の内側に描くので、**画面上の大きさは、拡大率に比例して変わる**
+ * (拡大すると大きく、縮小すると小さく。Figma と同じ)。拡大率を打ち消す(`1 / scale`)ことは、名前では、しない(ハンドル・帯・確認の表示とは違う)
+ * `rem` 基準のクラス(`text-sm`)ではなく、この値を style で渡す(ブラウザの文字の大きさの設定に、左右されない)
+ */
+export const LABEL_FONT_PX = 14
+export const LABEL_LINE_PX = LABEL_BAND_PX
 /** 名前の幅の上限(px)。これより長い名前は、省略記号にする */
 export const LABEL_MAX_WIDTH = 160
 /** 名前の幅の下限(px) */
@@ -45,4 +53,14 @@ export function labelHitRect(sectionWidth: number): { left: number; top: number;
 export function confirmPanelOffset(sectionWidth: number): { left: number; top: number } {
   const hit = labelHitRect(sectionWidth)
   return { left: hit.left, top: hit.top + hit.height }
+}
+
+/** 名前の文字の大きさ・行の高さ(キャンバスの単位の px)。`SectionBox` の文字と、名前の入力欄が、同じ値を使う */
+export function labelTypography(): { fontSize: number; lineHeight: string } {
+  return { fontSize: LABEL_FONT_PX, lineHeight: `${LABEL_LINE_PX}px` }
+}
+
+/** 名前の文字の、画面上の大きさ(px)。キャンバスの単位の大きさに、拡大率を掛けた値(拡大率に比例する) */
+export function labelScreenFontPx(scale: number): number {
+  return LABEL_FONT_PX * (Number.isFinite(scale) && scale > 0 ? scale : 1)
 }

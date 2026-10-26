@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { LABEL_FONT_PX, LABEL_LINE_PX } from '../lib/section-label'
+import { SectionBox } from './section-box'
 import { SectionColorPicker } from './section-color-picker'
 import { SectionEditor, type SectionEditorProps } from './section-editor'
 import { SectionEditorMenu } from './section-editor-menu'
@@ -249,5 +251,53 @@ describe('SectionNameEditor', () => {
     const html = editor('あ'.repeat(60))
     const value = /value="([^"]*)"/.exec(html)?.[1] ?? ''
     expect([...value].length).toBe(50)
+  })
+})
+
+describe('名前は、拡大・縮小(ズーム)に合わせて、文字の大きさが変わる(キャンバスの単位で描く。拡大率を打ち消さない)', () => {
+  // 名前(`data-section-label`)の style を取り出す
+  const labelStyle = (html: string) => {
+    const i = html.indexOf('data-section-label')
+    const open = html.lastIndexOf('<span', i)
+    return /style="([^"]*)"/.exec(html.slice(open))?.[1] ?? ''
+  }
+  const box = () => renderToStaticMarkup(createElement(SectionBox, { section }))
+  // 名前をつかむ場所の外枠の style を取り出す
+  const tagBox = (html: string) => {
+    const i = html.indexOf('data-section-tag')
+    const open = html.lastIndexOf('<div', html.lastIndexOf('<div', i) - 1)
+    return /style="([^"]*)"/.exec(html.slice(open, i))?.[1] ?? ''
+  }
+
+  test('名前の文字は、キャンバスの単位の px(14px、行の高さ 16px)で描かれる。rem 基準のクラス(text-sm)は使わない', () => {
+    const html = box()
+    const style = labelStyle(html)
+    expect(style).toContain(`font-size:${LABEL_FONT_PX}px`)
+    expect(style).toContain(`line-height:${LABEL_LINE_PX}px`)
+    expect(html).not.toContain('text-sm')
+  })
+
+  test('名前の描画は、拡大率を打ち消す変換(scale(…))を持たない(変換は、親のキャンバスの層がかける)', () => {
+    const html = box()
+    expect(html).not.toContain('scale(')
+    expect(html).not.toContain('transform')
+  })
+
+  test('名前をつかむ場所は、拡大率が違っても、キャンバスの単位で同じ(画面上の大きさは、親の変換で、拡大率に比例する)', () => {
+    const at = (scale: number) => tagBox(render({ scale }))
+    expect(at(0.25)).toBe('left:0;top:-20px;width:160px;height:24px')
+    expect(at(1)).toBe(at(0.25))
+    expect(at(4)).toBe(at(0.25))
+  })
+
+  test('名前の入力欄の文字は、名前と同じ大きさ・行の高さ・左の余白(拡大・縮小に合わせて、一緒に変わる)', () => {
+    const html = renderToStaticMarkup(
+      createElement(SectionNameEditor, { initial: '設計チーム', onCommit: () => {}, onCancel: () => {} }),
+    )
+    expect(html).toContain(`font-size:${LABEL_FONT_PX}px`)
+    expect(html).toContain(`line-height:${LABEL_LINE_PX}px`)
+    expect(html).toContain('padding-left:6px')
+    expect(html).not.toContain('text-sm')
+    expect(html).not.toContain('scale(')
   })
 })
