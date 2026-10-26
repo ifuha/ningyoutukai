@@ -9,7 +9,6 @@ import { SectionMoveSurface } from '#/components/section-move-surface'
 import { SectionNotice } from '#/components/section-notice'
 import { TreeConnectors } from '#/components/tree-connectors'
 import { TreeToolbar } from '#/components/tree-toolbar'
-import { TreeZoomBar } from '#/components/tree-zoom-bar'
 import { boxToCanvasRect, CanvasViewContext, clientToCanvas } from '#/lib/canvas-view'
 import type { CanvasView } from '#/lib/section-interaction-types'
 import { cursorClass } from '#/lib/canvas-tool'
@@ -38,7 +37,8 @@ import { usePanZoom } from '#/lib/use-pan-zoom'
 const NO_SECTIONS: Section[] = []
 
 // 下に重ねる道具のバー(高さ 86px、下から 12px)の分の余白(px)。全体表示は、この分を避ける
-// 右下の倍率表示と、通知は、道具のバーと重ならないよう、その上に置く(下から 104px)
+// 通知は、道具のバーと重ならないよう、その上に置く(下から 104px)。右下の倍率の表示は、置かない
+// (拡大縮小は、ホイール・ピンチ・キー(+ -)、全体表示は、キー(0))
 const BOTTOM_INSET = 100
 const ABOVE_TOOLBAR = 'bottom-[104px]'
 
@@ -444,9 +444,6 @@ export function ProductTree({
           onOpenMembers={onOpenMembers}
           canEditSections={canEditSections}
         />
-      </div>
-      <div className={`absolute right-3 ${ABOVE_TOOLBAR} z-10`}>
-        <TreeZoomBar percent={Math.round(scale * 100)} />
       </div>
       {sectionActions.notice && (
         <div className={`absolute left-1/2 ${ABOVE_TOOLBAR} z-20 -translate-x-1/2`}>
