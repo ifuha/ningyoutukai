@@ -212,6 +212,20 @@ describe('SectionLayer(選択とドロップ先の見た目)', () => {
     expect(html).not.toContain('data-highlighted')
     expect(html).not.toContain('data-selected')
   })
+  // 縮小したときも、名前を読める大きさに保つ(係数 `titleFactor(scale)`)。`scale` は、キャンバスの拡大率で、すべてのセクションの名前に届く
+  const fontSizes = (html: string) =>
+    [...html.matchAll(/data-section-label="" title="[^"]*" class="[^"]*" style="[^"]*?font-size:([0-9.]+)px/g)].map((m) =>
+      Number(m[1]),
+    )
+  test('scale を渡さないとき(等倍)、すべてのセクションの名前は 14px', () => {
+    expect(fontSizes(layer({}))).toEqual([14, 14])
+  })
+  test('縮小(scale 0.25)では、すべてのセクションの名前が、係数 4 で拡大される(56px。画面上は 14px)', () => {
+    expect(fontSizes(layer({ scale: 0.25 }))).toEqual([56, 56])
+  })
+  test('拡大(scale 2)では、係数なし(14px。画面上は 28px になる)', () => {
+    expect(fontSizes(layer({ scale: 2 }))).toEqual([14, 14])
+  })
 })
 
 // つなぎ役のフックが、A・B・C に渡す値(フックは、描画の中で呼んで、返り値を取り出す)

@@ -269,6 +269,7 @@ export function ProductTree({
             hoverSectionId={cardDrag.hoverSectionId}
             offsetX={bounds.offsetX}
             offsetY={bounds.offsetY}
+            scale={scale}
           />
           {/* 内側の「動かす面」(カードの下)。カードのない空いた場所のドラッグで、セクションを動かす(カードのように)。
               リーダーだけ。面積の大きい順に並べるので、重なるときは、小さい(内側の)セクションが手前になる */}

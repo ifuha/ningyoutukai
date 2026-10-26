@@ -5,6 +5,7 @@ import type { Section } from '#/lib/section'
  * セクションの四角を、カードの後ろに敷く層(F1 セクション画面)。
  * `selectedSectionId`: 選択中のセクション(輪郭)。`hoverSectionId`: カードをドラッグしていて、ドロップ先になっているセクション(強調)。
  * `offsetX` / `offsetY`: 負の座標があるときの、全体のずらし量。
+ * `scale`: キャンバスの拡大率(名前の大きさの係数に使う。縮小しても、名前を読める大きさに保つ)。
  */
 export function SectionLayer({
   sections,
@@ -12,12 +13,14 @@ export function SectionLayer({
   hoverSectionId,
   offsetX = 0,
   offsetY = 0,
+  scale = 1,
 }: {
   sections: Section[]
   selectedSectionId: string | null
   hoverSectionId: string | null
   offsetX?: number
   offsetY?: number
+  scale?: number
 }) {
   return (
     <>
@@ -29,6 +32,7 @@ export function SectionLayer({
           offsetY={offsetY}
           selected={s.sectionId === selectedSectionId}
           highlighted={s.sectionId === hoverSectionId}
+          scale={scale}
         />
       ))}
     </>
