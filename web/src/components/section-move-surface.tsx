@@ -137,12 +137,14 @@ export function SectionMoveSurface({
         <div
           aria-hidden="true"
           data-section-move-preview=""
-          className={`pointer-events-none absolute border-2 border-dashed ${style.box}`}
+          className="pointer-events-none absolute border-2 border-dashed"
           style={{
             left: live.x - base.x,
             top: live.y - base.y,
             width: live.width,
             height: live.height,
+            borderColor: style.line,
+            backgroundColor: style.fill,
           }}
         />
       )}

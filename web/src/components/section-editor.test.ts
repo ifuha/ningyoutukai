@@ -162,11 +162,16 @@ describe('SectionColorPicker', () => {
     expect(/aria-label="緑"[^>]*aria-pressed="true"/.test(html) || /aria-pressed="true"[^>]*aria-label="緑"/.test(html)).toBe(true)
   })
 
-  test('色の見た目は、札の色(section-style)と同じ', () => {
+  test('見本の色は、枠の破線と同じ線の色(section-style)。赤は Figma の #FF0004', () => {
     const html = renderToStaticMarkup(createElement(SectionColorPicker, { value: 'red', onPick: () => {} }))
-    expect(html).toContain('bg-red-500')
-    expect(html).toContain('bg-sky-400')
-    expect(html).toContain('bg-blue-500')
+    const swatch = (color: string) =>
+      new RegExp(`data-swatch="${color}"[^>]*style="([^"]*)"`).exec(html)?.[1] ?? ''
+    expect(swatch('red')).toContain('background-color:#FF0004')
+    expect(swatch('lightblue')).toContain('background-color:#38BDF8')
+    expect(swatch('blue')).toContain('background-color:#3B82F6')
+    // 6 色すべてに、見本の色がある(札の色のクラスは使わない)
+    expect(count(html, 'data-swatch=')).toBe(6)
+    expect(html).not.toMatch(/\bbg-(red|yellow|green|purple|sky|blue)-\d+/)
   })
 })
 
