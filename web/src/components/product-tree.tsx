@@ -186,6 +186,9 @@ export function ProductTree({
       ? [leader, ...members].find((m) => m.productMemberId === cardDrag.draggingId)
       : undefined
   const mode = interaction.tool
+  // セクションを動かすとき、一緒に動く、位置を持つ所属カード(api と同じ規則: 位置を持つ所属メンバーだけ)
+  const followIdsFor = (sectionId: string) =>
+    placedCards.filter((c) => c.member.sectionId === sectionId).map((c) => c.member.productMemberId)
   // 内側の「動かす面」(カードの下)を出すか。カードのドラッグと同じ条件(リーダーで、「セクション」の道具で描いているときを除く)
   const moveSurfacesOn = interaction.cardDragOptions.enabled
   // 重なるセクションは、面積が小さい方を手前(後に描く)にする(内側のセクションを、先につかめる。クリックでの選択と同じ規則)
@@ -265,6 +268,7 @@ export function ProductTree({
                   onSelect={e.onSelect}
                   onChange={e.onChange}
                   onPreview={e.onPreview}
+                  followMemberIds={followIdsFor(s.sectionId)}
                   offsetX={bounds.offsetX}
                   offsetY={bounds.offsetY}
                 />
@@ -400,6 +404,7 @@ export function ProductTree({
                 <SectionEditor
                   key={s.sectionId}
                   {...interaction.editorPropsFor(s)}
+                  followMemberIds={followIdsFor(s.sectionId)}
                   offsetX={bounds.offsetX}
                   offsetY={bounds.offsetY}
                 />
