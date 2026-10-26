@@ -11,6 +11,8 @@ import {
   zoomAt,
 } from '#/lib/pan-zoom'
 import type { Size, View } from '#/lib/pan-zoom'
+import { compensateOffsetChange } from '#/lib/canvas-origin'
+import type { Offset } from '#/lib/canvas-origin'
 
 const DRAG_THRESHOLD = 5
 const KEY_STEP = 48
@@ -39,6 +41,8 @@ export function usePanZoom(
   // イベントの処理は、最新の値を ref から読む(同じフレームで複数のイベントが来ても、取りこぼさない)
   const viewRef = useRef(view)
   viewRef.current = view
+  const userRef = useRef(user)
+  userRef.current = user
   const sizeRef = useRef(size)
   sizeRef.current = size
   const fitScaleRef = useRef(fit?.scale ?? 1)
@@ -68,6 +72,20 @@ export function usePanZoom(
   const reset = () => {
     viewRef.current = fit
     setUser(null)
+  }
+  // 編集の確定の前に、いまの見え方(自動の全体表示のときは、その見え方)を、ユーザーの見え方として固定する。
+  // 固定しないと、編集で中身の大きさが変わるたびに、全体表示が計算し直されて、拡大率と位置が勝手に変わる。
+  // すでにユーザーが動かしていれば、何もしない(ref から読むので、同じ処理の中で何度呼んでも安全)
+  const freeze = () => {
+    const v = viewRef.current
+    if (!v || userRef.current) return
+    userRef.current = v
+    setUser(v)
+  }
+  // 中身の「ずらし量」が prev から next に変わったとき、どの座標も画面上の位置が変わらないよう、パンを補正する。
+  // ユーザーの見え方があるときだけ(自動の全体表示のときは、全体が計算し直されるので、何もしない)
+  const shiftOrigin = (prev: Offset, next: Offset) => {
+    setUser((cur) => (cur ? compensateOffsetChange(cur, prev, next) : cur))
   }
 
   // wheel: Ctrl/⌘ ありはカーソルを中心にズーム、なしは二本指スクロールでパン
@@ -262,6 +280,8 @@ export function usePanZoom(
     zoomIn: () => view && zoomTo(view.scale * BUTTON_STEP),
     zoomOut: () => view && zoomTo(view.scale / BUTTON_STEP),
     reset,
+    freeze,
+    shiftOrigin,
     handlers: {
       onPointerDown,
       onPointerMove,

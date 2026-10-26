@@ -204,30 +204,33 @@ describe('TreeToolbar', () => {
   })
 })
 
-describe('ProductTree(表示の整理: 操作のヒントと、倍率の +/- を置かない)', () => {
+describe('ProductTree(表示の整理: 操作のヒントと、倍率の +/- と「全体表示」のボタンを置かない)', () => {
   const html = render({ tree: tree(L, [M1]) })
   test('細かい操作のヒントの文字が出ない', () => {
     expect(html).not.toContain('二本指スクロール')
     expect(html).not.toContain('2 本指で拡大縮小')
     expect(html).not.toContain('Ctrl+ホイール')
   })
-  test('拡大・縮小のボタン(+ と −)が出ない。倍率と「全体表示」は残る', () => {
+  test('拡大・縮小のボタン(+ と −)と、「全体表示」のボタンが出ない。倍率(%)は残る', () => {
     expect(html).not.toContain('aria-label="拡大"')
     expect(html).not.toContain('aria-label="縮小"')
-    expect(html).toContain('全体表示')
+    expect(html).not.toContain('aria-label="全体を表示"')
+    expect(html).not.toContain('title="全体を表示(0)"')
+    expect(html).not.toContain('>全体表示</button>')
     expect(html).toContain('%')
   })
-  test('キーボードでの操作の案内(aria-label)は残る', () => {
+  test('キーボードでの操作の案内(aria-label)は残る(全体表示は、キー 0 でできる)', () => {
     expect(html).toContain('+ と - で拡大縮小')
+    expect(html).toContain('0 で全体表示')
   })
 })
 
 describe('TreeZoomBar', () => {
-  test('倍率(%)と「全体表示」だけ。+/- のボタンは無い', () => {
-    const html = renderToStaticMarkup(createElement(TreeZoomBar, { percent: 80, onReset: () => {} } as never))
+  test('倍率(%)の表示だけ。ボタンは 1 つも無い(+/-、全体表示)', () => {
+    const html = renderToStaticMarkup(createElement(TreeZoomBar, { percent: 80 }))
     expect(html).toContain('80%')
-    expect(html).toContain('全体表示')
-    expect(html.split('<button').length - 1).toBe(1)
+    expect(html).not.toContain('全体表示')
+    expect(html).not.toContain('<button')
   })
 })
 
