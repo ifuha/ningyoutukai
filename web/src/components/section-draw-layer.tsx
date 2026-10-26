@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
+import { startDragSession } from '#/lib/drag-session'
+import type { DragSession, DragTarget } from '#/lib/drag-session'
 import { DRAW_IDLE, drawReducer, formatSize, previewRect, type DrawEvent, type DrawState } from '#/lib/section-draw'
 import type { Point, Rect } from '#/lib/section-edit-geometry'
 import { sectionStyle } from '#/lib/section-style'
@@ -17,6 +19,8 @@ import { sectionStyle } from '#/lib/section-style'
 //   負の座標があるときの、全体のずらし量(プレビューを置く位置にだけ使う。`toCanvas` の結果には足さない)
 //
 // 確定・取り消しの判断は、`#/lib/section-draw`(状態機械)が行う。ここは、イベントを事象に変えて、副作用を実行するだけ
+// 押した瞬間から離すまで、window で動きを受ける(`drag-session.ts`。速く動かしても、層の外へ出ても追従する)。
+// プレビューの描き直しは、1 フレームに 1 回にまとめる(動きの計算は、イベントごとに最新の座標で行う)。位置は、離した座標で決める
 
 const HUGE = 100_000
 
@@ -43,16 +47,19 @@ export function SectionDrawLayer({
   // 状態は ref に持つ(確定を 1 回だけにするため、再描画を待たずに、同期して判断する)。プレビューの描画用に、四角だけ state に写す
   const stateRef = useRef<DrawState>(DRAW_IDLE)
   const [preview, setPreview] = useState<Rect | null>(null)
+  // いまの押してから離すまでの操作(window で受ける)
+  const sessionRef = useRef<DragSession | null>(null)
 
   // 最新の props を、イベントの処理(window の keydown を含む)から読むための ref
   const latest = useRef({ toCanvas, onCreate, onCancel })
   latest.current = { toCanvas, onCreate, onCancel }
 
   // 事象を状態機械に渡し、副作用(onCreate / onCancel)を実行する。この層が受けたかどうかを返す
-  function apply(event: DrawEvent): boolean {
+  // `render: false` のとき(動き)は、プレビューの描き直しを、次のフレームにまとめる
+  function apply(event: DrawEvent, render = true): boolean {
     const step = drawReducer(stateRef.current, event)
     stateRef.current = step.state
-    setPreview(previewRect(step.state))
+    if (render) setPreview(previewRect(step.state))
     if (step.effect?.type === 'create') latest.current.onCreate(step.effect.rect)
     else if (step.effect?.type === 'cancel') latest.current.onCancel()
     return step.consumed
@@ -61,10 +68,20 @@ export function SectionDrawLayer({
   // 道具が切られたら(active が false)、途中のドラッグを、何も呼ばずに捨てる
   useEffect(() => {
     if (!active) {
+      sessionRef.current?.end()
+      sessionRef.current = null
       stateRef.current = DRAW_IDLE
       setPreview(null)
     }
   }, [active])
+  // 画面から消えるとき、続いている操作のリスナーを外す
+  useEffect(
+    () => () => {
+      sessionRef.current?.end()
+      sessionRef.current = null
+    },
+    [],
+  )
 
   // Esc で抜けられる(ドラッグ中でなくても、取り消しを返す)。フォーカスの位置に関わらず、window で受ける
   useEffect(() => {
@@ -83,6 +100,48 @@ export function SectionDrawLayer({
 
   const point = (e: ReactPointerEvent) => latest.current.toCanvas({ x: e.clientX, y: e.clientY })
 
+  // 押した瞬間から離すまでの操作を、window で受ける。層の外へ出ても、画面の外へ出ても、動きと離しが届く
+  function startSession(pointerId: number) {
+    sessionRef.current?.end()
+    const s: DragSession = startDragSession({
+      target: window as unknown as DragTarget,
+      pointerId,
+      lock: { body: document.body, cursor: 'crosshair' },
+      onMove: (ev) => {
+        // 動きは、イベントごとに最新の座標で計算し、プレビューの描き直しは、1 フレームに 1 回
+        const consumed = apply(
+          { type: 'move', pointerId: ev.pointerId, point: latest.current.toCanvas({ x: ev.clientX, y: ev.clientY }) },
+          false,
+        )
+        if (stateRef.current.kind === 'dragging') s.requestFrame()
+        return consumed
+      },
+      onFrame: () => setPreview(previewRect(stateRef.current)),
+      onUp: (ev) => {
+        sessionRef.current = null
+        // 離した座標で、置く四角を決める(最後の pointermove ではなく)
+        apply({
+          type: 'up',
+          pointerId: ev.pointerId,
+          button: 0,
+          point: latest.current.toCanvas({ x: ev.clientX, y: ev.clientY }),
+        })
+      },
+      onCancel: (reason) => {
+        sessionRef.current = null
+        if (reason === 'escape') {
+          // Esc: 途中のドラッグを捨てる。道具を「選択」に戻す onCancel は、下の window の keydown(Esc)が呼ぶ(二重に呼ばない)
+          stateRef.current = DRAW_IDLE
+          setPreview(null)
+        } else {
+          apply({ type: 'cancel', pointerId })
+        }
+      },
+    })
+    s.engage()
+    sessionRef.current = s
+  }
+
   function onPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     const consumed = apply({
       type: 'down',
@@ -92,29 +151,11 @@ export function SectionDrawLayer({
       point: point(e),
     })
     if (!consumed) return
-    // ドラッグが層の外に出ても、move / up を受け取り続ける
+    // ドラッグが層の外に出ても、離しが層に届くように捕捉する(動きと離しは、window でも受ける)
     e.currentTarget.setPointerCapture?.(e.pointerId)
     e.stopPropagation()
     e.preventDefault()
-  }
-
-  function onPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
-    if (stateRef.current.kind !== 'dragging') return
-    if (apply({ type: 'move', pointerId: e.pointerId, point: point(e) })) e.stopPropagation()
-  }
-
-  function onPointerUp(e: ReactPointerEvent<HTMLDivElement>) {
-    const wasDragging = stateRef.current.kind === 'dragging'
-    if (apply({ type: 'up', pointerId: e.pointerId, button: e.button, point: point(e) })) {
-      e.stopPropagation()
-      // 確定したら、キャプチャを手放す(ブラウザも離したときに自動で手放す。後から来る lostpointercapture は、待機なので何も起きない)
-      if (wasDragging) e.currentTarget.releasePointerCapture?.(e.pointerId)
-    }
-  }
-
-  // pointercancel と、キャプチャが失われたとき(ドラッグ中だけ取り消しになる。確定のあとの lostpointercapture は無視される)
-  function onCancelEvent(e: ReactPointerEvent<HTMLDivElement>) {
-    apply({ type: 'cancel', pointerId: e.pointerId })
+    startSession(e.pointerId)
   }
 
   const style = sectionStyle('red')
@@ -136,10 +177,6 @@ export function SectionDrawLayer({
         touchAction: 'none',
       }}
       onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onCancelEvent}
-      onLostPointerCapture={onCancelEvent}
     >
       {preview && (
         <div
