@@ -53,3 +53,76 @@ export function rectsEqualWithin(a: Rect, b: Rect, epsilon = 0.5): boolean {
 export function rectDelta(before: Rect, after: Rect): Point {
   return { x: after.x - before.x, y: after.y - before.y }
 }
+
+// ドラッグの 1 軸ぶん。始点(s)は動かさず、終点(e)の向きに伸ばす。最小と上限の大きさに収める
+function dragAxis(s: number, e: number): { lo: number; size: number } {
+  const size = clamp(Math.abs(e - s), MIN_SECTION_SIZE, SIZE_MAX)
+  const lo = e >= s ? s : s - size
+  return { lo: clampCoord(lo), size }
+}
+
+// ドラッグで四角を描く。どの向きにドラッグしても、正の幅・高さの四角にする(始点の角は動かさない)
+// - 縦も横も最小の大きさに満たない(ほぼクリックだけ)ときは、始点を左上にして、既定の大きさ(300×400)にする
+// - 片方だけが最小に満たないときは、その辺だけを最小の大きさまで伸ばす(ドラッグした向きへ)
+// - 座標と大きさが上限を超えるときは、上限に丸める
+export function rectFromDrag(start: Point, end: Point): Rect {
+  const s = clampCardPosition(start)
+  const e = clampCardPosition(end)
+  if (Math.abs(e.x - s.x) < MIN_SECTION_SIZE && Math.abs(e.y - s.y) < MIN_SECTION_SIZE) {
+    return { x: s.x, y: s.y, ...DEFAULT_SECTION_SIZE }
+  }
+  const xs = dragAxis(s.x, e.x)
+  const ys = dragAxis(s.y, e.y)
+  return { x: xs.lo, y: ys.lo, width: xs.size, height: ys.size }
+}
+
+// 大きさを変える 1 軸ぶん。lo(小さい側の端)と size を受け取り、動かす側の端を delta だけ動かす
+// - moveLow: 小さい側(西・北)の端を動かす。反対側(大きい側)の端は動かない
+// - 小さい側の端は座標の上限を超えない。大きさは、最小と上限の間に収まる
+// - すでに最小より小さい四角(api の既存の行)は、それ以上は縮まず、広げることだけができる
+function resizeAxis(
+  lo: number,
+  size: number,
+  delta: number,
+  moveLow: boolean,
+  minSize: number,
+): { lo: number; size: number } {
+  const hi = lo + size
+  const minEff = Math.min(minSize, size)
+  if (moveLow) {
+    const lower = Math.min(Math.max(hi - SIZE_MAX, -COORD_MAX), hi - minEff)
+    const newLo = clamp(lo + delta, lower, hi - minEff)
+    return { lo: newLo, size: hi - newLo }
+  }
+  const newHi = clamp(hi + delta, lo + minEff, lo + SIZE_MAX)
+  return { lo, size: newHi - lo }
+}
+
+// 8 つのハンドルで、大きさを変える。反対側の辺は動かない。角のハンドルは、2 辺を同時に動かす
+// 最小の大きさ(options.minSize、既定は MIN_SECTION_SIZE)を下回る方向のドラッグは、そこで止まる(反転しない)
+export function resizeRect(
+  rect: Rect,
+  handle: ResizeHandle,
+  delta: Point,
+  options: { minSize?: number } = {},
+): Rect {
+  const minSize = options.minSize ?? MIN_SECTION_SIZE
+  let { x, y, width, height } = rect
+  if (handle.includes('w') || handle.includes('e')) {
+    const r = resizeAxis(x, width, delta.x, handle.includes('w'), minSize)
+    x = r.lo
+    width = r.size
+  }
+  if (handle.includes('n') || handle.includes('s')) {
+    const r = resizeAxis(y, height, delta.y, handle.includes('n'), minSize)
+    y = r.lo
+    height = r.size
+  }
+  return { x, y, width, height }
+}
+
+// セクションを動かす。位置は座標の上限に収める(大きさは変えない)
+// 上限で丸められたときの実際の差分は、rectDelta(動かす前, 動かした後)で求める
+export function moveRect(rect: Rect, delta: Point): Rect {
+  return { ...rect, x: clampCoord(rect.x + delta.x), y: clampCoord(rect.y + delta.y) }
+}
