@@ -60,6 +60,13 @@ function Product() {
     retry: false,
   })
 
+  // セクションの四角(F1。表示のみ)。補助の表示なので、取得に失敗しても、ツリーは出す(セクションだけ出ない)
+  const sections = useQuery({
+    queryKey: ['products', productId, 'sections'],
+    queryFn: () => edenData(eden().api.product({ productId }).section.get()),
+    retry: false,
+  })
+
   const isLeader = product.data?.role === 'leader'
   // 「管理」メニューの項目。足すときは 1 行足す(リーダーだけなら isLeader の側に)
   const manageItems: ManageMenuItem[] = [
@@ -165,9 +172,11 @@ function Product() {
                 key={productId}
                 header={header}
                 tree={tree.data}
+                sections={sections.data}
                 onEditTask={openTask}
                 canOpenTask={canOpenTask}
                 onShowTasks={(member) => setListMemberId(member.productMemberId)}
+                onOpenMembers={isLeader ? () => setMembersOpen(true) : undefined}
               />
             <TaskListDialog
               member={
