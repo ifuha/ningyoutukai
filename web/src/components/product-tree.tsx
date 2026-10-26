@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { MemberCard } from '#/components/member-card'
 import { SectionBox } from '#/components/section-box'
+import { SectionDrawLayer } from '#/components/section-draw-layer'
 import { SectionNotice } from '#/components/section-notice'
 import { TreeConnectors } from '#/components/tree-connectors'
 import { TreeToolbar } from '#/components/tree-toolbar'
@@ -319,6 +320,13 @@ export function ProductTree({
               />
             </div>
           ))}
+          {/* 「セクション」の道具で、キャンバスにドラッグして、セクションを置く層(A)。`active` でなければ、何も出さず、何も奪わない。
+              重ね順は z-30(カードとセクションの上、道具のバー(z-10 の外側の層)より下)。リーダーでなければ、`active` は false */}
+          <SectionDrawLayer
+            {...interaction.drawLayerProps}
+            offsetX={bounds.offsetX}
+            offsetY={bounds.offsetY}
+          />
           </CanvasViewContext.Provider>
         </div>
       </div>
