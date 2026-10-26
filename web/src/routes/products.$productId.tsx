@@ -168,6 +168,7 @@ function Product() {
                 onEditTask={openTask}
                 canOpenTask={canOpenTask}
                 onShowTasks={(member) => setListMemberId(member.productMemberId)}
+                onOpenMembers={isLeader ? () => setMembersOpen(true) : undefined}
               />
             <TaskListDialog
               member={

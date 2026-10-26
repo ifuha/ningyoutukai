@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { MemberCard } from '#/components/member-card'
+import { TreeToolbar } from '#/components/tree-toolbar'
+import type { TreeMode } from '#/components/tree-toolbar'
 import { TreeZoomBar } from '#/components/tree-zoom-bar'
 import type {
   ProductTree as ProductTreeData,
@@ -10,8 +12,10 @@ import type {
 import { useCanvasSize } from '#/lib/use-canvas-size'
 import { usePanZoom } from '#/lib/use-pan-zoom'
 
-// 下に重ねる操作バーの高さの目安(px)
-const BOTTOM_INSET = 48
+// 下に重ねる道具のバー(高さ 86px、下から 12px)の分の余白(px)。全体表示は、この分を避ける
+// ズームバーと操作のヒントは、道具のバーと重ならないよう、その上に置く(下から TOOLBAR_INSET + 4px)
+const BOTTOM_INSET = 100
+const ABOVE_TOOLBAR = 'bottom-[104px]'
 
 // リーダーを一番上、その下にメンバーを横に並べる木構造。線は破線(CSS だけ)、矢印は子から親へ向く
 // 領域は、親(メイン領域)いっぱいの、自由にパン(移動)とズームができるキャンバス(スクロールバーは出さない)。初期表示は、全体が収まる倍率
@@ -20,20 +24,26 @@ const BOTTOM_INSET = 48
 // 入力は `usePanZoom`(ドラッグ・二本指スクロール・ピンチ・キー)。ページの縦スクロールは、領域の外で行う
 // `onEditTask` を渡すと、タスクが押せて、押した人とタスクを渡す(`canOpenTask` があれば、それが true の人のタスクだけ)
 // `onShowTasks` を渡すと、「他 N 件」が押せて、その人を渡す(全員向け)
+// 下の中央の道具のバー(`TreeToolbar`)。`onOpenMembers` を渡すと(リーダーのみ)「メンバー」が押せて、メンバーの管理を開く
+// 選択 / 移動のモードは、第 1 段階では押された見た目だけ(ドラッグでの移動は、どちらでもこれまでどおり)。
+// 初期は「移動」(これまでの、つかむカーソルと同じ見た目)
 export function ProductTree({
   header,
   tree,
   onEditTask,
   canOpenTask,
   onShowTasks,
+  onOpenMembers,
 }: {
   header?: ReactNode
   tree: ProductTreeData
   onEditTask?: (member: TreeMember, task: TreeTask) => void
   canOpenTask?: (member: TreeMember) => boolean
   onShowTasks?: (member: TreeMember) => void
+  onOpenMembers?: () => void
 }) {
   const { leader, members } = tree
+  const [mode, setMode] = useState<TreeMode>('pan')
   const editFor = (m: TreeMember) =>
     onEditTask && (canOpenTask?.(m) ?? true)
       ? (task: TreeTask) => onEditTask(m, task)
@@ -73,7 +83,7 @@ export function ProductTree({
         tabIndex={0}
         {...handlers}
         className={`absolute inset-0 touch-none select-none overflow-clip overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${
-          dragging ? 'cursor-grabbing' : 'cursor-grab'
+          mode === 'select' ? 'cursor-default' : dragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       >
         <div
@@ -132,7 +142,7 @@ export function ProductTree({
         </div>
         <p
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-3 left-3 hidden text-xs opacity-50 sm:block"
+          className={`pointer-events-none absolute ${ABOVE_TOOLBAR} left-3 hidden text-xs opacity-50 sm:block`}
         >
           <span className="pointer-coarse:hidden">
             ドラッグ・二本指スクロールで移動、Ctrl+ホイール・ピンチで拡大縮小
@@ -142,7 +152,14 @@ export function ProductTree({
           </span>
         </p>
       </div>
-      <div className="absolute right-3 bottom-3 z-10">
+      <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2">
+        <TreeToolbar
+          mode={mode}
+          onModeChange={setMode}
+          onOpenMembers={onOpenMembers}
+        />
+      </div>
+      <div className={`absolute right-3 ${ABOVE_TOOLBAR} z-10`}>
         <TreeZoomBar
           percent={Math.round((view?.scale ?? 1) * 100)}
           canZoomIn={canZoomIn}
