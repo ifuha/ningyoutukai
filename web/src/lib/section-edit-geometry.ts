@@ -126,3 +126,30 @@ export function resizeRect(
 export function moveRect(rect: Rect, delta: Point): Rect {
   return { ...rect, x: clampCoord(rect.x + delta.x), y: clampCoord(rect.y + delta.y) }
 }
+
+// カードの自由な位置(positionX / positionY)を持つもの。両方 NULL は「まだ自由な位置を持たない=自動配置」
+// (api の CHECK で、片方だけ NULL にはならない)
+export type PositionedMember = { positionX: number | null; positionY: number | null }
+
+// セクションを動かしたときの、所属メンバーのカードの位置(api の PATCH /section/:id と同じ規則)
+// - 位置を持つメンバーだけを、同じ差分だけ動かす。位置が NULL のメンバーは、NULL のまま(自動配置のまま)
+// - 動かした先が、1 人でも座標の上限(±1,000,000)を超えるなら、全体を動かさずに失敗を返す(api は 422 で何も変えない)
+// - 差分が両方 0 なら、api は何も調べないので、ここも何も変えずに成功を返す
+export function applyDeltaToMembers<T extends PositionedMember>(
+  members: readonly T[],
+  delta: Point,
+): { ok: true; members: T[] } | { ok: false } {
+  if (delta.x === 0 && delta.y === 0) return { ok: true, members: [...members] }
+  const moved: T[] = []
+  for (const m of members) {
+    if (m.positionX === null || m.positionY === null) {
+      moved.push(m)
+      continue
+    }
+    const positionX = m.positionX + delta.x
+    const positionY = m.positionY + delta.y
+    if (Math.abs(positionX) > COORD_MAX || Math.abs(positionY) > COORD_MAX) return { ok: false }
+    moved.push({ ...m, positionX, positionY })
+  }
+  return { ok: true, members: moved }
+}
