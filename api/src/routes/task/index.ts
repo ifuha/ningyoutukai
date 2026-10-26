@@ -6,6 +6,7 @@ import { listMemberTasks } from "./list-member-tasks";
 import { listTasks } from "./list-tasks";
 import { reportComplete } from "./report-complete";
 import { updateTask } from "./update-task";
+import { listMessages } from "./list-messages";
 
 /**
  * タスク機能の API(docs/api.md「タスク機能」)。
@@ -18,4 +19,5 @@ export const taskRoutes = new Elysia({ name: "task-routes" })
   .use(listMemberTasks)
   .use(updateTask)
   .use(reportComplete)
-  .use(confirmComplete);
+  .use(confirmComplete)
+  .use(listMessages);

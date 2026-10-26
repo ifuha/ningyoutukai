@@ -20,6 +20,7 @@ const EXPECTED_ROUTES = [
   "GET /api/product/:productId/member/:memberId/task",
   "GET /api/product/:productId/task",
   "GET /api/product/:productId/task/:taskId",
+  "GET /api/product/:productId/task/:taskId/message", 
   "GET /api/product/:productId/task_kinds",
   "GET /api/product/:productId/tree",
   "GET /swagger",
