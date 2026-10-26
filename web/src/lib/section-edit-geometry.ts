@@ -90,8 +90,11 @@ function resizeAxis(
   const hi = lo + size
   const minEff = Math.min(minSize, size)
   if (moveLow) {
-    const lower = Math.min(Math.max(hi - SIZE_MAX, -COORD_MAX), hi - minEff)
-    const newLo = clamp(lo + delta, lower, hi - minEff)
+    // 縮めるときも、小さい側の端(x・y)は、座標の上限(+COORD_MAX)を超えない(右の辺が上限の外にある四角を縮めたとき)
+    // 入力がすでに範囲外でも、今の位置より外へは動かさない
+    const upper = Math.max(Math.min(hi - minEff, COORD_MAX), lo)
+    const lower = Math.min(Math.max(hi - SIZE_MAX, -COORD_MAX), upper)
+    const newLo = clamp(lo + delta, lower, upper)
     return { lo: newLo, size: hi - newLo }
   }
   const newHi = clamp(hi + delta, lo + minEff, lo + SIZE_MAX)
