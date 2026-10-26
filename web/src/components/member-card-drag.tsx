@@ -33,8 +33,10 @@ export function DragSlot({
 }
 
 /**
- * ドラッグ中のカードの影。プレビューの位置(カードの左上のキャンバス座標。`offsetX` / `offsetY` は、負の座標があるときの
- * 全体のずらし量)に描く。`cardId` は付けない(カードの位置を測る目印が、元のカードと重ならないように)。ポインタは通す。
+ * ドラッグ中のカードの影。`position` は基準の位置(ドラッグを始めたときのカードの左上のキャンバス座標。`offsetX` / `offsetY` は、
+ * 負の座標があるときの全体のずらし量)。動きは、`elementRef` の要素の transform に、フックが直接書く(React の状態を経由しない。
+ * `position` は、ドラッグ中は変わらないので、再描画されても、transform は消えない)。
+ * `cardId` は付けない(カードの位置を測る目印が、元のカードと重ならないように)。ポインタは通す。
  * 重ね順は z-40(描く層 z-30・編集枠の上)。
  */
 export function CardGhost({
@@ -42,14 +44,17 @@ export function CardGhost({
   position,
   offsetX = 0,
   offsetY = 0,
+  elementRef,
 }: {
   member: TreeMember
   position: { x: number; y: number }
   offsetX?: number
   offsetY?: number
+  elementRef?: (el: HTMLElement | null) => void
 }) {
   return (
     <div
+      ref={elementRef}
       data-card-ghost={member.productMemberId}
       className="pointer-events-none absolute z-40 opacity-90 shadow-lg"
       style={{ left: position.x + offsetX, top: position.y + offsetY }}

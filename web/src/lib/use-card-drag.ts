@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
+import { flushSync } from 'react-dom'
+import { startDragSession } from '#/lib/drag-session'
+import type { DragLock, DragSession, DragTarget, FrameScheduler } from '#/lib/drag-session'
 import { clampCardPosition, pickSectionForCard } from '#/lib/section-edit-geometry'
 import type { PickableSection, Point, Rect } from '#/lib/section-edit-geometry'
 
 // メンバーのカードを、ドラッグで動かす(リーダーのみ)。位置と、所属するセクションの判定を返す(画面への反映と api 呼び出しは、呼び出し側)
 //
-// このファイルの前半は、DOM と React に依存しない状態機械(cardDragReducer)。後半は、それを呼ぶ薄いフック(useCardDrag)
+// このファイルは、3 つの層からなる。
+//   1. 状態機械(cardDragReducer): DOM と React に依存しない純粋な関数
+//   2. 制御部(createCardDragController): 状態機械と、window で動きを受ける仕組み(drag-session)をつなぐ。React に依存しない
+//      (受け手・固定の対象・フレームを引数で受けるので、偽のイベントでテストできる)
+//   3. フック(useCardDrag): 制御部を作って、React の状態(ドラッグの見え方)につなぐ薄い層
+// フックは、押した瞬間から離すまで、window で動きを受ける(`drag-session.ts`)。速く動かして、カードの外へ出ても追従する。
+// ドラッグ中の見た目は、React の状態を経由せず、影のカードの transform を直接書く(1 フレームに 1 回)。
+// React の状態を更新するのは、ドラッグの開始・終了と、ドロップ先のセクションが変わったときだけ(全体を、動かすたびに描き直さない)
 // 座標はすべて「キャンバスの座標」。カードの位置は「カードの左上の座標」(セクションの x / y と同じ)
 // 画面の座標(クライアント座標、px)の差分は、拡大率(scale)で割って、キャンバスの座標に換算する
 
@@ -225,62 +235,199 @@ export type UseCardDragOptions = {
   onDrop: (memberId: string, position: Point, sectionId: string | null) => void
 }
 
+// カードの要素に付けるハンドラ。押したところだけ。動き・離し・取り消しは、押した瞬間から window で受ける(drag-session)
 export type CardDragHandlers = {
   onPointerDown: (e: PointerEvent<HTMLElement>) => void
-  onPointerMove: (e: PointerEvent<HTMLElement>) => void
-  onPointerUp: (e: PointerEvent<HTMLElement>) => void
-  onPointerCancel: (e: PointerEvent<HTMLElement>) => void
 }
 
-// カードのドラッグ(リーダーのみ)。状態機械(cardDragReducer)を呼ぶ薄い層
-// 使い方: カードの要素に `{...getDragHandlers(memberId)}` を付ける。その要素には `touch-action: none` を付ける(タッチで、
-//   ブラウザのスクロールに奪われて pointercancel にならないように)。ドラッグ中は previewPosition にカードを描き、
-//   hoverSectionId のセクションをドロップ先として強調する。元の位置の表示は、呼び出し側が決める(このフックは、位置を動かさない)
-// 押したときは、イベントを止めない(キャンバスのパンの側にも記録させる)。ドラッグが確定したあとの動きだけを止めて、
-//   パンが始まらないようにする。離しは止めない(パンの側が、ポインタの記録を片付けるため)
-export function useCardDrag(options: UseCardDragOptions) {
-  const [state, setState] = useState<CardDragState>(CARD_DRAG_IDLE)
-  // イベントの処理は、最新の値を ref から読む(同じフレームで複数のイベントが来ても、取りこぼさない)
-  const stateRef = useRef(state)
-  const optionsRef = useRef(options)
-  optionsRef.current = options
+// React の状態に持つ、ドラッグの見え方。動くたびには変わらない(開始・終了・ドロップ先の変化のときだけ)
+export type DragView = {
+  memberId: string
+  // ドラッグを始めたときのカードの左上(影のカードの基準の位置。以降の動きは、transform で書く)
+  origin: Point
+  hoverSectionId: string | null
+}
 
-  const dispatch = (event: CardDragEvent): CardDragEffect => {
-    const { state: next, effect } = cardDragReducer(stateRef.current, event)
-    if (next !== stateRef.current) {
-      stateRef.current = next
-      setState(next)
+function viewOf(state: CardDragState): DragView | null {
+  return state.phase === 'dragging'
+    ? {
+        memberId: state.memberId,
+        origin: { x: state.startRect.x, y: state.startRect.y },
+        hoverSectionId: state.hoverSectionId,
+      }
+    : null
+}
+
+function sameView(a: DragView | null, b: DragView | null): boolean {
+  if (a === b) return true
+  if (a === null || b === null) return false
+  return a.memberId === b.memberId && a.hoverSectionId === b.hoverSectionId
+}
+
+/** 影のカードの要素の、最小の形(transform だけ書く) */
+export type GhostElement = { style: { transform: string } }
+
+/** カードの要素に付けた onPointerDown が受ける、イベントの最小の形 */
+export type CardPointerDown = {
+  pointerId: number
+  pointerType: string
+  button: number
+  isPrimary: boolean
+  clientX: number
+  clientY: number
+  currentTarget: { setPointerCapture(pointerId: number): void }
+  stopPropagation(): void
+}
+
+export type CardDragControllerDeps = {
+  /** 動きを受ける対象。押した時点で読む(サーバー側の描画で、window を触らないため) */
+  getTarget: () => DragTarget
+  /** ドラッグ中の、テキストの選択とカーソルの固定の対象。省略可 */
+  getLock?: () => DragLock | undefined
+  getOptions: () => UseCardDragOptions
+  /** ドラッグの見え方(開始・終了・ドロップ先の変化)を、React に伝える */
+  onView: (view: DragView | null) => void
+  /** 離したときの、見え方の消去と、楽観更新を、同時に反映する(通常は flushSync) */
+  batch: (fn: () => void) => void
+  suppressClick: () => void
+  scheduler?: FrameScheduler
+}
+
+export type CardDragController = {
+  pointerDown(memberId: string, e: CardPointerDown): void
+  /** 影のカードの要素。出てきた瞬間に、最新の位置を書く */
+  setGhost(el: GhostElement | null): void
+  /** 使えなくなったとき(リーダーでなくなったなど)に、途中のドラッグを取りやめる */
+  disable(): void
+  /** 画面から消えるとき */
+  dispose(): void
+  /** テスト用: いまの状態 */
+  getState(): CardDragState
+}
+
+// 状態機械(cardDragReducer)と、window で動きを受ける仕組み(drag-session)をつなぐ。React に依存しない
+// - 押す: 状態機械に渡し、待機中(pending)になったら、押した瞬間から離すまでの操作を始める(window で受ける)
+// - 動き: 状態機械に渡す。ドラッグが確定したら、固定(user-select・カーソル)と、カードの捕捉。見た目は、1 フレームに 1 回、影の transform に書く
+// - 離し: 離した座標で、最終の位置を決める。見え方の消去と onDrop(楽観更新)を、同時に反映する
+// - Esc・取りやめ: 離すまで、動きを呑み込む(パンが途中から始まらないように)。離したら、ドラッグしていたときだけ click を抑止する
+export function createCardDragController(deps: CardDragControllerDeps): CardDragController {
+  let state: CardDragState = CARD_DRAG_IDLE
+  let view: DragView | null = null
+  let session: DragSession | null = null
+  let ghost: GhostElement | null = null
+  // 影のカードの位置(カードの左上のキャンバス座標)。動くたびに更新し、1 フレームに 1 回、transform に書く
+  let position: Point | null = null
+  let origin: Point | null = null
+
+  const writeGhost = () => {
+    if (!ghost || !position || !origin) return
+    ghost.style.transform = `translate(${position.x - origin.x}px, ${position.y - origin.y}px)`
+  }
+
+  // 事象を状態機械に渡し、副作用(見え方、drop、click の抑止)を実行する
+  const run = (event: CardDragEvent): CardDragEffect => {
+    const { state: next, effect } = cardDragReducer(state, event)
+    state = next
+    if (next.phase === 'dragging') {
+      position = next.position
+      origin = { x: next.startRect.x, y: next.startRect.y }
     }
-    if (effect.drop) {
-      optionsRef.current.onDrop(effect.drop.memberId, effect.drop.position, effect.drop.sectionId)
+    const nextView = viewOf(next)
+    if (!sameView(view, nextView)) {
+      view = nextView
+      deps.onView(nextView)
     }
-    if (effect.suppressClick) suppressNextClick()
+    if (effect.drop) deps.getOptions().onDrop(effect.drop.memberId, effect.drop.position, effect.drop.sectionId)
+    if (effect.suppressClick) deps.suppressClick()
     return effect
   }
-  // effect の中から呼ぶので、dispatch は ref と setState だけを使う(つけ直さなくてよい)
-  const dispatchRef = useRef(dispatch)
-  dispatchRef.current = dispatch
 
-  // Esc で取りやめる(ドラッグの間だけ、見張る)
-  const active = state.phase !== 'idle'
-  useEffect(() => {
-    if (!active) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') dispatchRef.current({ type: 'escape' })
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [active])
+  const abortGesture = (pointerId: number) => {
+    run({ type: 'escape' })
+    session = startDragSession({
+      target: deps.getTarget(),
+      pointerId,
+      scheduler: deps.scheduler,
+      onMove: () => true,
+      onUp: () => {
+        session = null
+        run({ type: 'up', pointerId, client: { x: 0, y: 0 }, scale: 1, sections: [] })
+      },
+      onCancel: () => {
+        session = null
+        run({ type: 'cancel', pointerId })
+      },
+    })
+  }
 
-  // ドラッグの途中で、使えなくなったら(リーダーでなくなったなど)、取りやめる
-  useEffect(() => {
-    if (!options.enabled) dispatchRef.current({ type: 'escape' })
-  }, [options.enabled])
+  const startSession = (pointerId: number, card: CardPointerDown['currentTarget']) => {
+    session?.end()
+    const s: DragSession = startDragSession({
+      target: deps.getTarget(),
+      pointerId,
+      scheduler: deps.scheduler,
+      lock: deps.getLock?.(),
+      onMove: (e) => {
+        const o = deps.getOptions()
+        const effect = run({
+          type: 'move',
+          pointerId: e.pointerId,
+          client: { x: e.clientX, y: e.clientY },
+          scale: o.scale,
+          sections: o.sections,
+        })
+        if (effect.started) {
+          // ドラッグが確定した。テキストの選択を防ぎ、離しがカードに届くよう捕捉する(先にすると、カードの中のボタンへの click が届かない)
+          s.engage()
+          try {
+            card.setPointerCapture(pointerId)
+          } catch {
+            // すでに離れたポインタなど。window で受けているので、ドラッグ自体は続けられる
+          }
+        }
+        if (state.phase === 'dragging') s.requestFrame()
+        return effect.consumed
+      },
+      onFrame: writeGhost,
+      onUp: (e) => {
+        session = null
+        const o = deps.getOptions()
+        // 離したときの座標で、最終の位置を決める(最後の pointermove ではなく)
+        deps.batch(() => {
+          run({
+            type: 'up',
+            pointerId: e.pointerId,
+            client: { x: e.clientX, y: e.clientY },
+            scale: o.scale,
+            sections: o.sections,
+          })
+        })
+      },
+      onCancel: (reason) => {
+        session = null
+        if (reason === 'escape') abortGesture(pointerId)
+        else run({ type: 'cancel', pointerId })
+      },
+      // 2 本目の指: 確定前なら取りやめ(ピンチに譲る)。ドラッグ中なら、無視して、パンにも渡さない
+      onOtherPointerDown: () => {
+        if (state.phase === 'pending') {
+          s.end()
+          session = null
+          run({ type: 'cancel', pointerId })
+          return false
+        }
+        return state.phase === 'dragging'
+      },
+    })
+    session = s
+  }
 
-  const getDragHandlers = (memberId: string): CardDragHandlers => ({
-    onPointerDown: (e) => {
-      const o = optionsRef.current
-      const effect = dispatch({
+  return {
+    pointerDown(memberId, e) {
+      // 2 本目以降の指は、ドラッグを始めない(ピンチに譲る)。マウスは、いつも主のポインタ
+      if (!e.isPrimary) return
+      const o = deps.getOptions()
+      const effect = run({
         type: 'down',
         memberId,
         pointerId: e.pointerId,
@@ -290,48 +437,68 @@ export function useCardDrag(options: UseCardDragOptions) {
         rect: o.enabled ? o.getCardRect(memberId) : null,
         enabled: o.enabled,
       })
-      // ドラッグ中に、別の指が押されたとき(consumed)は、ピンチが始まらないよう、パンに渡さない
+      if (state.phase === 'pending') startSession(e.pointerId, e.currentTarget)
       if (effect.consumed) e.stopPropagation()
     },
-    onPointerMove: (e) => {
-      const o = optionsRef.current
-      const effect = dispatch({
-        type: 'move',
-        pointerId: e.pointerId,
-        client: { x: e.clientX, y: e.clientY },
-        scale: o.scale,
-        sections: o.sections,
-      })
-      // キャプチャは、ドラッグが確定してから(先にすると、カードの中のボタンへの click が届かなくなる)
-      if (effect.started) {
-        try {
-          e.currentTarget.setPointerCapture(e.pointerId)
-        } catch {
-          // すでに離れたポインタなど。ドラッグ自体は続けられる
-        }
-      }
-      if (effect.consumed) e.stopPropagation()
+    setGhost(el) {
+      ghost = el
+      if (el) writeGhost()
     },
-    onPointerUp: (e) => {
-      const o = optionsRef.current
-      dispatch({
-        type: 'up',
-        pointerId: e.pointerId,
-        client: { x: e.clientX, y: e.clientY },
-        scale: o.scale,
-        sections: o.sections,
-      })
+    disable() {
+      if (state.phase === 'idle') return
+      session?.end()
+      abortGesture(state.pointerId)
     },
-    onPointerCancel: (e) => {
-      dispatch({ type: 'cancel', pointerId: e.pointerId })
+    dispose() {
+      session?.end()
+      session = null
     },
+    getState: () => state,
+  }
+}
+
+// カードのドラッグ(リーダーのみ)。制御部(createCardDragController)を、React の状態につなぐフック
+// 使い方: カードの要素に `{...getDragHandlers(memberId)}` を付ける。その要素には `touch-action: none` を付ける(タッチで、
+//   ブラウザのスクロールに奪われて pointercancel にならないように)。ドラッグ中は、`draggingId` のカードの影を、
+//   `previewPosition`(影の基準の位置)に描き、影の要素に `ghostRef` を付ける(動きは、その要素の transform に直接書かれる)。
+//   `hoverSectionId` のセクションをドロップ先として強調する。元の位置の表示は、呼び出し側が決める(このフックは、位置を動かさない)
+// 押したときは、イベントを止めない(キャンバスのパンの側にも記録させる)。ドラッグが確定したあとの動きは、window のキャプチャ段階で
+//   止めて、パンが始まらないようにする。離しは止めない(パンの側が、ポインタの記録を片付けるため)
+export function useCardDrag(options: UseCardDragOptions) {
+  const [view, setView] = useState<DragView | null>(null)
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+  const controllerRef = useRef<CardDragController | null>(null)
+  if (controllerRef.current === null) {
+    controllerRef.current = createCardDragController({
+      getTarget: () => window as unknown as DragTarget,
+      getLock: () => ({ body: document.body, cursor: 'grabbing' }),
+      getOptions: () => optionsRef.current,
+      onView: setView,
+      batch: (fn) => flushSync(fn),
+      suppressClick: suppressNextClick,
+    })
+  }
+  const controller = controllerRef.current
+
+  // ドラッグの途中で、使えなくなったら(リーダーでなくなったなど)、取りやめる
+  useEffect(() => {
+    if (!options.enabled) controller.disable()
+  }, [options.enabled, controller])
+
+  // 画面から消えるとき、続いている操作のリスナーを外す
+  useEffect(() => () => controller.dispose(), [controller])
+
+  const getDragHandlers = (memberId: string): CardDragHandlers => ({
+    onPointerDown: (e) => controller.pointerDown(memberId, e),
   })
 
-  const dragging = state.phase === 'dragging' ? state : null
   return {
-    draggingId: dragging ? dragging.memberId : null,
-    previewPosition: dragging ? dragging.position : null,
-    hoverSectionId: dragging ? dragging.hoverSectionId : null,
+    draggingId: view ? view.memberId : null,
+    // 影のカードの基準の位置(ドラッグを始めたときのカードの左上)。動きは、`ghostRef` の要素の transform に書かれる
+    previewPosition: view ? view.origin : null,
+    hoverSectionId: view ? view.hoverSectionId : null,
     getDragHandlers,
+    ghostRef: controller.setGhost as (el: HTMLElement | null) => void,
   }
 }

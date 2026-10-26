@@ -113,11 +113,9 @@ describe('ProductTree(リーダーでないとき: A・B・C は、何も出さ�
 })
 
 describe('DragSlot(カードを包む要素)', () => {
+  // 押したところだけ。動き・離し・取り消しは、押した瞬間から window で受ける(drag-session)ので、要素には付けない
   const handlers = {
     onPointerDown: () => {},
-    onPointerMove: () => {},
-    onPointerUp: () => {},
-    onPointerCancel: () => {},
   }
   const slot = (props: Record<string, unknown>) =>
     renderToStaticMarkup(createElement(DragSlot, { dragging: false, ...props } as never, createElement('p', null, 'カード')))
@@ -149,6 +147,21 @@ describe('CardGhost(ドラッグ中のカードの影)', () => {
     expect(html).toContain('z-40')
     expect(html).not.toContain('data-card-id')
     expect(html).toContain('メンバーB')
+  })
+  test('動きは transform に直接書かれる(React の style には、transform を持たない)。基準の位置は left / top だけ', () => {
+    expect(html).not.toContain('transform')
+  })
+  test('要素を受け取る ref(elementRef)を、影の要素に付ける', () => {
+    const seen: Array<{ tag: string } | null> = []
+    renderToStaticMarkup(
+      createElement(CardGhost, {
+        member: M1 as never,
+        position: { x: 0, y: 0 },
+        // サーバー描画では、ref は呼ばれない。型と受け渡しの形(関数)だけを確かめる
+        elementRef: (el: HTMLElement | null) => seen.push(el ? { tag: el.tagName } : null),
+      }),
+    )
+    expect(Array.isArray(seen)).toBe(true)
   })
 })
 

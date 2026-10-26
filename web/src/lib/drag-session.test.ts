@@ -1,73 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import {
-  startDragSession,
-  type DragCancelReason,
-  type DragPointer,
-  type DragSessionOptions,
-  type DragTarget,
-  type FrameScheduler,
-} from '#/lib/drag-session'
-
-// 偽の受け手(window の代わり)。リスナーの数と、イベントの配送(キャプチャ指定を含む)を、そのまま見られる
-class FakeTarget implements DragTarget {
-  private listeners = new Map<string, Set<(e: any) => void>>()
-  addEventListener(type: string, listener: (e: any) => void, options?: boolean | { capture?: boolean }) {
-    const key = `${type}:${typeof options === 'object' && options.capture ? 'capture' : 'bubble'}`
-    if (!this.listeners.has(key)) this.listeners.set(key, new Set())
-    this.listeners.get(key)!.add(listener)
-  }
-  removeEventListener(type: string, listener: (e: any) => void, options?: boolean | { capture?: boolean }) {
-    const key = `${type}:${typeof options === 'object' && options.capture ? 'capture' : 'bubble'}`
-    this.listeners.get(key)?.delete(listener)
-  }
-  get count() {
-    let n = 0
-    for (const set of this.listeners.values()) n += set.size
-    return n
-  }
-  dispatch(type: string, event: object) {
-    for (const [key, set] of this.listeners) {
-      if (!key.startsWith(`${type}:`)) continue
-      for (const l of [...set]) l(event)
-    }
-  }
-}
-
-type Ev = DragPointer & { stopped: boolean; prevented: boolean }
-const ev = (pointerId: number, x: number, y: number): Ev => {
-  const e = {
-    pointerId,
-    clientX: x,
-    clientY: y,
-    stopped: false,
-    prevented: false,
-    stopPropagation() {
-      e.stopped = true
-    },
-    preventDefault() {
-      e.prevented = true
-    },
-  }
-  return e
-}
-
-class FakeScheduler implements FrameScheduler {
-  private next = 1
-  readonly pending = new Map<number, () => void>()
-  request(cb: () => void) {
-    const id = this.next++
-    this.pending.set(id, cb)
-    return id
-  }
-  cancel(id: number) {
-    this.pending.delete(id)
-  }
-  flush() {
-    const cbs = [...this.pending.values()]
-    this.pending.clear()
-    for (const cb of cbs) cb()
-  }
-}
+import { startDragSession, type DragCancelReason, type DragSessionOptions } from '#/lib/drag-session'
+import { FakeScheduler, FakeTarget, fakeBody, pointerEvent as ev } from '#/lib/drag-test-support'
 
 function setup(overrides: Partial<DragSessionOptions> = {}) {
   const target = new FakeTarget()
@@ -79,7 +12,7 @@ function setup(overrides: Partial<DragSessionOptions> = {}) {
     frames: 0,
     others: 0,
   }
-  const body = { style: { userSelect: 'auto', cursor: 'default' } }
+  const body = fakeBody()
   const session = startDragSession({
     target,
     pointerId: 1,

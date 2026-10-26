@@ -385,6 +385,7 @@ export function ProductTree({
               position={cardDrag.previewPosition}
               offsetX={bounds.offsetX}
               offsetY={bounds.offsetY}
+              elementRef={cardDrag.ghostRef}
             />
           )}
           {/* 各セクションの編集枠(B)。選択・大きさの変更・移動・名前・色・削除。リーダーだけ(リーダーでなければ、何も出さない)。
