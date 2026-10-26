@@ -2,25 +2,24 @@ import { describe, expect, test } from 'bun:test'
 import {
   LABEL_BAND_PX,
   LABEL_MAX_WIDTH,
-  LABEL_MENU_GAP,
-  LABEL_MENU_RESERVE,
   LABEL_MIN_WIDTH,
   LABEL_TEXT_LEFT_PX,
   labelHitRect,
   labelTextRect,
   labelWidth,
-  menuButtonOffset,
+  confirmPanelOffset,
 } from './section-label'
 
 describe('labelWidth(名前の幅)', () => {
   test('広いセクションでは上限(160)、狭いセクションでは下限(40)', () => {
     expect(labelWidth(300)).toBe(160)
     expect(labelWidth(10_000)).toBe(LABEL_MAX_WIDTH)
-    expect(labelWidth(80)).toBe(LABEL_MIN_WIDTH)
+    expect(labelWidth(40)).toBe(LABEL_MIN_WIDTH)
     expect(labelWidth(1)).toBe(LABEL_MIN_WIDTH)
   })
-  test('中間は、セクションの幅からメニューの分(40)を引いた値', () => {
-    expect(labelWidth(150)).toBe(150 - LABEL_MENU_RESERVE)
+  test('中間は、セクションの幅そのまま(「⋯」のボタンを消したので、メニューの分の空きは引かない)', () => {
+    expect(labelWidth(80)).toBe(80)
+    expect(labelWidth(150)).toBe(150)
     expect(labelWidth(200)).toBe(160)
   })
   test('数でない値でも、落ちずに下限になる', () => {
@@ -57,15 +56,15 @@ describe('名前の位置(Figma: 枠の上の左に置く文字。上辺の上�
   })
 })
 
-describe('メニューのボタンの位置', () => {
-  test('名前をつかむ場所の右どなり(6px あける)で、上辺をまたぐ(上辺の 16px 上から)', () => {
+describe('削除の確認の表示の位置(「⋯」のボタンは無い)', () => {
+  test('名前をつかむ場所の、すぐ下の左端', () => {
     const hit = labelHitRect(300)
-    expect(menuButtonOffset(300)).toEqual({ left: hit.left + hit.width + LABEL_MENU_GAP, top: -LABEL_BAND_PX })
+    expect(confirmPanelOffset(300)).toEqual({ left: hit.left, top: hit.top + hit.height })
   })
-  test('狭いセクションでも、メニューは名前のつかむ場所に重ならない', () => {
+  test('名前をつかむ場所に重ならない(その下から始まる)', () => {
     for (const w of [80, 120, 300]) {
       const hit = labelHitRect(w)
-      expect(menuButtonOffset(w).left).toBeGreaterThanOrEqual(hit.left + hit.width)
+      expect(confirmPanelOffset(w).top).toBeGreaterThanOrEqual(hit.top + hit.height)
     }
   })
 })
