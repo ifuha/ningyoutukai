@@ -8,7 +8,6 @@ import {
   SECTION_COLOR_LABELS,
   SECTION_COLOR_ORDER,
   SECTION_NAME_MAX,
-  TAG_RECT,
   bandBoxes,
   cancelDrag,
   cancelRename,
@@ -103,9 +102,6 @@ describe('ハンドルと、つかめる帯の配置', () => {
     const rightBand = bands.find((x) => x.side === 'right')!
     expect(rightBand.left).toBe(300 - b / 2)
     expect(rightBand.height).toBe(400 + b)
-  })
-  test('札の位置は、SectionBox の札と同じ(外側の左端から右へ 18、上の辺から上へ 16、120 × 32)', () => {
-    expect(TAG_RECT).toEqual({ left: 18, top: -16, width: 120, height: 32 })
   })
 })
 

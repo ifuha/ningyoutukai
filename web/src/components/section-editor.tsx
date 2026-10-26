@@ -7,7 +7,6 @@ import type { Point, Rect } from '#/lib/section-edit-geometry'
 import {
   IDLE,
   NUDGE_SETTLE_MS,
-  TAG_RECT,
   bandBoxes,
   cancelDrag,
   dragPreview,
@@ -29,6 +28,7 @@ import {
   type DragState,
   type MenuState,
 } from '#/lib/section-editor-state'
+import { labelHitRect, menuButtonOffset } from '#/lib/section-label'
 import { sectionStyle } from '#/lib/section-style'
 
 // セクションの編集枠。`SectionBox`(セクションの見た目を描く)の上に重ねる、編集用の層
@@ -218,6 +218,8 @@ export function SectionEditor({
   const live = dragPreview(drag) ?? nudge ?? base
   const moving = drag.phase === 'dragging' || nudge !== null
   const style = sectionStyle(section.color)
+  // 名前をつかむ場所・名前の入力欄(`SectionBox` の文字の位置に合わせる。ドラッグ中の見た目の幅に追従する)
+  const tag = labelHitRect(live.width)
 
   // 移動・大きさの変更のつかみ場所に付ける、ポインタのイベント
   // 押したら、その場でつかむ(カードと同じ)。**未選択でも、押した時点で選択し**、キャンバスの移動(パン)は始めない。
@@ -285,7 +287,8 @@ export function SectionEditor({
         <div
           aria-hidden="true"
           data-section-preview
-          className={`absolute inset-0 border-2 border-dashed ${style.box}`}
+          className="absolute inset-0 border-2 border-dashed"
+          style={{ borderColor: style.line, backgroundColor: style.fill }}
         />
       )}
       {/* 選択中の印 */}
@@ -327,15 +330,15 @@ export function SectionEditor({
         />
       ))}
 
-      {/* 札: 押すと選択、ドラッグで移動、ダブルクリックで名前の編集 */}
+      {/* 名前(枠の上の文字): 押すと選択、ドラッグで移動、ダブルクリックで名前の編集。つかむ場所と入力欄は、`SectionBox` の文字の位置に合わせる */}
       <div
         className="absolute z-20"
-        style={{ left: TAG_RECT.left, top: TAG_RECT.top, width: TAG_RECT.width, height: TAG_RECT.height }}
+        style={{ left: tag.left, top: tag.top, width: tag.width, height: tag.height }}
       >
         {renaming ? (
           <SectionNameEditor
             initial={section.sectionName}
-            className={style.tag}
+            className="bg-surface text-ink"
             onCommit={(name) => {
               setRenaming(false)
               onRename(name)
@@ -383,6 +386,7 @@ export function SectionEditor({
           color={section.color}
           menu={menu}
           scale={scale}
+          offset={menuButtonOffset(live.width)}
           onToggle={() => setMenu((m) => menuReduce(m, { type: 'toggle' }))}
           onPickColor={(chosen) => {
             const r = pickColor(section.color, chosen)

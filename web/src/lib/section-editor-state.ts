@@ -30,11 +30,7 @@ export function inverseScaleStyle(scale: number): { transform: string; transform
 
 // ---------------------------------------------------------------- 配置の寸法
 
-/** 札(名前のラベル)の位置と大きさ。`SectionBox` の札と同じ(Figma の `Frame 71`: 120 × 32)。
- *  四角の外側の左端から 18px 右、上の辺から 16px 上(`SectionBox` は枠線 2px の内側を基準に -18 / 16 なので、外側基準では 18 / -16) */
-export const TAG_RECT = { left: 18, top: -16, width: 120, height: 32 } as const
-/** メニューのボタンの位置(札の右どなり) */
-export const MENU_BUTTON_OFFSET = { left: TAG_RECT.left + TAG_RECT.width + 6, top: TAG_RECT.top } as const
+// 名前(枠の上の文字)をつかむ場所と、メニューのボタンの位置は、`section-label.ts`(`SectionBox` の文字の位置と同じ寸法)
 /** リサイズのハンドルの、画面での見た目の大きさ(px) */
 export const HANDLE_PX = 12
 /** 枠の線の近くの、つかめる帯の、画面での太さ(px。線をまたいで、内と外に半分ずつ) */
