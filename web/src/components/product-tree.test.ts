@@ -285,3 +285,67 @@ describe('SectionBox(選択・ドロップ先の見た目)', () => {
     expect(box({})).not.toContain('data-highlighted')
   })
 })
+
+describe('ProductTree(セクションの動かす面。カードの下・リーダーだけ)', () => {
+  const at = (html: string, needle: string) => html.indexOf(needle)
+  // 目印の属性を持つ要素の、開きタグ(`<div ...`)を取り出す
+  const openTag = (html: string, marker: string) => {
+    const i = html.indexOf(marker)
+    return html.slice(html.lastIndexOf('<div', i), html.indexOf('>', i) + 1)
+  }
+  const leaderHtml = render({
+    tree: tree(L, [M1]),
+    sections: [section()],
+    canEditSections: true,
+  })
+
+  test('リーダーなら、セクションごとに動かす面が出る(リーダーでなければ、出ない)', () => {
+    expect(leaderHtml).toContain('data-section-move-surface="s1"')
+    const viewer = render({ tree: tree(L, [M1]), sections: [section()], canEditSections: false })
+    expect(viewer).not.toContain('data-section-move-surface')
+  })
+
+  test('重ね順: セクションの四角 → 動かす面 → カード → 編集枠(DOM の順序。後に描くものが手前)', () => {
+    const box = at(leaderHtml, 'data-section-id="s1"')
+    const surface = at(leaderHtml, 'data-section-move-surface="s1"')
+    const card = at(leaderHtml, 'data-card-id=')
+    const editor = at(leaderHtml, 'data-section-editor="s1"')
+    expect(box).toBeGreaterThanOrEqual(0)
+    expect(surface).toBeGreaterThan(box)
+    expect(card).toBeGreaterThan(surface) // 面は、カードの下(カードのドラッグを奪わない)
+    expect(editor).toBeGreaterThan(card) // 編集枠(札・帯・ハンドル)は、カードの上
+  })
+
+  test('重なるセクションは、面積の大きい順に並べる(内側の小さいセクションが手前=先につかめる)', () => {
+    const big = section({ sectionId: 'big', width: 600, height: 600 })
+    const small = section({ sectionId: 'small', sectionName: '内側', x: 50, y: 50, width: 100, height: 100 })
+    // 配列の順(名前順など)に関わらず、面は大きい順
+    for (const sections of [[small, big], [big, small]]) {
+      const html = render({ tree: tree(L, [M1]), sections, canEditSections: true })
+      expect(at(html, 'data-section-move-surface="big"')).toBeGreaterThanOrEqual(0)
+      expect(at(html, 'data-section-move-surface="small"')).toBeGreaterThan(at(html, 'data-section-move-surface="big"'))
+    }
+  })
+
+  test('面を出すとき、自動配置の枠はポインタを通す。カードの包み(DragSlot)は受ける', () => {
+    // カードの間の空いた場所が、面のドラッグを遮らない
+    expect(openTag(leaderHtml, 'data-flow-layer')).toContain('pointer-events-none')
+    // カードの包みは、pointer-events-auto で、これまでどおり受ける
+    expect(leaderHtml).toContain('data-drag-slot')
+    expect(openTag(leaderHtml, 'data-drag-slot')).toContain('pointer-events-auto')
+  })
+
+  test('リーダーでなければ、自動配置の枠はこれまでどおり(ポインタを通さない設定を付けない)', () => {
+    const viewer = render({ tree: tree(L, [M1]), sections: [section()], canEditSections: false })
+    expect(openTag(viewer, 'data-flow-layer')).not.toContain('pointer-events-none')
+    expect(viewer).not.toContain('data-drag-slot')
+  })
+
+  test('位置を持つカードは、面より手前(DOM の順序で後)に描かれる', () => {
+    const placed = member('P', '位置ありC', 'member', { positionX: 40, positionY: 60 })
+    const html = render({ tree: tree(L, [placed]), sections: [section()], canEditSections: true })
+    const surface = at(html, 'data-section-move-surface="s1"')
+    const placedCard = at(html, 'left:40px')
+    expect(placedCard).toBeGreaterThan(surface)
+  })
+})
