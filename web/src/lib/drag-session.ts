@@ -8,7 +8,8 @@
 //   その動きを止める(stopPropagation)。パンが始まらない。離し・取り消しは止めない(パンの側が、ポインタの記録を片付けるため)
 // - 見た目の更新は、`requestFrame()` で 1 フレームに 1 回にまとめる(`onFrame`)。計算は、イベントごとに最新の座標で行う
 // - 終わったら(離す・取り消す・Esc・window が非アクティブ・`end()`)、リスナーを必ず外す。`end()` は、何度呼んでも安全
-// - ドラッグ中は、テキストの選択を防ぎ、カーソルを固定する(`lock`)。終わったら元に戻す
+// - ドラッグが確定したら(`engage()`)、テキストの選択を防ぎ、カーソルを固定する(`lock`)。終わったら元に戻す
+//   (押しただけの間=クリックかもしれない間は、固定しない。カードの中のボタンの見た目などを変えないため)
 // - 別のポインタの押し(2 本目の指)は、`onOtherPointerDown` に知らせる(ピンチに譲るか、無視するかは、呼び出し側が決める)
 //
 // DOM に依存しない形にしてある(イベントの受け手 `target`、フレームの `scheduler`、`lock` を、引数で受ける)。テストで、偽のものを渡す
@@ -63,6 +64,8 @@ export type DragSessionOptions = {
 export type DragSession = {
   /** まだ続いているか(離す・取り消す・`end()` のあとは false) */
   readonly active: boolean
+  /** ドラッグが確定した(クリックではない)。`lock` があれば、テキストの選択を防ぎ、カーソルを固定する。何度呼んでもよい */
+  engage(): void
   /** 見た目の更新を、次のフレームに 1 回だけ予約する(すでに予約があれば、何もしない) */
   requestFrame(): void
   /** 何も呼ばずに終わる(リスナーを外し、予約したフレームを取り消し、`lock` を戻す)。何度呼んでもよい */
@@ -95,13 +98,9 @@ export function startDragSession(options: DragSessionOptions): DragSession {
   let active = true
   let frameId: number | null = null
 
-  // ドラッグ中の、テキストの選択とカーソルの固定
+  // ドラッグが確定してからの、テキストの選択とカーソルの固定(元の値を覚えておき、終わったら戻す)
   const lock = options.lock
-  const saved = lock ? { userSelect: lock.body.style.userSelect, cursor: lock.body.style.cursor } : null
-  if (lock) {
-    lock.body.style.userSelect = 'none'
-    lock.body.style.cursor = lock.cursor
-  }
+  let saved: { userSelect: string; cursor: string } | null = null
 
   const onPointerMove = (e: DragPointer) => {
     if (!active || e.pointerId !== pointerId) return
@@ -152,6 +151,7 @@ export function startDragSession(options: DragSessionOptions): DragSession {
     if (lock && saved) {
       lock.body.style.userSelect = saved.userSelect
       lock.body.style.cursor = saved.cursor
+      saved = null
     }
   }
 
@@ -165,6 +165,12 @@ export function startDragSession(options: DragSessionOptions): DragSession {
   return {
     get active() {
       return active
+    },
+    engage() {
+      if (!active || !lock || saved) return
+      saved = { userSelect: lock.body.style.userSelect, cursor: lock.body.style.cursor }
+      lock.body.style.userSelect = 'none'
+      lock.body.style.cursor = lock.cursor
     },
     requestFrame() {
       if (!active || frameId !== null) return

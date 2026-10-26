@@ -275,9 +275,31 @@ describe('startDragSession: フレームのまとめ', () => {
 })
 
 describe('startDragSession: テキストの選択とカーソルの固定', () => {
-  test('始めると固定し、離す・取り消す・end() のどれで終わっても、元に戻す', () => {
+  test('始めただけ(クリックかもしれない間)は固定しない。確定(engage)で固定する', () => {
+    const { session, body } = setup()
+    expect(body.style.userSelect).toBe('auto')
+    expect(body.style.cursor).toBe('default')
+    session.engage()
+    session.engage()
+    expect(body.style.userSelect).toBe('none')
+    expect(body.style.cursor).toBe('grabbing')
+    session.end()
+    // 2 回 engage しても、元の値は「固定前」のものに戻る(固定後の値を、元として覚えない)
+    expect(body.style.userSelect).toBe('auto')
+    expect(body.style.cursor).toBe('default')
+  })
+
+  test('固定していないときに終わっても、何も変えない', () => {
+    const { target, body } = setup()
+    target.dispatch('pointerup', ev(1, 0, 0))
+    expect(body.style.userSelect).toBe('auto')
+    expect(body.style.cursor).toBe('default')
+  })
+
+  test('確定のあと、離す・取り消す・end() のどれで終わっても、元に戻す', () => {
     for (const finishWith of ['up', 'cancel', 'escape', 'end'] as const) {
       const { target, session, body } = setup()
+      session.engage()
       expect(body.style.userSelect).toBe('none')
       expect(body.style.cursor).toBe('grabbing')
       if (finishWith === 'up') target.dispatch('pointerup', ev(1, 0, 0))
