@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
+import type { PointerEvent } from 'react'
 import { clampCardPosition, pickSectionForCard } from '#/lib/section-edit-geometry'
 import type { PickableSection, Point, Rect } from '#/lib/section-edit-geometry'
 
@@ -194,5 +196,142 @@ export function cardDragReducer(state: CardDragState, event: CardDragEvent): Red
       }
       return stay(state)
     }
+  }
+}
+
+// ドラッグのあとに来る click を、1 回だけ捨てる(カードの中のボタンやリンクが、ドラッグの終わりに押されないように)
+// click は、離した(pointerup)のすぐあとに、同じタスクの中で届く。届かなかったときに備えて、少しあとで外す
+function suppressNextClick() {
+  if (typeof window === 'undefined') return
+  const swallow = (e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+  window.addEventListener('click', swallow, { capture: true, once: true })
+  setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0)
+}
+
+export type UseCardDragOptions = {
+  // リーダーのとき true。false なら、ハンドラは何もしない(キャンバスのパンなどの、既存の操作を妨げない)
+  enabled: boolean
+  // キャンバスの拡大率(画面の差分を、これで割ってキャンバスの座標にする)
+  scale: number
+  // 入るセクションの候補(位置と大きさは、キャンバスの座標)
+  sections: readonly PickableSection[]
+  // カードの、いまのキャンバス上の位置と大きさ(左上と実寸。高さはタスクの数で変わる)。取れなければ null
+  getCardRect: (memberId: string) => Rect | null
+  // ドラッグが終わって、位置が決まったとき(1 回のドラッグにつき、多くても 1 回)。position はカードの左上
+  // sectionId は、その位置で入るセクション(どこにも入らなければ null=無所属)
+  onDrop: (memberId: string, position: Point, sectionId: string | null) => void
+}
+
+export type CardDragHandlers = {
+  onPointerDown: (e: PointerEvent<HTMLElement>) => void
+  onPointerMove: (e: PointerEvent<HTMLElement>) => void
+  onPointerUp: (e: PointerEvent<HTMLElement>) => void
+  onPointerCancel: (e: PointerEvent<HTMLElement>) => void
+}
+
+// カードのドラッグ(リーダーのみ)。状態機械(cardDragReducer)を呼ぶ薄い層
+// 使い方: カードの要素に `{...getDragHandlers(memberId)}` を付ける。その要素には `touch-action: none` を付ける(タッチで、
+//   ブラウザのスクロールに奪われて pointercancel にならないように)。ドラッグ中は previewPosition にカードを描き、
+//   hoverSectionId のセクションをドロップ先として強調する。元の位置の表示は、呼び出し側が決める(このフックは、位置を動かさない)
+// 押したときは、イベントを止めない(キャンバスのパンの側にも記録させる)。ドラッグが確定したあとの動きだけを止めて、
+//   パンが始まらないようにする。離しは止めない(パンの側が、ポインタの記録を片付けるため)
+export function useCardDrag(options: UseCardDragOptions) {
+  const [state, setState] = useState<CardDragState>(CARD_DRAG_IDLE)
+  // イベントの処理は、最新の値を ref から読む(同じフレームで複数のイベントが来ても、取りこぼさない)
+  const stateRef = useRef(state)
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+
+  const dispatch = (event: CardDragEvent): CardDragEffect => {
+    const { state: next, effect } = cardDragReducer(stateRef.current, event)
+    if (next !== stateRef.current) {
+      stateRef.current = next
+      setState(next)
+    }
+    if (effect.drop) {
+      optionsRef.current.onDrop(effect.drop.memberId, effect.drop.position, effect.drop.sectionId)
+    }
+    if (effect.suppressClick) suppressNextClick()
+    return effect
+  }
+  // effect の中から呼ぶので、dispatch は ref と setState だけを使う(つけ直さなくてよい)
+  const dispatchRef = useRef(dispatch)
+  dispatchRef.current = dispatch
+
+  // Esc で取りやめる(ドラッグの間だけ、見張る)
+  const active = state.phase !== 'idle'
+  useEffect(() => {
+    if (!active) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dispatchRef.current({ type: 'escape' })
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [active])
+
+  // ドラッグの途中で、使えなくなったら(リーダーでなくなったなど)、取りやめる
+  useEffect(() => {
+    if (!options.enabled) dispatchRef.current({ type: 'escape' })
+  }, [options.enabled])
+
+  const getDragHandlers = (memberId: string): CardDragHandlers => ({
+    onPointerDown: (e) => {
+      const o = optionsRef.current
+      const effect = dispatch({
+        type: 'down',
+        memberId,
+        pointerId: e.pointerId,
+        pointerType: e.pointerType,
+        button: e.button,
+        client: { x: e.clientX, y: e.clientY },
+        rect: o.enabled ? o.getCardRect(memberId) : null,
+        enabled: o.enabled,
+      })
+      // ドラッグ中に、別の指が押されたとき(consumed)は、ピンチが始まらないよう、パンに渡さない
+      if (effect.consumed) e.stopPropagation()
+    },
+    onPointerMove: (e) => {
+      const o = optionsRef.current
+      const effect = dispatch({
+        type: 'move',
+        pointerId: e.pointerId,
+        client: { x: e.clientX, y: e.clientY },
+        scale: o.scale,
+        sections: o.sections,
+      })
+      // キャプチャは、ドラッグが確定してから(先にすると、カードの中のボタンへの click が届かなくなる)
+      if (effect.started) {
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId)
+        } catch {
+          // すでに離れたポインタなど。ドラッグ自体は続けられる
+        }
+      }
+      if (effect.consumed) e.stopPropagation()
+    },
+    onPointerUp: (e) => {
+      const o = optionsRef.current
+      dispatch({
+        type: 'up',
+        pointerId: e.pointerId,
+        client: { x: e.clientX, y: e.clientY },
+        scale: o.scale,
+        sections: o.sections,
+      })
+    },
+    onPointerCancel: (e) => {
+      dispatch({ type: 'cancel', pointerId: e.pointerId })
+    },
+  })
+
+  const dragging = state.phase === 'dragging' ? state : null
+  return {
+    draggingId: dragging ? dragging.memberId : null,
+    previewPosition: dragging ? dragging.position : null,
+    hoverSectionId: dragging ? dragging.hoverSectionId : null,
+    getDragHandlers,
   }
 }
