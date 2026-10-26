@@ -153,3 +153,65 @@ export function applyDeltaToMembers<T extends PositionedMember>(
   }
   return { ok: true, members: moved }
 }
+
+// 点が四角の内側にあるか(辺の上を含む)
+function contains(rect: Rect, p: Point): boolean {
+  return p.x >= rect.x && p.x <= rect.x + rect.width && p.y >= rect.y && p.y <= rect.y + rect.height
+}
+
+// カードの中心。カードの四角(左上と大きさ)か、中心の点を受け取る
+function centerOf(card: Rect | Point): Point {
+  return 'width' in card
+    ? { x: card.x + card.width / 2, y: card.y + card.height / 2 }
+    : card
+}
+
+// 選ぶ対象のセクション。createdAt(ISO 文字列か Date)は、面積が同じときの優先に使う(なければ配列の後ろ)
+export type PickableSection = Rect & { sectionId: string; createdAt?: string | Date }
+
+function timeOf(value: string | Date | undefined): number | null {
+  if (value === undefined) return null
+  const t = typeof value === 'string' ? Date.parse(value) : value.getTime()
+  return Number.isNaN(t) ? null : t
+}
+
+// カードを置いた位置から、所属するセクションの ID を決める(どれにも入らなければ null=無所属)
+// - カードの中心が、セクションの内側(辺の上を含む)にあるものが候補
+// - 候補が複数あるときは、面積が小さい方(内側のセクション)を優先
+// - 面積が同じなら、createdAt が新しい方。createdAt が同じ・なし・不正なら、配列の後ろの方
+export function pickSectionForCard(
+  card: Rect | Point,
+  sections: readonly PickableSection[],
+): string | null {
+  const center = centerOf(card)
+  let best: { section: PickableSection; area: number } | null = null
+  for (const section of sections) {
+    if (!contains(section, center)) continue
+    const area = section.width * section.height
+    if (best === null || area < best.area) {
+      best = { section, area }
+    } else if (area === best.area) {
+      const a = timeOf(section.createdAt)
+      const b = timeOf(best.section.createdAt)
+      // 新しい方。時刻が比べられない・同じときは、後ろに出てきた方(今のループの方)
+      if (a === null || b === null || a >= b) best = { section, area }
+    }
+  }
+  return best === null ? null : best.section.sectionId
+}
+
+// 四角の中に、カードの中心が入るメンバー(位置を持つものだけ。位置は、カードの左上の座標)
+// セクションを新しく置いたとき、囲んだカードを所属させるかの判断材料。順序は、受け取った順のまま
+export function membersInsideRect<T extends PositionedMember>(
+  members: readonly T[],
+  rect: Rect,
+  cardSize: Size = CARD_SIZE,
+): T[] {
+  return members.filter((m) => {
+    if (m.positionX === null || m.positionY === null) return false
+    return contains(rect, {
+      x: m.positionX + cardSize.width / 2,
+      y: m.positionY + cardSize.height / 2,
+    })
+  })
+}
