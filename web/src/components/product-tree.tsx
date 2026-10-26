@@ -2,17 +2,24 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { MemberCard } from '#/components/member-card'
 import { SectionBox } from '#/components/section-box'
+import { TreeConnectors } from '#/components/tree-connectors'
 import { TreeToolbar } from '#/components/tree-toolbar'
 import type { TreeMode } from '#/components/tree-toolbar'
 import { TreeZoomBar } from '#/components/tree-zoom-bar'
 import type { Section } from '#/lib/section'
-import { canvasBounds } from '#/lib/tree-layout'
+import {
+  canvasBounds,
+  connectorKind,
+  hasPosition,
+  splitByPosition,
+} from '#/lib/tree-layout'
 import type {
   ProductTree as ProductTreeData,
   TreeMember,
   TreeTask,
 } from '#/lib/tree'
 import { useCanvasSize } from '#/lib/use-canvas-size'
+import { useCardBoxes } from '#/lib/use-card-boxes'
 import { usePanZoom } from '#/lib/use-pan-zoom'
 
 // セクションがないときに渡す、空の配列(毎回新しい配列を作らない)
@@ -35,6 +42,9 @@ const ABOVE_TOOLBAR = 'bottom-[104px]'
 // 初期は「移動」(これまでの、つかむカーソルと同じ見た目)
 // `sections` を渡すと、その座標と大きさで、色つきの四角を、カードの後ろに描く(F1。表示のみ)
 //   座標の原点は、自動配置(リーダーを上、メンバーを横に並べる、これまでの配置)の左上。負の座標があれば、全体をずらして収める
+// カードの位置(`positionX` / `positionY`): **カードの左上の座標**(中心ではない)。両方の値があるカードだけ、その座標に置く。
+//   NULL のカードは、これまでどおり自動配置のまま(一部だけ位置を持っていても、崩れない)
+//   位置を持つカードへの親子の線は、測ったカードの実際の位置に合わせて、SVG で描く(自動配置どうしは、これまでの CSS の線)
 export function ProductTree({
   header,
   tree,
@@ -54,13 +64,37 @@ export function ProductTree({
 }) {
   const { leader, members } = tree
   const [mode, setMode] = useState<TreeMode>('pan')
-  // セクションが収まる大きさと、負の座標のときのずらし量(セクションがなければ、すべて 0 = これまでの大きさ)
-  const bounds = canvasBounds({ sections, cards: [] })
+  // 位置を持つカード(座標に置く)と、持たないカード(自動配置のまま)に分ける。リーダーも位置を持てる
+  const leaderPlaced = hasPosition(leader)
+  const { flow: flowMembers, placed: placedMembers } = splitByPosition(members)
+  const placedCards = [
+    ...(leaderPlaced
+      ? [
+          {
+            member: leader,
+            x: leader.positionX as number,
+            y: leader.positionY as number,
+          },
+        ]
+      : []),
+    ...placedMembers,
+  ]
+  // セクションと、位置を持つカードが収まる大きさと、負の座標のときのずらし量(なければ、すべて 0 = これまでの大きさ)
+  const bounds = canvasBounds({ sections, cards: placedCards })
   const editFor = (m: TreeMember) =>
     onEditTask && (canOpenTask?.(m) ?? true)
       ? (task: TreeTask) => onEditTask(m, task)
       : undefined
-  const last = members.length - 1
+  // 自動配置のメンバーの数(横一列の線の端の判定に使う)
+  const last = flowMembers.length - 1
+  // 親子の線を SVG で描く子(リーダーかメンバーのどちらかが位置を持つ)。なければ、測らない
+  const svgMembers = members.filter(
+    (m) => connectorKind(leaderPlaced, hasPosition(m)) === 'svg',
+  )
+  // カードの集まり・位置が変わったら、測り直すためのキー
+  const cardsKey = [leader, ...members]
+    .map((m) => `${m.productMemberId}:${m.positionX ?? ''}:${m.positionY ?? ''}`)
+    .join('|')
   // 上に重ねている見出しの高さ。全体表示で、ツリーがその下に潜らないようにする(初回の描画の前に測る)
   const headerRef = useRef<HTMLDivElement | null>(null)
   const [headerHeight, setHeaderHeight] = useState(0)
@@ -79,6 +113,13 @@ export function ProductTree({
   )
   const { view, dragging, canZoomIn, canZoomOut, zoomIn, zoomOut, reset, handlers } =
     usePanZoom(containerRef, size)
+  // 線を SVG で描くときだけ、カードの実際の位置・高さを測る
+  const boxes = useCardBoxes(contentRef, svgMembers.length > 0, cardsKey)
+  const leaderBox = boxes?.get(leader.productMemberId)
+  const connectorTargets = svgMembers.flatMap((m) => {
+    const box = boxes?.get(m.productMemberId)
+    return box ? [{ id: m.productMemberId, box }] : []
+  })
 
   return (
     <div className="relative h-full w-full">
@@ -120,7 +161,11 @@ export function ProductTree({
               offsetY={bounds.offsetY}
             />
           ))}
-          {/* 自動配置(リーダーを上、メンバーを横に並べる)。負の座標があるときは、その分だけずらす */}
+          {/* 位置を持つカードへの、実際の位置に合わせた親子の線(SVG)。セクションの上、カードの下 */}
+          {leaderBox && connectorTargets.length > 0 && (
+            <TreeConnectors parent={leaderBox} targets={connectorTargets} />
+          )}
+          {/* 自動配置(リーダーを上、メンバーを横に並べる)。位置を持つカードは含めない。負の座標があるときは、その分だけずらす */}
           <div
             className="relative flex w-max flex-col items-center"
             style={{
@@ -128,50 +173,81 @@ export function ProductTree({
               marginTop: bounds.offsetY || undefined,
             }}
           >
-            <MemberCard
-              member={leader}
-              onEditTask={editFor(leader)}
-              onShowTasks={onShowTasks}
-            />
+            {!leaderPlaced && (
+              <MemberCard
+                member={leader}
+                cardId={leader.productMemberId}
+                onEditTask={editFor(leader)}
+                onShowTasks={onShowTasks}
+              />
+            )}
             {members.length === 0 ? (
-              <p className="mt-4 text-sm opacity-60"># メンバーは、まだいません</p>
+              !leaderPlaced && (
+                <p className="mt-4 text-sm opacity-60"># メンバーは、まだいません</p>
+              )
             ) : (
-              <>
-                <div
-                  aria-hidden="true"
-                  className="h-6 border-l border-dashed border-ink/50"
-                />
-                <ul className="flex">
-                  {members.map((m, i) => (
-                    <li key={m.productMemberId} className="relative px-3 pt-6">
-                      <span aria-hidden="true">
-                        {members.length > 1 && (
-                          <span
-                            className={`absolute top-0 h-0 border-t border-dashed border-ink/50 ${
-                              i === 0
-                                ? 'left-1/2 w-1/2'
-                                : i === last
-                                  ? 'left-0 w-1/2'
-                                  : 'left-0 w-full'
-                            }`}
-                          />
+              flowMembers.length > 0 && (
+                <>
+                  {!leaderPlaced && (
+                    <div
+                      aria-hidden="true"
+                      className="h-6 border-l border-dashed border-ink/50"
+                    />
+                  )}
+                  <ul className="flex">
+                    {flowMembers.map((m, i) => (
+                      <li
+                        key={m.productMemberId}
+                        className={`relative px-3 ${leaderPlaced ? '' : 'pt-6'}`}
+                      >
+                        {/* リーダーが自動配置のときだけ、これまでの CSS の線。リーダーが位置を持つときは、SVG の線 */}
+                        {!leaderPlaced && (
+                          <span aria-hidden="true">
+                            {flowMembers.length > 1 && (
+                              <span
+                                className={`absolute top-0 h-0 border-t border-dashed border-ink/50 ${
+                                  i === 0
+                                    ? 'left-1/2 w-1/2'
+                                    : i === last
+                                      ? 'left-0 w-1/2'
+                                      : 'left-0 w-full'
+                                }`}
+                              />
+                            )}
+                            {/* 縦線(幅 1px)と三角(幅 10px)は、どちらも left-1/2 に置き、-translate-x-1/2 で、自分の幅の半分だけ左へ戻す。
+                              線は [c-0.5, c+0.5]、三角は [c-5, c+5] で、中心はどちらも c(li の中央)になる */}
+                            <span className="absolute top-0 left-1/2 h-4 -translate-x-1/2 border-l border-dashed border-ink/50" />
+                            <span className="absolute top-4 left-1/2 size-0 -translate-x-1/2 border-x-[5px] border-b-[7px] border-x-transparent border-b-ink/50" />
+                          </span>
                         )}
-                        {/* 縦線(幅 1px)と三角(幅 10px)は、どちらも left-1/2 に置き、-translate-x-1/2 で、自分の幅の半分だけ左へ戻す。
-                          線は [c-0.5, c+0.5]、三角は [c-5, c+5] で、中心はどちらも c(li の中央)になる */}
-                        <span className="absolute top-0 left-1/2 h-4 -translate-x-1/2 border-l border-dashed border-ink/50" />
-                        <span className="absolute top-4 left-1/2 size-0 -translate-x-1/2 border-x-[5px] border-b-[7px] border-x-transparent border-b-ink/50" />
-                      </span>
-                      <MemberCard
-                        member={m}
-                        onEditTask={editFor(m)}
-                        onShowTasks={onShowTasks}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </>
+                        <MemberCard
+                          member={m}
+                          cardId={m.productMemberId}
+                          onEditTask={editFor(m)}
+                          onShowTasks={onShowTasks}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )
             )}
           </div>
+          {/* 位置を持つカード。座標は左上(負の座標のずらし量を足す)。いちばん手前に描く */}
+          {placedCards.map(({ member, x, y }) => (
+            <div
+              key={member.productMemberId}
+              className="absolute"
+              style={{ left: x + bounds.offsetX, top: y + bounds.offsetY }}
+            >
+              <MemberCard
+                member={member}
+                cardId={member.productMemberId}
+                onEditTask={editFor(member)}
+                onShowTasks={onShowTasks}
+              />
+            </div>
+          ))}
         </div>
         <p
           aria-hidden="true"

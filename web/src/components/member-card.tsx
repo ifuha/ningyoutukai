@@ -31,12 +31,15 @@ export function formatLimit(iso: string): string {
 // ツリーの 1 人分のカード(見出し部: アバター・名前・役割 / 本体: タスク 3 件まで / フッター: 件数)
 // `onEditTask` を渡すと、タスク名が押せる(リーダーにだけ渡す。ツリーに完了済みは出ないので、すべて編集できる)
 // `onShowTasks` を渡すと、4 件目以降があるとき「他 N 件」が押せて、全タスクの一覧を開ける
+// `cardId` を渡すと、カードに `data-card-id` を付ける(親子の線の端点を、カードの実際の位置・高さで描くために、測る目印)
 export function MemberCard({
   member,
+  cardId,
   onEditTask,
   onShowTasks,
 }: {
   member: TreeMember
+  cardId?: string
   onEditTask?: (task: TreeTask) => void
   onShowTasks?: (member: TreeMember) => void
 }) {
@@ -46,7 +49,10 @@ export function MemberCard({
   const pending = member.tasks.filter((t) => t.reportedAt).length
 
   return (
-    <article className="w-[240px] shrink-0 border-2 border-ink bg-surface text-left">
+    <article
+      data-card-id={cardId}
+      className="w-[240px] shrink-0 border-2 border-ink bg-surface text-left"
+    >
       <header
         className={`flex items-center gap-2 border-b-2 border-ink p-2 ${isLeader ? 'bg-ink text-surface' : ''}`}
       >
