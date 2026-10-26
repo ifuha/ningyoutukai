@@ -73,14 +73,15 @@ describe('ProductTree(位置もセクションもないとき = これまでの�
 })
 
 describe('ProductTree(セクション)', () => {
-  test('座標と大きさで四角を描き、色の見た目と名前の札を付ける', () => {
+  test('座標と大きさで四角を描き、色の見た目(破線の枠と 20% の塗り)と、枠の上の名前を付ける', () => {
     const html = render({
       tree: tree(L, [M1]),
       sections: [section({ x: 120, y: 80, width: 320, height: 200, color: 'blue', sectionName: '開発' })],
     })
     expect(html).toContain('data-section-id="s1"')
     expect(html).toContain('left:120px;top:80px;width:320px;height:200px')
-    expect(html).toContain('border-blue-500')
+    expect(html).toContain('border-color:#3B82F6')
+    expect(html).toContain('background-color:rgba(59, 130, 246, 0.2)')
     expect(html).toContain('開発')
   })
   test('セクションは、カードより前(後ろに敷く)に出力される', () => {
@@ -95,8 +96,8 @@ describe('ProductTree(セクション)', () => {
         section({ sectionId: 'b', color: 'green', sectionName: '運用' }),
       ],
     })
-    expect(html).toContain('border-red-500')
-    expect(html).toContain('border-green-500')
+    expect(html).toContain('border-color:#FF0004')
+    expect(html).toContain('border-color:#22C55E')
   })
   test('負の座標があるときは、自動配置を、その分だけずらす', () => {
     const html = render({ tree: tree(L, []), sections: [section({ x: -100, y: -30 })] })
@@ -279,10 +280,46 @@ describe('SectionBox(選択・ドロップ先の見た目)', () => {
     expect(box({})).not.toContain('data-selected')
     expect(box({})).not.toContain('outline-ink')
   })
-  test('カードのドロップ先(highlighted)は、枠を強調し、data-highlighted が付く', () => {
+  test('カードのドロップ先(highlighted)は、輪を足して塗りを濃くし、data-highlighted が付く', () => {
     expect(box({ highlighted: true })).toContain('data-highlighted="true"')
     expect(box({ highlighted: true })).toContain('ring-4')
     expect(box({})).not.toContain('data-highlighted')
+    expect(box({})).not.toContain('ring-4')
+    // 塗りは、通常 20%、ドロップ先は 35%(赤 #FF0004)
+    expect(box({})).toContain('background-color:rgba(255, 0, 4, 0.2)')
+    expect(box({ highlighted: true })).toContain('background-color:rgba(255, 0, 4, 0.35)')
+  })
+})
+
+describe('SectionBox(Figma の見た目: 破線・20% の塗り・枠の上の名前)', () => {
+  const box = (props: Record<string, unknown>) =>
+    renderToStaticMarkup(createElement(SectionBox, { section: section() as never, ...props } as never))
+  test('枠は破線で、色は赤 #FF0004、内側は同じ色の 20%', () => {
+    const html = box({})
+    expect(html).toContain('border-dashed')
+    expect(html).toContain('border-2')
+    expect(html).toContain('border-color:#FF0004')
+    expect(html).toContain('background-color:rgba(255, 0, 4, 0.2)')
+  })
+  test('名前は、色つきの札ではなく、枠の上の文字(札の背景色・固定の札の大きさが無い)', () => {
+    const html = box({ section: section({ sectionName: 'デザイン' }) as never })
+    const label = html.slice(html.indexOf('data-section-label'))
+    expect(label).toContain('デザイン')
+    expect(label).toContain('text-ink')
+    expect(html).not.toMatch(/\bbg-(red|yellow|green|purple|sky|blue)-\d+/)
+    expect(html).not.toContain('w-[120px]')
+    expect(html).not.toContain('h-8')
+  })
+  test('名前は、外側の上辺の 16px 上の帯に置く(枠線 2px の内側基準で、上 -18px・左 4px)', () => {
+    const html = box({})
+    expect(html).toContain('top:-18px')
+    expect(html).toContain('left:4px')
+    expect(html).toContain('height:16px')
+  })
+  test('長い名前は、省略記号にする(truncate)。名前の全文は title に残る', () => {
+    const html = box({ section: section({ sectionName: 'とてもとてもとてもとても長いセクションの名前' }) as never })
+    expect(html).toContain('truncate')
+    expect(html).toContain('title="とてもとてもとてもとても長いセクションの名前"')
   })
 })
 
