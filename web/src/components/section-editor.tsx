@@ -1,31 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
+import { flushSync } from 'react-dom'
 import { SectionEditorMenu } from '#/components/section-editor-menu'
 import { SectionNameEditor } from '#/components/section-name-editor'
+import { collectFollowers, type FollowRoot } from '#/lib/drag-follow'
+import type { DragTarget } from '#/lib/drag-session'
 import type { SectionColor } from '#/lib/section'
 import type { Point, Rect } from '#/lib/section-edit-geometry'
+import { createSectionDragController, type SectionDragController } from '#/lib/section-drag-controller'
 import {
-  IDLE,
   NUDGE_SETTLE_MS,
   bandBoxes,
-  cancelDrag,
-  dragPreview,
-  endDrag,
   handleBoxes,
   handleCursor,
   isClick,
   keyAction,
   menuReduce,
-  moveDrag,
   nudgeRect,
   pickColor,
-  pressDrag,
   confirmDelete,
   screenSize,
   settleNudge,
-  startDrag,
   type DragKind,
-  type DragState,
   type MenuState,
 } from '#/lib/section-editor-state'
 import { labelHitRect, menuButtonOffset } from '#/lib/section-label'
@@ -40,7 +36,10 @@ import { sectionStyle } from '#/lib/section-style'
 // - 札・枠の線の近く(帯)は、未選択でも、押した時点で選択し、4px を超えて動かすと移動する(カードと同じ。パンは始めない)
 //   四角の内側の空いた場所のドラッグは、カードの下の層の `SectionMoveSurface` が受ける
 // - 選択中: 8 つのハンドルで大きさを変える
-// - ドラッグ中は、見た目だけを更新する(破線のプレビュー)。確定は、ポインタを離したときに 1 回だけ `onChange(rect)`。動かなかったら呼ばない。Esc で取り消し
+// - **マウスに追従する**: 押した瞬間から離すまで、window で動きを受ける(速く動かしても、要素の外へ出ても追従する)。
+//   移動は、セクションの四角・この編集枠・中のカードを、transform で一緒に動かす(React の状態を経由しない。1 フレームに 1 回)。
+//   大きさの変更は、見た目の四角(破線とハンドル)を、1 フレームに 1 回だけ更新する。
+//   確定は、ポインタを離したときに 1 回だけ `onChange(rect)`(離した座標で決める)。動かなかったら呼ばない。Esc で取り消し
 // - 名前: 札をダブルクリックで、その場で編集(Enter・外のクリックで `onRename`、Esc で取り消し)
 // - 色・削除: 札のとなりの「⋯」メニュー。削除は確認を挟む。選択中の Delete / Backspace でも、確認を開く
 // - 矢印キー: 1px(Shift で 10px)。連打は、待ち時間(350ms)のあとに 1 回にまとめて `onChange`
@@ -75,14 +74,18 @@ export type SectionEditorProps = {
   offsetY?: number
   /** 四角の内側のクリックでも選択できる(カードより下の層に置くとき)。省略は false(内側は、ポインタを通す) */
   interiorSelectable?: boolean
-  /** ドラッグ・矢印キーの途中の、見た目だけの四角を知らせる(終わったら `null`)。`SectionBox` を追従させたいときに使う */
+  /** ドラッグが確定した(四角あり)・終わった(`null`)、矢印キーの途中を知らせる。Esc の優先順位に使う。動くたびには呼ばない */
   onPreview?: (rect: Rect | null) => void
+  /** 移動で、四角・編集枠と一緒に動かす、位置を持つ所属メンバー(api と同じ規則)。省略は、なし */
+  followMemberIds?: readonly string[]
 }
 
 type Latest = {
   base: Rect
   scale: number
   selected: boolean
+  sectionId: string
+  followMemberIds?: readonly string[]
   onSelect: () => void
   onChange: (rect: Rect) => void
   onPreview?: (rect: Rect | null) => void
@@ -102,15 +105,34 @@ export function SectionEditor({
   offsetY = 0,
   interiorSelectable = false,
   onPreview,
+  followMemberIds,
 }: SectionEditorProps) {
   const base: Rect = { x: section.x, y: section.y, width: section.width, height: section.height }
 
   // イベントの中(古い render の関数)から、最新の値を読むための入れ物
-  const latest = useRef<Latest>({ base, scale, selected, onSelect, onChange, onPreview })
-  latest.current = { base, scale, selected, onSelect, onChange, onPreview }
+  const latest = useRef<Latest>({
+    base,
+    scale,
+    selected,
+    sectionId: section.sectionId,
+    followMemberIds,
+    onSelect,
+    onChange,
+    onPreview,
+  })
+  latest.current = {
+    base,
+    scale,
+    selected,
+    sectionId: section.sectionId,
+    followMemberIds,
+    onSelect,
+    onChange,
+    onPreview,
+  }
 
-  const [drag, setDrag] = useState<DragState>(IDLE)
-  const dragRef = useRef<DragState>(IDLE)
+  // 大きさの変更の、見た目の四角(1 フレームに 1 回だけ更新される。移動は、transform で動かすので、ここには入らない)
+  const [liveRect, setLiveRect] = useState<Rect | null>(null)
   const [nudge, setNudge] = useState<Rect | null>(null)
   const nudgeRef = useRef<Rect | null>(null)
   const nudgeTimer = useRef<number | undefined>(undefined)
@@ -121,11 +143,28 @@ export function SectionEditor({
 
   const preview = (rect: Rect | null) => latest.current.onPreview?.(rect)
 
-  const updateDrag = (next: DragState) => {
-    dragRef.current = next
-    setDrag(next)
-    preview(dragPreview(next))
+  // 移動・大きさの変更のドラッグ(window で受ける)。札・枠の線の近く・ハンドルが、同じ制御部を使う
+  const controllerRef = useRef<SectionDragController | null>(null)
+  if (controllerRef.current === null) {
+    controllerRef.current = createSectionDragController({
+      getTarget: () => window as unknown as DragTarget,
+      getLock: (cursor) => ({ body: document.body, cursor }),
+      getBase: () => latest.current.base,
+      getScale: () => latest.current.scale,
+      getFollowers: () =>
+        collectFollowers(
+          document as unknown as FollowRoot,
+          latest.current.sectionId,
+          latest.current.followMemberIds ?? [],
+        ),
+      batch: (fn) => flushSync(fn),
+      onCommit: (rect) => latest.current.onChange(rect),
+      onPreview: (rect) => latest.current.onPreview?.(rect),
+      onLive: setLiveRect,
+      onActive: () => {},
+    })
   }
+  const controller = controllerRef.current
 
   const clearNudgeTimer = () => {
     window.clearTimeout(nudgeTimer.current)
@@ -169,7 +208,7 @@ export function SectionEditor({
         e.preventDefault()
         setMenu((m) => menuReduce(m, { type: 'ask-delete' }))
       } else if (action.type === 'nudge') {
-        if (dragRef.current.phase !== 'idle') return
+        if (controller.isActive()) return
         e.preventDefault()
         const next = nudgeRect(nudgeRef.current ?? latest.current.base, action.delta)
         nudgeRef.current = next
@@ -178,9 +217,10 @@ export function SectionEditor({
         clearNudgeTimer()
         nudgeTimer.current = window.setTimeout(flushNudge, NUDGE_SETTLE_MS)
       } else {
-        // Esc: ドラッグ中 → ドラッグの取り消し。矢印キーの移動の途中 → 取り消し。メニューが開いている → 閉じる
-        if (dragRef.current.phase !== 'idle') {
-          updateDrag(cancelDrag())
+        // Esc: ドラッグ中 → ドラッグの取り消し(window のキャプチャ段階で、すでに取り消している。ここでは、ほかの動作をしない)。
+        //   矢印キーの移動の途中 → 取り消し。メニューが開いている → 閉じる
+        if (controller.takeEscape()) {
+          // 1 回の Esc で、受けるのは 1 つだけ
         } else if (nudgeRef.current) {
           cancelNudge()
         } else {
@@ -213,17 +253,25 @@ export function SectionEditor({
 
   useEffect(() => clearNudgeTimer, [])
 
+  // リーダーでなくなった・消えたときは、途中のドラッグを捨てる。画面から消えるときは、リスナーを外す
+  useEffect(() => {
+    if (!canEdit) controller.cancel()
+  }, [canEdit, controller])
+  useEffect(() => () => controller.dispose(), [controller])
+
   if (!canEdit) return null
 
-  const live = dragPreview(drag) ?? nudge ?? base
-  const moving = drag.phase === 'dragging' || nudge !== null
+  // 移動中は、`live` は元のまま(四角・編集枠・カードが、transform で動く)。大きさの変更と矢印キーの途中だけ、見た目の四角を使う
+  const live = liveRect ?? nudge ?? base
+  const moving = liveRect !== null || nudge !== null
   const style = sectionStyle(section.color)
   // 名前をつかむ場所・名前の入力欄(`SectionBox` の文字の位置に合わせる。ドラッグ中の見た目の幅に追従する)
   const tag = labelHitRect(live.width)
 
   // 移動・大きさの変更のつかみ場所に付ける、ポインタのイベント
   // 押したら、その場でつかむ(カードと同じ)。**未選択でも、押した時点で選択し**、キャンバスの移動(パン)は始めない。
-  // 移動は、動きが 4px を超えたらドラッグになる(`pressDrag`。クリックだけなら、選択するだけ)。大きさの変更(ハンドル)は、すぐ始まる
+  // 移動は、動きが 4px を超えたらドラッグになる(クリックだけなら、選択するだけ)。大きさの変更(ハンドル)は、すぐ始まる。
+  // 動き・離し・取り消しは、押した瞬間から window で受ける(制御部 `section-drag-controller.ts`)ので、要素には、押したところだけを付ける
   const grab = (kind: DragKind) => ({
     onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
       if (e.button !== 0 || !e.isPrimary) return
@@ -231,33 +279,8 @@ export function SectionEditor({
       e.stopPropagation()
       e.preventDefault()
       flushNudge()
-      e.currentTarget.setPointerCapture(e.pointerId)
       if (!latest.current.selected) latest.current.onSelect()
-      const client = { x: e.clientX, y: e.clientY }
-      updateDrag(
-        kind.type === 'move'
-          ? pressDrag(kind, latest.current.base, client, e.pointerId)
-          : startDrag(kind, latest.current.base, client, e.pointerId),
-      )
-    },
-    onPointerMove: (e: ReactPointerEvent<HTMLElement>) => {
-      if (dragRef.current.phase === 'idle') return
-      const next = moveDrag(dragRef.current, { x: e.clientX, y: e.clientY }, latest.current.scale, e.pointerId)
-      if (next !== dragRef.current) updateDrag(next)
-    },
-    onPointerUp: (e: ReactPointerEvent<HTMLElement>) => {
-      const result = endDrag(dragRef.current, e.pointerId)
-      if (result.state === dragRef.current) return // ほかのポインタ・待機中
-      updateDrag(result.state)
-      if (result.commit) latest.current.onChange(result.commit)
-    },
-    onPointerCancel: (e: ReactPointerEvent<HTMLElement>) => {
-      const d = dragRef.current
-      if (d.phase !== 'idle' && d.pointerId === e.pointerId) updateDrag(cancelDrag())
-    },
-    onLostPointerCapture: (e: ReactPointerEvent<HTMLElement>) => {
-      const d = dragRef.current
-      if (d.phase !== 'idle' && d.pointerId === e.pointerId) updateDrag(cancelDrag())
+      controller.start(kind, e)
     },
     onClick: (e: { clientX: number; clientY: number }) => {
       if (latest.current.selected || !downPoint.current) return

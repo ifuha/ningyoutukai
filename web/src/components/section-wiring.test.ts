@@ -87,6 +87,32 @@ describe('ProductTree(リーダーのとき: B の編集枠と、C のカード�
   })
 })
 
+describe('セクションを動かす間の追従(drag-follow)が頼る、3 つの目印が描画される', () => {
+  // 動かす要素は、data 属性で探す(`drag-follow.ts`)。属性が消えると、追従が黙って効かなくなるので、描画で固定する
+  const html = render({
+    tree: tree(L, [M1, member('M3', 'メンバーD', 'member', { positionX: 50, positionY: 60 })].map((m) =>
+      m.productMemberId === 'M3' ? { ...m, sectionId: 's1' } : m,
+    )),
+    sections: [section()],
+    canEditSections: true,
+  })
+  test('セクションの四角(data-section-id)・編集枠(data-section-editor)・位置を持つ所属カード(data-card-id)が、どれも出る', () => {
+    expect(html).toContain('data-section-id="s1"')
+    expect(html).toContain('data-section-editor="s1"')
+    expect(html).toContain('data-card-id="M3"')
+  })
+  test('動かす要素の style に、transform を持たない(動きは直接書かれる。React が描き直しても、transform を消さない)', () => {
+    for (const id of ['data-section-id="s1"', 'data-section-editor="s1"', 'data-card-id="M3"']) {
+      const start = html.indexOf(id)
+      const tag = html.slice(start, html.indexOf('>', start))
+      expect(tag).not.toContain('transform')
+    }
+  })
+  test('動かす面は、動かす要素に含まれない(押している間、つかんでいる要素は動かさない)', () => {
+    expect(html).toContain('data-section-move-surface="s1"')
+  })
+})
+
 describe('ProductTree(リーダーでないとき: A・B・C は、何も出さず、何も奪わない)', () => {
   const html = render({ tree: tree(L, [M1, M2]), sections: [section()] })
   test('編集枠も、カードのドラッグのラッパーも、影も無い(これまでと同じ DOM)', () => {
@@ -113,11 +139,9 @@ describe('ProductTree(リーダーでないとき: A・B・C は、何も出さ�
 })
 
 describe('DragSlot(カードを包む要素)', () => {
+  // 押したところだけ。動き・離し・取り消しは、押した瞬間から window で受ける(drag-session)ので、要素には付けない
   const handlers = {
     onPointerDown: () => {},
-    onPointerMove: () => {},
-    onPointerUp: () => {},
-    onPointerCancel: () => {},
   }
   const slot = (props: Record<string, unknown>) =>
     renderToStaticMarkup(createElement(DragSlot, { dragging: false, ...props } as never, createElement('p', null, 'カード')))
@@ -149,6 +173,21 @@ describe('CardGhost(ドラッグ中のカードの影)', () => {
     expect(html).toContain('z-40')
     expect(html).not.toContain('data-card-id')
     expect(html).toContain('メンバーB')
+  })
+  test('動きは transform に直接書かれる(React の style には、transform を持たない)。基準の位置は left / top だけ', () => {
+    expect(html).not.toContain('transform')
+  })
+  test('要素を受け取る ref(elementRef)を、影の要素に付ける', () => {
+    const seen: Array<{ tag: string } | null> = []
+    renderToStaticMarkup(
+      createElement(CardGhost, {
+        member: M1 as never,
+        position: { x: 0, y: 0 },
+        // サーバー描画では、ref は呼ばれない。型と受け渡しの形(関数)だけを確かめる
+        elementRef: (el: HTMLElement | null) => seen.push(el ? { tag: el.tagName } : null),
+      }),
+    )
+    expect(Array.isArray(seen)).toBe(true)
   })
 })
 

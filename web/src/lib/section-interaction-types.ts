@@ -41,12 +41,12 @@ export type SectionEditorProps = {
   onDelete: () => void
 }
 
-/** C: カードのドラッグが返す、カードの要素に付けるポインタのハンドラ */
+/**
+ * C: カードのドラッグが返す、カードの要素に付けるポインタのハンドラ。
+ * 押したところだけ。動き・離し・取り消しは、押した瞬間から window で受ける(`web/src/lib/drag-session.ts`。速く動かして、カードの外へ出ても追従する)
+ */
 export type CardDragHandlers = {
   onPointerDown: PointerEventHandler<HTMLElement>
-  onPointerMove: PointerEventHandler<HTMLElement>
-  onPointerUp: PointerEventHandler<HTMLElement>
-  onPointerCancel: PointerEventHandler<HTMLElement>
 }
 
 /**
@@ -64,9 +64,12 @@ export type UseCardDragOptions = {
 /** C: カードのドラッグの戻り値 */
 export type UseCardDragResult = {
   draggingId: string | null
+  /** 影のカードの基準の位置(ドラッグを始めたときのカードの左上)。以降の動きは、`ghostRef` の要素の transform に直接書かれる */
   previewPosition: Point | null
   hoverSectionId: string | null
   getDragHandlers: (memberId: string) => CardDragHandlers
+  /** 影のカードの要素に付ける(React の状態を経由せず、動くたびに transform を書くため) */
+  ghostRef: (el: HTMLElement | null) => void
 }
 
 /**

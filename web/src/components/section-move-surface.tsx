@@ -1,17 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
+import { flushSync } from 'react-dom'
 import type { SectionEditorProps } from '#/components/section-editor'
+import { collectFollowers, type FollowRoot } from '#/lib/drag-follow'
+import type { DragTarget } from '#/lib/drag-session'
 import type { Rect } from '#/lib/section-edit-geometry'
-import {
-  IDLE,
-  cancelDrag,
-  dragPreview,
-  endDrag,
-  moveDrag,
-  pressDrag,
-  type DragState,
-} from '#/lib/section-editor-state'
-import { sectionStyle } from '#/lib/section-style'
+import { createSectionDragController, type SectionDragController } from '#/lib/section-drag-controller'
 
 // セクションの内側の「動かす面」。セクションを、カードのように、内側の空いている場所をつかんでドラッグして動かせるようにする。
 //
@@ -20,18 +14,25 @@ import { sectionStyle } from '#/lib/section-style'
 // 振る舞い(`canEdit` のときだけ。false のときは、何も出さず、何も受けない):
 // - 押したら、そのセクションを選択する(`onSelect`)。キャンバスの移動(パン)は始めない(押下を、親に伝えない)。
 // - 動きが 4px 以内なら、クリック(選択するだけ。動かさない)。超えたらドラッグになり、**押した点を起点に**動く。
-// - ドラッグ中は、見た目だけを更新する(破線のプレビュー)。確定は、離したときに 1 回だけ `onChange(rect)`。動かなかったら呼ばない。
-//   所属メンバーのカードの連動は、`onChange` を受ける側(`updateSection` の楽観更新)が行う(ここでは動かさない)。
+// - **マウスに追従する**: 押した瞬間から離すまで、window で動きを受ける(速く動かしても、面の外へ出ても追従する)。
+//   動いている間は、セクションの四角・編集枠・中のカードを、transform で一緒に動かす(React の状態を経由しない。1 フレームに 1 回)。
+//   つかんだ点が、いつもマウスの下にある(Figma と同じ)。確定は、離したときに 1 回だけ `onChange(rect)`。動かなかったら呼ばない。
+//   所属メンバーのカードの連動は、`onChange` を受ける側(`updateSection` の楽観更新)が行う。transform は、その反映と同時に戻す
 // - Esc・`pointercancel` で取り消し(`onChange` は呼ばない)。右クリックは無視。2 本目の指は、押している間は無視する(パンも始めない)。
 // - `data-no-deselect`: この面のクリックが、「背景のクリック」として、選択を外さないようにする(キャンバスのクリックの判定が無視する)。
-// 計算は、編集枠と同じ移動の遷移(`section-editor-state.ts`。画面の差分を拡大率で割って、座標の上限に収める)を使う。
+// 計算と後始末は、`section-drag-controller.ts`(編集枠の、札・帯・ハンドルと同じ制御部)が行う。
 
 export type SectionMoveSurfaceProps = Pick<
   SectionEditorProps,
   'section' | 'canEdit' | 'scale' | 'onSelect' | 'onChange' | 'onPreview' | 'offsetX' | 'offsetY'
->
+> & {
+  /** 一緒に動かす、位置を持つ所属メンバー(api と同じ規則)。省略は、なし */
+  followMemberIds?: readonly string[]
+}
 
-type Latest = Pick<SectionMoveSurfaceProps, 'scale' | 'onSelect' | 'onChange' | 'onPreview'> & { base: Rect }
+type Latest = Pick<SectionMoveSurfaceProps, 'scale' | 'onSelect' | 'onChange' | 'onPreview' | 'followMemberIds' | 'section'> & {
+  base: Rect
+}
 
 export function SectionMoveSurface({
   section,
@@ -40,50 +41,49 @@ export function SectionMoveSurface({
   onSelect,
   onChange,
   onPreview,
+  followMemberIds,
   offsetX = 0,
   offsetY = 0,
 }: SectionMoveSurfaceProps) {
   const base: Rect = { x: section.x, y: section.y, width: section.width, height: section.height }
 
   // イベントの中(古い render の関数)から、最新の値を読むための入れ物
-  const latest = useRef<Latest>({ base, scale, onSelect, onChange, onPreview })
-  latest.current = { base, scale, onSelect, onChange, onPreview }
+  const latest = useRef<Latest>({ base, scale, onSelect, onChange, onPreview, followMemberIds, section })
+  latest.current = { base, scale, onSelect, onChange, onPreview, followMemberIds, section }
 
-  const [drag, setDrag] = useState<DragState>(IDLE)
-  const dragRef = useRef<DragState>(IDLE)
-  const update = (next: DragState) => {
-    dragRef.current = next
-    setDrag(next)
-    // 親に、動かしている最中か(プレビューの四角あり)を知らせる。Esc の優先順位に使う
-    latest.current.onPreview?.(dragPreview(next))
+  // カーソル(つかんでいる間は grabbing)のためだけの状態。動くたびには変わらない(確定と終わりのときだけ)
+  const [dragging, setDragging] = useState(false)
+
+  const controllerRef = useRef<SectionDragController | null>(null)
+  if (controllerRef.current === null) {
+    controllerRef.current = createSectionDragController({
+      getTarget: () => window as unknown as DragTarget,
+      getLock: (cursor) => ({ body: document.body, cursor }),
+      getBase: () => latest.current.base,
+      getScale: () => latest.current.scale,
+      getFollowers: () =>
+        collectFollowers(
+          document as unknown as FollowRoot,
+          latest.current.section.sectionId,
+          latest.current.followMemberIds ?? [],
+        ),
+      batch: (fn) => flushSync(fn),
+      onCommit: (rect) => latest.current.onChange(rect),
+      // 親に、動かしている最中か(四角あり)を知らせる。Esc の優先順位に使う(動くたびには呼ばない)
+      onPreview: (rect) => latest.current.onPreview?.(rect),
+      onLive: () => {},
+      onActive: setDragging,
+    })
   }
-
-  // 押している間の Esc で、取り消す
-  useEffect(() => {
-    if (drag.phase === 'idle') return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') update(cancelDrag())
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [drag.phase])
+  const controller = controllerRef.current
 
   // リーダーでなくなった・消えたときは、途中のドラッグを捨てる
   useEffect(() => {
-    if (!canEdit && dragRef.current.phase !== 'idle') update(cancelDrag())
-  }, [canEdit])
-  useEffect(
-    () => () => {
-      if (dragRef.current.phase === 'dragging') latest.current.onPreview?.(null)
-    },
-    [],
-  )
+    if (!canEdit) controller.cancel()
+  }, [canEdit, controller])
+  useEffect(() => () => controller.dispose(), [controller])
 
   if (!canEdit) return null
-
-  const live = dragPreview(drag)
-  const dragging = drag.phase === 'dragging'
-  const style = sectionStyle(section.color)
 
   return (
     <div
@@ -100,7 +100,7 @@ export function SectionMoveSurface({
       }}
       onPointerDown={(e: ReactPointerEvent<HTMLElement>) => {
         // 動かしている最中の、ほかのポインタ(2 本目の指)は、無視する(パンも、始めない)
-        if (dragRef.current.phase !== 'idle' && dragRef.current.pointerId !== e.pointerId) {
+        if (controller.isActive() && !e.isPrimary) {
           e.stopPropagation()
           return
         }
@@ -108,46 +108,9 @@ export function SectionMoveSurface({
         if (e.button !== 0 || !e.isPrimary) return
         e.stopPropagation()
         e.preventDefault()
-        e.currentTarget.setPointerCapture(e.pointerId)
         latest.current.onSelect()
-        update(pressDrag({ type: 'move' }, latest.current.base, { x: e.clientX, y: e.clientY }, e.pointerId))
+        controller.start({ type: 'move' }, e)
       }}
-      onPointerMove={(e: ReactPointerEvent<HTMLElement>) => {
-        if (dragRef.current.phase === 'idle') return
-        const next = moveDrag(dragRef.current, { x: e.clientX, y: e.clientY }, latest.current.scale, e.pointerId)
-        if (next !== dragRef.current) update(next)
-      }}
-      onPointerUp={(e: ReactPointerEvent<HTMLElement>) => {
-        const result = endDrag(dragRef.current, e.pointerId)
-        if (result.state === dragRef.current) return // ほかのポインタ・待機中
-        update(result.state)
-        if (result.commit) latest.current.onChange(result.commit)
-      }}
-      onPointerCancel={(e: ReactPointerEvent<HTMLElement>) => {
-        const d = dragRef.current
-        if (d.phase !== 'idle' && d.pointerId === e.pointerId) update(cancelDrag())
-      }}
-      onLostPointerCapture={(e: ReactPointerEvent<HTMLElement>) => {
-        const d = dragRef.current
-        if (d.phase !== 'idle' && d.pointerId === e.pointerId) update(cancelDrag())
-      }}
-    >
-      {/* ドラッグ中の、見た目だけの四角(確定するまで、元のセクションはそのまま) */}
-      {live && (
-        <div
-          aria-hidden="true"
-          data-section-move-preview=""
-          className="pointer-events-none absolute border-2 border-dashed"
-          style={{
-            left: live.x - base.x,
-            top: live.y - base.y,
-            width: live.width,
-            height: live.height,
-            borderColor: style.line,
-            backgroundColor: style.fill,
-          }}
-        />
-      )}
-    </div>
+    />
   )
 }
