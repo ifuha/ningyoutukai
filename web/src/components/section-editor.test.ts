@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { LABEL_FONT_PX, LABEL_LINE_PX } from '../lib/section-label'
+import { SectionBox } from './section-box'
 import { SectionColorPicker } from './section-color-picker'
 import { SectionEditor, type SectionEditorProps } from './section-editor'
 import { SectionEditorMenu } from './section-editor-menu'
@@ -66,12 +68,16 @@ describe('SectionEditor: 出すもの・出さないもの', () => {
     expect(render({ interiorSelectable: false })).not.toContain('data-section-interior')
   })
 
-  test('選択中: ハンドルが 8 つ(角 4 つと辺 4 つ)、メニューのボタン、選択の印', () => {
+  test('選択中: ハンドルが 8 つ(角 4 つと辺 4 つ)と、選択の印。「⋯」のメニューのボタンは出ない', () => {
     const html = render({ selected: true })
     expect(count(html, 'data-resize-handle=')).toBe(8)
     for (const h of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) expect(html).toContain(`data-resize-handle="${h}"`)
-    expect(html).toContain('aria-label="セクションのメニュー"')
     expect(html).toContain('data-selected="true"')
+    // 「⋯」のボタン(ユーザーの指示で消した)
+    expect(html).not.toContain('aria-label="セクションのメニュー"')
+    expect(html).not.toContain('aria-haspopup')
+    expect(html).not.toContain('<button')
+    expect(html).not.toContain('data-section-menu')
   })
 
   test('メニューは、最初は閉じている(色の選択も削除も出ない)', () => {
@@ -135,18 +141,18 @@ describe('SectionEditor: 名前(枠の上の文字)をつかむ場所は、Secti
   test('幅 300 のセクション: 左端から、上辺の 20px 上〜4px 下(幅 160、高さ 24)。文字の帯(16px 上〜上辺)を含む', () => {
     expect(tagBox(render())).toBe('left:0;top:-20px;width:160px;height:24px')
   })
-  test('狭いセクション(幅 80)は、メニューの分を空けて、幅 40', () => {
+  test('狭いセクション(幅 80)は、セクションの幅いっぱい(「⋯」のボタンを消したので、メニューの分の空きは無い)', () => {
     const narrow = { ...section, width: 80 }
-    expect(tagBox(render({ section: narrow }))).toBe('left:0;top:-20px;width:40px;height:24px')
+    expect(tagBox(render({ section: narrow }))).toBe('left:0;top:-20px;width:80px;height:24px')
   })
   test('名前のつかむ場所の上辺(-20)は、文字の帯の上辺(-16)より上にあり、旧い札(左へ 18px・120×32)の位置ではない', () => {
     const html = render()
     expect(html).not.toContain('left:18px;top:-16px')
     expect(html).not.toContain('width:120px;height:32px')
   })
-  test('選択中のメニューのボタンは、名前のつかむ場所の右どなり(幅 300 で、左 166px・上 -16px)', () => {
-    expect(render({ selected: true })).toContain('left:166px;top:-16px')
-    expect(render({ selected: true, section: { ...section, width: 80 } })).toContain('left:46px;top:-16px')
+  test('選択中でも、メニューのボタンは、名前のつかむ場所の右どなりに出ない(旧い位置: 幅 300 で左 166px・上 -16px)', () => {
+    expect(render({ selected: true })).not.toContain('left:166px;top:-16px')
+    expect(render({ selected: true, section: { ...section, width: 80 } })).not.toContain('left:46px;top:-16px')
   })
   test('ドラッグ中でなければ、元の四角の幅で決まる(offsetX は名前の位置を変えない)', () => {
     expect(tagBox(render({ offsetX: 50, offsetY: -20 }))).toBe('left:0;top:-20px;width:160px;height:24px')
@@ -175,7 +181,7 @@ describe('SectionColorPicker', () => {
   })
 })
 
-describe('SectionEditorMenu', () => {
+describe('SectionEditorMenu(「⋯」のボタンは無い。キーボードの Delete で開く、削除の確認だけが出る)', () => {
   const menu = (state: 'closed' | 'menu' | 'confirm-delete', scale = 1) =>
     renderToStaticMarkup(
       createElement(SectionEditorMenu, {
@@ -183,8 +189,7 @@ describe('SectionEditorMenu', () => {
         color: 'red',
         menu: state,
         scale,
-        offset: { left: 166, top: -16 },
-        onToggle: () => {},
+        offset: { left: 0, top: 4 },
         onPickColor: () => {},
         onAskDelete: () => {},
         onCancelDelete: () => {},
@@ -192,21 +197,14 @@ describe('SectionEditorMenu', () => {
       }),
     )
 
-  test('閉じているときは、ボタンだけ(aria-expanded が false)', () => {
+  test('閉じているときは、何も出さない(ボタンは無い)', () => {
     const html = menu('closed')
-    expect(html).toContain('aria-expanded="false"')
-    expect(html).not.toContain('セクションの色')
+    expect(html).toBe('')
+    expect(html).not.toContain('<button')
+    expect(html).not.toContain('aria-expanded')
   })
 
-  test('開くと、色の選択と、削除のボタンが出る', () => {
-    const html = menu('menu')
-    expect(html).toContain('aria-expanded="true"')
-    expect(html).toContain('セクションの色')
-    expect(html).toContain('>削除<')
-    expect(html).not.toContain('を削除しますか')
-  })
-
-  test('削除は確認を挟む: 名前と、中のメンバーが無所属に戻ることを示し、「削除する」「やめる」が出る', () => {
+  test('削除の確認: 名前と、中のメンバーが無所属に戻ることを示し、「削除する」「やめる」が出る(メニューのボタンは出ない)', () => {
     const html = menu('confirm-delete')
     expect(html).toContain('role="alertdialog"')
     expect(html).toContain('「設計チーム」を削除しますか?')
@@ -214,12 +212,23 @@ describe('SectionEditorMenu', () => {
     expect(html).toContain('削除する')
     expect(html).toContain('やめる')
     expect(html).not.toContain('セクションの色')
+    expect(html).not.toContain('aria-haspopup')
+    expect(html).not.toContain('aria-label="セクションのメニュー"')
+  })
+
+  test('色の選択のメニュー(開く入口は無い。部品は、後で別の入口をつけるために残してある): 開けば、色の選択と削除が出る', () => {
+    const html = menu('menu')
+    expect(html).toContain('role="menu"')
+    expect(html).toContain('セクションの色')
+    expect(html).toContain('>削除<')
+    expect(html).not.toContain('を削除しますか')
+    expect(html).not.toContain('aria-expanded')
   })
 
   test('拡大率を打ち消す(拡大率 2 で scale(0.5))。渡された位置に置く', () => {
-    const html = menu('closed', 2)
+    const html = menu('confirm-delete', 2)
     expect(html).toContain('scale(0.5)')
-    expect(html).toContain('left:166px;top:-16px')
+    expect(html).toContain('left:0;top:4px')
   })
 })
 
@@ -242,5 +251,53 @@ describe('SectionNameEditor', () => {
     const html = editor('あ'.repeat(60))
     const value = /value="([^"]*)"/.exec(html)?.[1] ?? ''
     expect([...value].length).toBe(50)
+  })
+})
+
+describe('名前は、拡大・縮小(ズーム)に合わせて、文字の大きさが変わる(キャンバスの単位で描く。拡大率を打ち消さない)', () => {
+  // 名前(`data-section-label`)の style を取り出す
+  const labelStyle = (html: string) => {
+    const i = html.indexOf('data-section-label')
+    const open = html.lastIndexOf('<span', i)
+    return /style="([^"]*)"/.exec(html.slice(open))?.[1] ?? ''
+  }
+  const box = () => renderToStaticMarkup(createElement(SectionBox, { section }))
+  // 名前をつかむ場所の外枠の style を取り出す
+  const tagBox = (html: string) => {
+    const i = html.indexOf('data-section-tag')
+    const open = html.lastIndexOf('<div', html.lastIndexOf('<div', i) - 1)
+    return /style="([^"]*)"/.exec(html.slice(open, i))?.[1] ?? ''
+  }
+
+  test('名前の文字は、キャンバスの単位の px(14px、行の高さ 16px)で描かれる。rem 基準のクラス(text-sm)は使わない', () => {
+    const html = box()
+    const style = labelStyle(html)
+    expect(style).toContain(`font-size:${LABEL_FONT_PX}px`)
+    expect(style).toContain(`line-height:${LABEL_LINE_PX}px`)
+    expect(html).not.toContain('text-sm')
+  })
+
+  test('名前の描画は、拡大率を打ち消す変換(scale(…))を持たない(変換は、親のキャンバスの層がかける)', () => {
+    const html = box()
+    expect(html).not.toContain('scale(')
+    expect(html).not.toContain('transform')
+  })
+
+  test('名前をつかむ場所は、拡大率が違っても、キャンバスの単位で同じ(画面上の大きさは、親の変換で、拡大率に比例する)', () => {
+    const at = (scale: number) => tagBox(render({ scale }))
+    expect(at(0.25)).toBe('left:0;top:-20px;width:160px;height:24px')
+    expect(at(1)).toBe(at(0.25))
+    expect(at(4)).toBe(at(0.25))
+  })
+
+  test('名前の入力欄の文字は、名前と同じ大きさ・行の高さ・左の余白(拡大・縮小に合わせて、一緒に変わる)', () => {
+    const html = renderToStaticMarkup(
+      createElement(SectionNameEditor, { initial: '設計チーム', onCommit: () => {}, onCancel: () => {} }),
+    )
+    expect(html).toContain(`font-size:${LABEL_FONT_PX}px`)
+    expect(html).toContain(`line-height:${LABEL_LINE_PX}px`)
+    expect(html).toContain('padding-left:6px')
+    expect(html).not.toContain('text-sm')
+    expect(html).not.toContain('scale(')
   })
 })

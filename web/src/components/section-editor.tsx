@@ -24,7 +24,7 @@ import {
   type DragKind,
   type MenuState,
 } from '#/lib/section-editor-state'
-import { labelHitRect, menuButtonOffset } from '#/lib/section-label'
+import { confirmPanelOffset, labelHitRect } from '#/lib/section-label'
 import { sectionStyle } from '#/lib/section-style'
 
 // セクションの編集枠。`SectionBox`(セクションの見た目を描く)の上に重ねる、編集用の層
@@ -41,7 +41,8 @@ import { sectionStyle } from '#/lib/section-style'
 //   大きさの変更は、見た目の四角(破線とハンドル)を、1 フレームに 1 回だけ更新する。
 //   確定は、ポインタを離したときに 1 回だけ `onChange(rect)`(離した座標で決める)。動かなかったら呼ばない。Esc で取り消し
 // - 名前: 札をダブルクリックで、その場で編集(Enter・外のクリックで `onRename`、Esc で取り消し)
-// - 色・削除: 札のとなりの「⋯」メニュー。削除は確認を挟む。選択中の Delete / Backspace でも、確認を開く
+// - 削除: 選択中の Delete / Backspace で、確認を開く(確認を挟む)。「⋯」のメニューのボタンは、ユーザーの指示で消した
+//   色の変更は、いま、入口が無い(`onColorChange` と色の選択のメニューは、後で別の入口をつけるために残してある。使われていない)
 // - 矢印キー: 1px(Shift で 10px)。連打は、待ち時間(350ms)のあとに 1 回にまとめて `onChange`
 // 座標は、すべてキャンバスの座標(`offsetX` / `offsetY` は、`SectionBox` と同じ全体のずらし量で、表示の位置にだけ足す)
 
@@ -66,6 +67,7 @@ export type SectionEditorProps = {
   onChange: (rect: Rect) => void
   /** 名前の確定(前後の空白を取り除いた、1〜50 文字) */
   onRename: (name: string) => void
+  /** 色の変更。いまは、入口(「⋯」のメニュー)を消したので、呼ばれない。後で別の入口をつけるために残してある */
   onColorChange: (color: SectionColor) => void
   /** 削除の確認で「削除する」を押したとき */
   onDelete: () => void
@@ -402,15 +404,14 @@ export function SectionEditor({
           />
         ))}
 
-      {/* 選択中: 色と削除のメニュー */}
+      {/* 選択中: 削除の確認(Delete / Backspace で開く)。「⋯」のボタンは無い。色の選択のメニューは、開く入口が無い(使われていない) */}
       {selected && (
         <SectionEditorMenu
           name={section.sectionName}
           color={section.color}
           menu={menu}
           scale={scale}
-          offset={menuButtonOffset(live.width)}
-          onToggle={() => setMenu((m) => menuReduce(m, { type: 'toggle' }))}
+          offset={confirmPanelOffset(live.width)}
           onPickColor={(chosen) => {
             const r = pickColor(section.color, chosen)
             setMenu(r.menu)

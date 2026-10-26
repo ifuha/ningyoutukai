@@ -277,7 +277,11 @@ export type MenuAction =
   | { type: 'ask-delete' }
   | { type: 'cancel-delete' }
 
-/** メニューの状態遷移。確認の表示(`confirm-delete`)は、「やめる」か、閉じるまで残る */
+/**
+ * メニューの状態遷移。確認の表示(`confirm-delete`)は、「やめる」か、閉じるまで残る
+ * 「⋯」のボタンは無い(ユーザーの指示で消した)ので、`menu`(色の選択と削除のメニュー)を開く入口は、いまは無い(`toggle` は、後で別の入口をつけるために残す)。
+ * そのため、確認で「やめる」を押したら、`menu` ではなく `closed` に戻る(入口の無いメニューが、突然開かないように)
+ */
 export function menuReduce(state: MenuState, action: MenuAction): MenuState {
   switch (action.type) {
     case 'toggle':
@@ -287,7 +291,7 @@ export function menuReduce(state: MenuState, action: MenuAction): MenuState {
     case 'ask-delete':
       return 'confirm-delete'
     case 'cancel-delete':
-      return state === 'confirm-delete' ? 'menu' : state
+      return state === 'confirm-delete' ? 'closed' : state
   }
 }
 

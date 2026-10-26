@@ -390,12 +390,17 @@ describe('色と削除のメニュー', () => {
     expect(menuReduce('confirm-delete', { type: 'toggle' })).toBe('closed')
     for (const s of ['closed', 'menu', 'confirm-delete'] as const) expect(menuReduce(s, { type: 'close' })).toBe('closed')
   })
-  test('削除は、確認を挟む(menu → confirm-delete → 削除する)。やめるとメニューに戻る', () => {
+  test('削除は、確認を挟む(confirm-delete → 削除する)。やめると閉じる(「⋯」のボタンが無いので、入口の無いメニューには戻らない)', () => {
     const asked = menuReduce('menu', { type: 'ask-delete' })
     expect(asked).toBe('confirm-delete')
-    expect(menuReduce(asked, { type: 'cancel-delete' })).toBe('menu')
+    expect(menuReduce(asked, { type: 'cancel-delete' })).toBe('closed')
+    expect(menuReduce('closed', { type: 'cancel-delete' })).toBe('closed')
     expect(menuReduce('menu', { type: 'cancel-delete' })).toBe('menu')
     expect(confirmDelete(asked)).toEqual({ menu: 'closed', remove: true })
+  })
+  test('キーボードの Delete → 確認 →「やめる」で、元の閉じた状態に戻る(メニューが開いたままにならない)', () => {
+    const asked = menuReduce('closed', { type: 'ask-delete' })
+    expect(menuReduce(asked, { type: 'cancel-delete' })).toBe('closed')
   })
   test('確認の表示でない状態からは、削除しない(1 回で消えない)', () => {
     expect(confirmDelete('menu')).toEqual({ menu: 'menu', remove: false })

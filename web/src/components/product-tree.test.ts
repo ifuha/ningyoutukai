@@ -5,7 +5,6 @@ import { ProductTree } from './product-tree'
 import { SectionNotice } from './section-notice'
 import { SectionBox } from './section-box'
 import { TreeToolbar } from './tree-toolbar'
-import { TreeZoomBar } from './tree-zoom-bar'
 
 // 画面部品の、最小のスモークテスト(DOM なし。サーバーでのマークアップを検査する)
 // ブラウザでの測定(カードの実際の位置・高さ)と、SVG の線は、ここでは出ない(`tree-layout.test.ts` と `use-card-boxes.test.ts` で、計算を確かめる)
@@ -204,33 +203,26 @@ describe('TreeToolbar', () => {
   })
 })
 
-describe('ProductTree(表示の整理: 操作のヒントと、倍率の +/- と「全体表示」のボタンを置かない)', () => {
+describe('ProductTree(表示の整理: 操作のヒントと、倍率の表示(%)・+/- と「全体表示」のボタンを置かない)', () => {
   const html = render({ tree: tree(L, [M1]) })
   test('細かい操作のヒントの文字が出ない', () => {
     expect(html).not.toContain('二本指スクロール')
     expect(html).not.toContain('2 本指で拡大縮小')
     expect(html).not.toContain('Ctrl+ホイール')
   })
-  test('拡大・縮小のボタン(+ と −)と、「全体表示」のボタンが出ない。倍率(%)は残る', () => {
+  test('拡大・縮小のボタン(+ と −)と、「全体表示」のボタンが出ない。倍率(%)の表示も出ない', () => {
     expect(html).not.toContain('aria-label="拡大"')
     expect(html).not.toContain('aria-label="縮小"')
     expect(html).not.toContain('aria-label="全体を表示"')
     expect(html).not.toContain('title="全体を表示(0)"')
     expect(html).not.toContain('>全体表示</button>')
-    expect(html).toContain('%')
+    // 倍率の表示(「80%」のような文字だけの要素)が無い
+    expect(html).not.toMatch(/>\s*\d+%\s*</)
+    expect(html).not.toContain('tabular-nums')
   })
   test('キーボードでの操作の案内(aria-label)は残る(全体表示は、キー 0 でできる)', () => {
     expect(html).toContain('+ と - で拡大縮小')
     expect(html).toContain('0 で全体表示')
-  })
-})
-
-describe('TreeZoomBar', () => {
-  test('倍率(%)の表示だけ。ボタンは 1 つも無い(+/-、全体表示)', () => {
-    const html = renderToStaticMarkup(createElement(TreeZoomBar, { percent: 80 }))
-    expect(html).toContain('80%')
-    expect(html).not.toContain('全体表示')
-    expect(html).not.toContain('<button')
   })
 })
 
