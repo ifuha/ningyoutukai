@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { MemberCard } from '#/components/member-card'
 import { SectionBox } from '#/components/section-box'
 import { SectionDrawLayer } from '#/components/section-draw-layer'
+import { SectionEditor } from '#/components/section-editor'
 import { SectionNotice } from '#/components/section-notice'
 import { TreeConnectors } from '#/components/tree-connectors'
 import { TreeToolbar } from '#/components/tree-toolbar'
@@ -320,6 +321,24 @@ export function ProductTree({
               />
             </div>
           ))}
+          {/* 各セクションの編集枠(B)。選択・大きさの変更・移動・名前・色・削除。リーダーだけ(リーダーでなければ、何も出さない)。
+              カードの後(上)に置く: 外枠は pointer-events を通し、つかめる場所(枠の線の近くの帯、札、選択中のハンドル、「⋯」)だけが受けるので、
+              内側のカードのドラッグを妨げない。内側のクリックでの選択は、キャンバスのクリック(`handleCanvasClick`)が受ける
+              (`interiorSelectable` は、カードより下に置くときだけ使うので、使わない)。
+              `data-no-deselect` で包む: 編集枠の中のクリック(札・メニューの余白など)が、「背景のクリック」として選択を外さないようにする。
+              `display: contents` なので、配置には影響しない */}
+          {canEditSections && (
+            <div data-no-deselect className="contents">
+              {sections.map((s) => (
+                <SectionEditor
+                  key={s.sectionId}
+                  {...interaction.editorPropsFor(s)}
+                  offsetX={bounds.offsetX}
+                  offsetY={bounds.offsetY}
+                />
+              ))}
+            </div>
+          )}
           {/* 「セクション」の道具で、キャンバスにドラッグして、セクションを置く層(A)。`active` でなければ、何も出さず、何も奪わない。
               重ね順は z-30(カードとセクションの上、道具のバー(z-10 の外側の層)より下)。リーダーでなければ、`active` は false */}
           <SectionDrawLayer
