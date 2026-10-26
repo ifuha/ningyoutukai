@@ -112,6 +112,13 @@ describe('移動: 速く動かしても、四角・編集枠・中のカード�
     expect(followers[0]!.style.transform).toBe('') // フレームが来るまで、書かない
     scheduler.flush()
     expect(followers[0]!.style.transform).toBe('translate(500px, 300px)')
+    // フレームを進めても、動かす要素は探し直さない(動くたびに document を探さない)
+    target.dispatch('pointermove', pointerEvent(1, 900, 600))
+    scheduler.flush()
+    target.dispatch('pointermove', pointerEvent(1, 950, 650))
+    scheduler.flush()
+    expect(log.getFollowersCalls).toBe(1)
+    expect(followers[0]!.style.transform).toBe('translate(750px, 450px)')
   })
 
   test('離したときの座標で、確定する四角を決める(最後の pointermove ではない)', () => {
