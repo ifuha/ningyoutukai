@@ -72,9 +72,9 @@ describe('runOptimistic', () => {
     expect(settled).toBe(1)
   })
 
-  test('apply が null(先に更新しない)のときは、書き込まない。失敗しても、戻す書き込みだけ(同じ値)', async () => {
+  test('apply が null(先に更新しない)のときは、書き込まない', async () => {
     const initial: Snap = { sections: ['a'], tree: 't0' }
-    const { store, get } = makeStore(initial)
+    const { store, get, writes } = makeStore(initial)
     let called = 0
     const r = await runOptimistic({
       store,
@@ -88,6 +88,27 @@ describe('runOptimistic', () => {
     expect(r.ok).toBe(true)
     expect(called).toBe(1)
     expect(get()).toEqual(initial)
+    expect(writes.length).toBe(0)
+  })
+
+  test('先に更新していないなら、失敗しても元に戻す書き込みをしない(その間に入った他の更新を、古い値で上書きしない)', async () => {
+    const initial: Snap = { sections: ['a'], tree: 't0' }
+    const { store, get, writes } = makeStore(initial)
+    const errors: unknown[] = []
+    const r = await runOptimistic({
+      store,
+      apply: () => null,
+      call: async () => {
+        // api を待っている間に、別の更新が入った
+        store.write({ sections: ['a', '別の更新'], tree: 't0' })
+        throw new Error('失敗')
+      },
+      onError: (e) => errors.push(e),
+    })
+    expect(r.ok).toBe(false)
+    expect(errors.length).toBe(1)
+    expect(get().sections).toEqual(['a', '別の更新']) // 古い値(['a'])で上書きされない
+    expect(writes.length).toBe(1)
   })
 
   test('before(進行中の取得の取り消しなど)が、値を読む前に実行される', async () => {

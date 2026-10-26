@@ -35,8 +35,8 @@ export async function runOptimistic<Snapshot, R>({
       const value = await call()
       return { ok: true, value }
     } catch (error) {
-      // 失敗: 先に更新した値を、元に戻す
-      store.write(previous)
+      // 失敗: 先に更新したときだけ、元に戻す(更新していないなら、その間に入った他の更新を、古い値で上書きしない)
+      if (next) store.write(previous)
       onError(error)
       return { ok: false, error }
     }
