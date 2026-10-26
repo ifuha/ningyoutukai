@@ -3,13 +3,19 @@
 // 座標の考え方:
 // - 「自動配置」(位置を持たないカード。リーダーを上、メンバーを横に並べる、これまでの配置)の左上が、キャンバスの原点(0, 0)
 // - セクションと、位置を持つカード(`positionX` / `positionY` が両方ある)は、その原点からの絶対座標に置く
+// - **座標は、どちらも「左上」の座標**(セクションの `x` / `y` も、カードの `positionX` / `positionY` も。中心ではない)。
+//   右へ `width`(カードは CARD_WIDTH)、下へ `height`(カードは実際の高さ)に広がる
 // - 負の座標があるときは、全体を右下へずらして(offset)、中身の左上が (0, 0) 以上になるようにする
 
-/** カードの幅(px)。`member-card.tsx` の `w-[240px]` と同じ */
+/**
+ * カードの幅(px)。実際の幅 = `member-card.tsx` の `w-[240px]`。
+ * (Figma の `task` カードは 236 だが、実装のカードの実寸の 240 を使う)
+ */
 export const CARD_WIDTH = 240
 /**
- * カードの高さの目安(px)。実際の高さはタスクの数で変わる(見出し + タスク 3 件まで + フッター)ので、
- * 全体の大きさ(全体表示の倍率・移動範囲)を決めるときの、余裕を見た上限として使う。線の位置には使わない(測った値を使う)
+ * カードの高さの目安(px)。実際の高さは、タスクの数で変わる(見出し + タスク 0〜3 件 + フッターで、およそ 118〜230)。
+ * (Figma の `task` カードの 138 は、タスク 1 件のときの高さに近い)
+ * 全体の大きさ(全体表示の倍率・移動範囲)を決めるときの、余裕を見た上限としてだけ使う。線の位置には使わない(測った値を使う)
  */
 export const CARD_HEIGHT_ESTIMATE = 240
 /** 矢印の三角の、幅と高さ(px)。`product-tree.tsx` の自動配置の矢印(幅 10、高さ 7)と同じ */
@@ -55,6 +61,14 @@ export function splitByPosition<T extends Positioned>(
 
 export type Rect = { x: number; y: number; width: number; height: number }
 
+/**
+ * 位置を持つカードが占める矩形(全体の大きさを決めるための、高さは目安)。
+ * 座標 (x, y) は**カードの左上**(中心ではない)。右へ CARD_WIDTH、下へ CARD_HEIGHT_ESTIMATE
+ */
+export function cardRect(x: number, y: number): Rect {
+  return { x, y, width: CARD_WIDTH, height: CARD_HEIGHT_ESTIMATE }
+}
+
 export type CanvasBounds = {
   /** 負の座標があるとき、全体を右へずらす量(なければ 0) */
   offsetX: number
@@ -89,7 +103,10 @@ export function canvasBounds({
     maxY = Math.max(maxY, y + h)
   }
   for (const s of sections) extend(s.x, s.y, s.width, s.height)
-  for (const c of cards) extend(c.x, c.y, CARD_WIDTH, CARD_HEIGHT_ESTIMATE)
+  for (const c of cards) {
+    const r = cardRect(c.x, c.y)
+    extend(r.x, r.y, r.width, r.height)
+  }
   return {
     // `-minX` だと、0 のとき -0 になるので、0 から引く
     offsetX: 0 - minX,

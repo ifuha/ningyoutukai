@@ -5,6 +5,7 @@ import {
   CARD_WIDTH,
   CONNECTOR_DROP,
   canvasBounds,
+  cardRect,
   connectorKind,
   connectorPath,
   hasPosition,
@@ -69,6 +70,34 @@ describe('splitByPosition', () => {
   })
   test('空でも動く', () => {
     expect(splitByPosition([])).toEqual({ flow: [], placed: [] })
+  })
+})
+
+describe('cardRect(座標は、カードの左上)', () => {
+  test('(x, y) は左上で、右へ幅(240)、下へ高さの目安に広がる(中心ではない)', () => {
+    expect(cardRect(100, 50)).toEqual({
+      x: 100,
+      y: 50,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT_ESTIMATE,
+    })
+    expect(CARD_WIDTH).toBe(240) // member-card.tsx の w-[240px](Figma の 236 ではなく、実寸)
+  })
+  test('原点(0, 0)のカードは、原点から右下へ広がる(左上に置く。ずらさない)', () => {
+    const b = canvasBounds({ sections: [], cards: [{ x: 0, y: 0 }] })
+    expect(b.offsetX).toBe(0)
+    expect(b.offsetY).toBe(0)
+    expect(b.minWidth).toBe(CARD_WIDTH)
+    expect(b.minHeight).toBe(CARD_HEIGHT_ESTIMATE)
+  })
+  test('負の座標のカードは、左上の座標の分だけ(中心の分を足さず)全体をずらす', () => {
+    const b = canvasBounds({ sections: [], cards: [{ x: -100, y: -50 }] })
+    // 中心の座標なら、ずらす量は 100 + 120 になる。左上なので 100 と 50
+    expect(b.offsetX).toBe(100)
+    expect(b.offsetY).toBe(50)
+    // ずらしたあと、左上は (0, 0)。右端は -100 + 240 + 100 = 240(原点 0 より右の範囲は、カードの右端まで)
+    expect(b.minWidth).toBe(CARD_WIDTH)
+    expect(b.minHeight).toBe(CARD_HEIGHT_ESTIMATE)
   })
 })
 
