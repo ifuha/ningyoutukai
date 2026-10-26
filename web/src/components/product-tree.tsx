@@ -13,6 +13,7 @@ import { TreeZoomBar } from '#/components/tree-zoom-bar'
 import { boxToCanvasRect, CanvasViewContext, clientToCanvas } from '#/lib/canvas-view'
 import type { CanvasView } from '#/lib/section-interaction-types'
 import { cursorClass } from '#/lib/canvas-tool'
+import { freezeBeforeCommit } from '#/lib/freeze-on-commit'
 import type { Section } from '#/lib/section'
 import { NO_SECTION_ACTIONS } from '#/lib/use-section-actions'
 import type { SectionActions } from '#/lib/use-section-actions'
@@ -130,7 +131,22 @@ export function ProductTree({
     headerHeight,
     BOTTOM_INSET,
   )
-  const { view, dragging, reset, handlers } = usePanZoom(containerRef, size)
+  const { view, dragging, reset, freeze, shiftOrigin, handlers } = usePanZoom(containerRef, size)
+  // 中身のずらし量(負の座標を表示するための、中身の最小座標から決まる値)が変わったとき、どの要素も画面上の位置が変わらないよう、
+  // パンを逆向きに補正する(セクションを左・上へ動かして範囲が変わっても、見ている画面が勝手に動かない)。
+  // レイアウトの直後・描画の前に行うので、ちらつかない。楽観更新の取り消しで、ずらし量が元に戻るときも、同じ計算で元の見え方に戻る
+  const offsetRef = useRef({ x: bounds.offsetX, y: bounds.offsetY })
+  useLayoutEffect(() => {
+    const prev = offsetRef.current
+    const next = { x: bounds.offsetX, y: bounds.offsetY }
+    if (prev.x === next.x && prev.y === next.y) return
+    offsetRef.current = next
+    shiftOrigin(prev, next)
+    // shiftOrigin は、ref と setState だけを使うので、依存に入れなくてよい
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bounds.offsetX, bounds.offsetY])
+  // 編集の確定の直前に、いまの見え方を固定する(自動の全体表示が、編集のたびに計算し直されないように)
+  const guardedActions = freezeBeforeCommit(sectionActions, freeze)
   const scale = view?.scale ?? 1
   // 画面の座標 → キャンバス座標。中身(変換された層)の左上の画面上の位置は、パンを含んで測れる
   const toCanvas = useCallback(
@@ -164,7 +180,7 @@ export function ProductTree({
     [contentRef, bounds.offsetX, bounds.offsetY],
   )
   const interaction = useSectionInteraction({
-    actions: sectionActions,
+    actions: guardedActions,
     canEdit: canEditSections,
     sections,
     scale,
