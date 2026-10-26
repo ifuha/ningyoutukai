@@ -5,6 +5,7 @@ import { CardGhost, DragSlot } from '#/components/member-card-drag'
 import { SectionDrawLayer } from '#/components/section-draw-layer'
 import { SectionEditor } from '#/components/section-editor'
 import { SectionLayer } from '#/components/section-layer'
+import { SectionMoveSurface } from '#/components/section-move-surface'
 import { SectionNotice } from '#/components/section-notice'
 import { TreeConnectors } from '#/components/tree-connectors'
 import { TreeToolbar } from '#/components/tree-toolbar'
@@ -185,6 +186,13 @@ export function ProductTree({
       ? [leader, ...members].find((m) => m.productMemberId === cardDrag.draggingId)
       : undefined
   const mode = interaction.tool
+  // 内側の「動かす面」(カードの下)を出すか。カードのドラッグと同じ条件(リーダーで、「セクション」の道具で描いているときを除く)
+  const moveSurfacesOn = interaction.cardDragOptions.enabled
+  // 重なるセクションは、面積が小さい方を手前(後に描く)にする(内側のセクションを、先につかめる。クリックでの選択と同じ規則)
+  const moveSurfaceSections = useMemo(
+    () => [...sections].sort((a, b) => b.width * b.height - a.width * a.height),
+    [sections],
+  )
   // 「セクション」の道具のときは、ドラッグでの移動を止める(描く層が受ける)。ホイール・ピンチ・キーは、そのまま使える
   const { onPointerDown, onPointerMove, onPointerUp, onPointerCancel, ...otherHandlers } = handlers
   const containerHandlers =
@@ -243,7 +251,26 @@ export function ProductTree({
             offsetX={bounds.offsetX}
             offsetY={bounds.offsetY}
           />
-          {/* 重ね順(下から): セクションの四角 → 親子の線 → 自動配置のカード → 位置を持つカード → 編集枠(B) → ドラッグ中のカードの影(C, z-40)
+          {/* 内側の「動かす面」(カードの下)。カードのない空いた場所のドラッグで、セクションを動かす(カードのように)。
+              リーダーだけ。面積の大きい順に並べるので、重なるときは、小さい(内側の)セクションが手前になる */}
+          {moveSurfacesOn &&
+            moveSurfaceSections.map((s) => {
+              const e = interaction.editorPropsFor(s)
+              return (
+                <SectionMoveSurface
+                  key={s.sectionId}
+                  section={e.section}
+                  canEdit={e.canEdit}
+                  scale={e.scale}
+                  onSelect={e.onSelect}
+                  onChange={e.onChange}
+                  onPreview={e.onPreview}
+                  offsetX={bounds.offsetX}
+                  offsetY={bounds.offsetY}
+                />
+              )
+            })}
+          {/* 重ね順(下から): セクションの四角 → 動かす面 → 親子の線 → 自動配置のカード → 位置を持つカード → 編集枠(B) → ドラッグ中のカードの影(C, z-40)
               描く層(A, z-30)は、道具が「セクション」のときだけ全面を覆う。座標は、キャンバス座標に bounds.offsetX / offsetY を足したもの。
               A・B・C に渡す値は、`useSectionInteraction` が作る(リーダーでなければ、すべて無効) */}
           {/* 位置を持つカードへの、実際の位置に合わせた親子の線(SVG)。セクションの上、カードの下 */}
@@ -251,8 +278,11 @@ export function ProductTree({
             <TreeConnectors parent={leaderBox} targets={connectorTargets} />
           )}
           {/* 自動配置(リーダーを上、メンバーを横に並べる)。位置を持つカードは含めない。負の座標があるときは、その分だけずらす */}
+          {/* 動かす面を出すときは、この枠自体はポインタを通す(枠の大きさ=カードの間の空いた場所が、面のドラッグを遮らないように)。
+              カードは、`DragSlot` の `pointer-events-auto` で、これまでどおり受ける */}
           <div
-            className="relative flex w-max flex-col items-center"
+            className={`relative flex w-max flex-col items-center ${moveSurfacesOn ? 'pointer-events-none' : ''}`}
+            data-flow-layer=""
             style={{
               marginLeft: bounds.offsetX || undefined,
               marginTop: bounds.offsetY || undefined,

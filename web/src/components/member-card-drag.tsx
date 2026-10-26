@@ -8,6 +8,7 @@ import type { TreeMember } from '#/lib/tree'
 /**
  * カードを包む要素。ハンドラ(押す・動かす・離す・取り消し)と、`touch-action: none`(タッチで、ブラウザのスクロールに
  * 奪われない)を付ける。ドラッグ中は、元のカードを薄くする(プレビューは、`CardGhost` が別に描く)。
+ * `pointer-events-auto`: 自動配置の枠は、セクションの「動かす面」を出すとき `pointer-events-none` になる。カードは、これまでどおり受ける。
  * ハンドラがない(リーダーでない・「セクション」の道具で描いている間)ときは、何も包まない(これまでと同じ DOM のまま)。
  */
 export function DragSlot({
@@ -21,7 +22,11 @@ export function DragSlot({
 }) {
   if (!handlers) return <>{children}</>
   return (
-    <div {...handlers} data-drag-slot="" className={`touch-none ${dragging ? 'opacity-40' : ''}`}>
+    <div
+      {...handlers}
+      data-drag-slot=""
+      className={`pointer-events-auto touch-none ${dragging ? 'opacity-40' : ''}`}
+    >
       {children}
     </div>
   )
