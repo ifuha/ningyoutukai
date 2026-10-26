@@ -9,7 +9,10 @@ type Task = typeof tasks.$inferSelect;
 type TaskType = typeof taskTypes.$inferSelect;
 type Product = typeof products.$inferSelect;
 
-export type MemberRow = Pick<Member, "productMemberId" | "userId" | "role"> &
+export type MemberRow = Pick<
+  Member,
+  "productMemberId" | "userId" | "role" | "sectionId" | "positionX" | "positionY"
+> &
   Pick<User, "userName" | "avatarUrl">;
 
 // タスクの種類は left join なので、種類名は null になりうる
@@ -57,6 +60,9 @@ export function buildTree(
     userName: m.userName,
     avatarUrl: m.avatarUrl,
     role: m.role,
+    sectionId: m.sectionId,
+    positionX: m.positionX,
+    positionY: m.positionY,
     tasks: tasksByMember.get(m.productMemberId) ?? [],
   }));
 
