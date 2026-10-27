@@ -372,6 +372,24 @@ describe('名前は、縮小しても読める大きさを保つ(scale < 1 で�
     expect(x4).not.toContain('scale(')
   })
 
+  test('編集枠が開く名前の入力欄(ダブルクリックのあと)は、その scale の係数で、名前と同じ大きさ・余白・位置になる', () => {
+    // サーバー描画では、ダブルクリックできないので、入力欄を最初から開いた状態(`startRenaming`)で描く
+    const inputFont = (html: string) => Number(/<input[^>]*font-size:([0-9.]+)px/.exec(html)?.[1])
+    const inputPad = (html: string) => Number(/<input[^>]*padding-left:([0-9.]+)px/.exec(html)?.[1])
+    for (const s of [0.05, 0.25, 0.5, 1, 2]) {
+      const k = titleFactor(s)
+      const html = render({ scale: s, startRenaming: true })
+      expect(html).toContain('<input')
+      expect(inputFont(html)).toBe(LABEL_FONT_PX * k)
+      expect(inputFont(html)).toBe(px(labelStyle(box(s)), 'font-size'))
+      expect(inputPad(html)).toBe(6 * k)
+      // 入力欄を包む外枠は、名前をつかむ場所と同じ(縮小で大きくなる)
+      const wrap = /<div class="absolute z-20" style="([^"]*)"/.exec(html)?.[1] ?? ''
+      expect(px(wrap, 'height')).toBe(16 * k + 8 * k)
+      expect(px(wrap, 'top')).toBe(-(16 * k + 4 * k))
+    }
+  })
+
   test('名前の表示・つかむ場所・入力欄は、同じ scale で、同じ係数(文字の大きさが一致する)', () => {
     for (const s of [0.05, 0.25, 0.5, 1, 2]) {
       const factor = titleFactor(s)

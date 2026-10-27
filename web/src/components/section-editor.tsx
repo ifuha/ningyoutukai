@@ -80,6 +80,8 @@ export type SectionEditorProps = {
   onPreview?: (rect: Rect | null) => void
   /** 移動で、四角・編集枠と一緒に動かす、位置を持つ所属メンバー(api と同じ規則)。省略は、なし */
   followMemberIds?: readonly string[]
+  /** 名前の入力欄を、最初から開いた状態で描く(ダブルクリックしたあとの見た目を、サーバー描画のテストで確かめるため)。省略は false(普通は閉じている) */
+  startRenaming?: boolean
 }
 
 type Latest = {
@@ -108,6 +110,7 @@ export function SectionEditor({
   interiorSelectable = false,
   onPreview,
   followMemberIds,
+  startRenaming = false,
 }: SectionEditorProps) {
   const base: Rect = { x: section.x, y: section.y, width: section.width, height: section.height }
 
@@ -139,7 +142,7 @@ export function SectionEditor({
   const nudgeRef = useRef<Rect | null>(null)
   const nudgeTimer = useRef<number | undefined>(undefined)
   const [menu, setMenu] = useState<MenuState>('closed')
-  const [renaming, setRenaming] = useState(false)
+  const [renaming, setRenaming] = useState(startRenaming)
   // 押した位置(画面の座標)。クリックとドラッグの区別に使う
   const downPoint = useRef<Point | null>(null)
 
