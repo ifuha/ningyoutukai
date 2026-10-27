@@ -24,7 +24,7 @@ import {
   type DragKind,
   type MenuState,
 } from '#/lib/section-editor-state'
-import { confirmPanelOffset, labelHitRect } from '#/lib/section-label'
+import { confirmPanelOffset, labelHitRect, titleFactor } from '#/lib/section-label'
 import { sectionStyle } from '#/lib/section-style'
 
 // セクションの編集枠。`SectionBox`(セクションの見た目を描く)の上に重ねる、編集用の層
@@ -80,6 +80,8 @@ export type SectionEditorProps = {
   onPreview?: (rect: Rect | null) => void
   /** 移動で、四角・編集枠と一緒に動かす、位置を持つ所属メンバー(api と同じ規則)。省略は、なし */
   followMemberIds?: readonly string[]
+  /** 名前の入力欄を、最初から開いた状態で描く(ダブルクリックしたあとの見た目を、サーバー描画のテストで確かめるため)。省略は false(普通は閉じている) */
+  startRenaming?: boolean
 }
 
 type Latest = {
@@ -108,6 +110,7 @@ export function SectionEditor({
   interiorSelectable = false,
   onPreview,
   followMemberIds,
+  startRenaming = false,
 }: SectionEditorProps) {
   const base: Rect = { x: section.x, y: section.y, width: section.width, height: section.height }
 
@@ -139,7 +142,7 @@ export function SectionEditor({
   const nudgeRef = useRef<Rect | null>(null)
   const nudgeTimer = useRef<number | undefined>(undefined)
   const [menu, setMenu] = useState<MenuState>('closed')
-  const [renaming, setRenaming] = useState(false)
+  const [renaming, setRenaming] = useState(startRenaming)
   // 押した位置(画面の座標)。クリックとドラッグの区別に使う
   const downPoint = useRef<Point | null>(null)
 
@@ -268,7 +271,9 @@ export function SectionEditor({
   const moving = liveRect !== null || nudge !== null
   const style = sectionStyle(section.color)
   // 名前をつかむ場所・名前の入力欄(`SectionBox` の文字の位置に合わせる。ドラッグ中の見た目の幅に追従する)
-  const tag = labelHitRect(live.width)
+  // 縮小したとき、名前は、係数 `titleFactor(scale)` で拡大されて、読める大きさを保つ(`SectionBox` と同じ係数。つかむ場所・入力欄・確認の位置も同じ係数)
+  const factor = titleFactor(scale)
+  const tag = labelHitRect(live.width, factor)
 
   // 移動・大きさの変更のつかみ場所に付ける、ポインタのイベント
   // 押したら、その場でつかむ(カードと同じ)。**未選択でも、押した時点で選択し**、キャンバスの移動(パン)は始めない。
@@ -363,6 +368,7 @@ export function SectionEditor({
         {renaming ? (
           <SectionNameEditor
             initial={section.sectionName}
+            factor={factor}
             className="bg-surface text-ink"
             onCommit={(name) => {
               setRenaming(false)
@@ -411,7 +417,7 @@ export function SectionEditor({
           color={section.color}
           menu={menu}
           scale={scale}
-          offset={confirmPanelOffset(live.width)}
+          offset={confirmPanelOffset(live.width, factor)}
           onPickColor={(chosen) => {
             const r = pickColor(section.color, chosen)
             setMenu(r.menu)

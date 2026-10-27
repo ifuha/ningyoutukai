@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { LABEL_FONT_PX, LABEL_LINE_PX } from '../lib/section-label'
+import { LABEL_FONT_PX, LABEL_LINE_PX, titleFactor } from '../lib/section-label'
 import { SectionBox } from './section-box'
 import { SectionColorPicker } from './section-color-picker'
 import { SectionEditor, type SectionEditorProps } from './section-editor'
@@ -254,50 +254,152 @@ describe('SectionNameEditor', () => {
   })
 })
 
-describe('名前は、拡大・縮小(ズーム)に合わせて、文字の大きさが変わる(キャンバスの単位で描く。拡大率を打ち消さない)', () => {
+describe('名前は、縮小しても読める大きさを保つ(scale < 1 で、キャンバスの単位を 1 / scale 倍にする。scale ≥ 1 は拡大に比例)', () => {
   // 名前(`data-section-label`)の style を取り出す
   const labelStyle = (html: string) => {
     const i = html.indexOf('data-section-label')
     const open = html.lastIndexOf('<span', i)
     return /style="([^"]*)"/.exec(html.slice(open))?.[1] ?? ''
   }
-  const box = () => renderToStaticMarkup(createElement(SectionBox, { section }))
+  const box = (scale?: number) =>
+    renderToStaticMarkup(createElement(SectionBox, scale === undefined ? { section } : { section, scale }))
   // 名前をつかむ場所の外枠の style を取り出す
   const tagBox = (html: string) => {
     const i = html.indexOf('data-section-tag')
     const open = html.lastIndexOf('<div', html.lastIndexOf('<div', i) - 1)
     return /style="([^"]*)"/.exec(html.slice(open, i))?.[1] ?? ''
   }
+  const px = (style: string, prop: string) => {
+    const m = new RegExp(`(?:^|;)${prop}:(-?[0-9.]+)px`).exec(style)
+    return m ? Number(m[1]) : Number.NaN
+  }
 
-  test('名前の文字は、キャンバスの単位の px(14px、行の高さ 16px)で描かれる。rem 基準のクラス(text-sm)は使わない', () => {
-    const html = box()
-    const style = labelStyle(html)
-    expect(style).toContain(`font-size:${LABEL_FONT_PX}px`)
-    expect(style).toContain(`line-height:${LABEL_LINE_PX}px`)
-    expect(html).not.toContain('text-sm')
+  test('等倍(scale 1)と、scale を渡さないとき: 名前の文字は、キャンバスの単位の px(14px、行の高さ 16px)。rem 基準のクラス(text-sm)は使わない', () => {
+    for (const html of [box(), box(1)]) {
+      const style = labelStyle(html)
+      expect(style).toContain(`font-size:${LABEL_FONT_PX}px`)
+      expect(style).toContain(`line-height:${LABEL_LINE_PX}px`)
+      expect(html).not.toContain('text-sm')
+    }
   })
 
-  test('名前の描画は、拡大率を打ち消す変換(scale(…))を持たない(変換は、親のキャンバスの層がかける)', () => {
-    const html = box()
-    expect(html).not.toContain('scale(')
-    expect(html).not.toContain('transform')
+  test('縮小(scale 0.25)では、係数 4 で拡大される(文字 56px、行の高さ 64px。画面上は 14px・16px)', () => {
+    const style = labelStyle(box(0.25))
+    expect(style).toContain('font-size:56px')
+    expect(style).toContain('line-height:64px')
+    // 位置: 外側の左上が原点。左の余白 6 × 4 = 24、帯の上 16 × 4 = 64。絶対配置の基準は枠線(2px。係数は掛けない)の内側なので、その分だけ戻す
+    expect(px(style, 'left')).toBe(24 - 2)
+    expect(px(style, 'top')).toBe(-64 - 2)
   })
 
-  test('名前をつかむ場所は、拡大率が違っても、キャンバスの単位で同じ(画面上の大きさは、親の変換で、拡大率に比例する)', () => {
+  test('拡大(scale 2、4)では、係数 1(キャンバスの単位のまま。画面上は scale 倍に大きくなる)', () => {
+    for (const s of [1.5, 2, 4]) {
+      const style = labelStyle(box(s))
+      expect(style).toContain('font-size:14px')
+      expect(style).toContain('line-height:16px')
+    }
+  })
+
+  test('名前の画面上の大きさは、1/8 ≤ scale ≤ 1 で 14px で一定(キャンバスの単位の文字の大きさ × scale)', () => {
+    for (const s of [1, 0.75, 0.5, 0.25, 0.125]) {
+      expect(px(labelStyle(box(s)), 'font-size') * s).toBeCloseTo(14, 8)
+    }
+  })
+
+  test('上限(係数 8)で止まる: scale 0.05 でも、文字は 112px(画面上は 5.6px)', () => {
+    expect(labelStyle(box(0.05))).toContain('font-size:112px')
+    expect(labelStyle(box(0.001))).toContain('font-size:112px')
+  })
+
+  test('名前の描画は、拡大率を打ち消す変換(scale(…))を持たない(大きさは、キャンバスの単位の寸法で表す。変換は、親のキャンバスの層がかける)', () => {
+    for (const s of [0.25, 1, 4]) {
+      const html = box(s)
+      expect(html).not.toContain('scale(')
+      expect(html).not.toContain('transform')
+    }
+  })
+
+  test('名前をつかむ場所は、縮小すると、同じ係数で大きくなる(画面上の大きさは一定)。拡大では、キャンバスの単位で同じ', () => {
     const at = (scale: number) => tagBox(render({ scale }))
-    expect(at(0.25)).toBe('left:0;top:-20px;width:160px;height:24px')
-    expect(at(1)).toBe(at(0.25))
-    expect(at(4)).toBe(at(0.25))
+    // 等倍: 左 0、上 -(16 + 4)、幅は上限 160、高さ 16 + 4 × 2
+    expect(at(1)).toBe('left:0;top:-20px;width:160px;height:24px')
+    expect(at(4)).toBe(at(1))
+    expect(at(2)).toBe(at(1))
+    // 係数 4(scale 0.25): 上 -(64 + 16)、幅は上限 640 と、セクションの幅 300 の小さい方、高さ 64 + 32
+    expect(at(0.25)).toBe('left:0;top:-80px;width:300px;height:96px')
+    // 係数 2(scale 0.5): 上 -(32 + 8)、幅 300、高さ 32 + 16
+    expect(at(0.5)).toBe('left:0;top:-40px;width:300px;height:48px')
+    // 上限(係数 8): 上 -(128 + 32)、高さ 128 + 64
+    expect(at(0.05)).toBe('left:0;top:-160px;width:300px;height:192px')
   })
 
-  test('名前の入力欄の文字は、名前と同じ大きさ・行の高さ・左の余白(拡大・縮小に合わせて、一緒に変わる)', () => {
-    const html = renderToStaticMarkup(
-      createElement(SectionNameEditor, { initial: '設計チーム', onCommit: () => {}, onCancel: () => {} }),
-    )
-    expect(html).toContain(`font-size:${LABEL_FONT_PX}px`)
-    expect(html).toContain(`line-height:${LABEL_LINE_PX}px`)
-    expect(html).toContain('padding-left:6px')
-    expect(html).not.toContain('text-sm')
-    expect(html).not.toContain('scale(')
+  test('名前をつかむ場所は、名前の文字と、同じ位置・同じ高さの帯(どの scale でも、文字の帯を含み、中心が同じ)', () => {
+    for (const s of [0.05, 0.125, 0.25, 0.5, 1, 2, 4]) {
+      const label = labelStyle(box(s))
+      const tag = tagBox(render({ scale: s }))
+      const textTop = px(label, 'top') + 2 // 枠線の分を戻して、外側の左上が原点の値にする
+      const textHeight = px(label, 'height')
+      const hitTop = px(tag, 'top')
+      const hitHeight = px(tag, 'height')
+      expect(hitTop).toBeLessThan(textTop)
+      expect(hitTop + hitHeight).toBeGreaterThan(textTop + textHeight)
+      expect(hitTop + hitHeight / 2).toBeCloseTo(textTop + textHeight / 2, 8)
+    }
+  })
+
+  test('名前の入力欄の文字は、名前と同じ大きさ・行の高さ・左右の余白(同じ係数。縮小しても、一緒に読める大きさを保つ)', () => {
+    const input = (factor?: number) =>
+      renderToStaticMarkup(
+        createElement(SectionNameEditor, {
+          initial: '設計チーム',
+          ...(factor === undefined ? {} : { factor }),
+          onCommit: () => {},
+          onCancel: () => {},
+        }),
+      )
+    for (const html of [input(), input(1)]) {
+      expect(html).toContain(`font-size:${LABEL_FONT_PX}px`)
+      expect(html).toContain(`line-height:${LABEL_LINE_PX}px`)
+      expect(html).toContain('padding-left:6px')
+      expect(html).toContain('padding-right:6px')
+    }
+    const x4 = input(4)
+    expect(x4).toContain('font-size:56px')
+    expect(x4).toContain('line-height:64px')
+    expect(x4).toContain('padding-left:24px')
+    expect(x4).toContain('padding-right:24px')
+    expect(x4).not.toContain('text-sm')
+    expect(x4).not.toContain('scale(')
+  })
+
+  test('編集枠が開く名前の入力欄(ダブルクリックのあと)は、その scale の係数で、名前と同じ大きさ・余白・位置になる', () => {
+    // サーバー描画では、ダブルクリックできないので、入力欄を最初から開いた状態(`startRenaming`)で描く
+    const inputFont = (html: string) => Number(/<input[^>]*font-size:([0-9.]+)px/.exec(html)?.[1])
+    const inputPad = (html: string) => Number(/<input[^>]*padding-left:([0-9.]+)px/.exec(html)?.[1])
+    for (const s of [0.05, 0.25, 0.5, 1, 2]) {
+      const k = titleFactor(s)
+      const html = render({ scale: s, startRenaming: true })
+      expect(html).toContain('<input')
+      expect(inputFont(html)).toBe(LABEL_FONT_PX * k)
+      expect(inputFont(html)).toBe(px(labelStyle(box(s)), 'font-size'))
+      expect(inputPad(html)).toBe(6 * k)
+      // 入力欄を包む外枠は、名前をつかむ場所と同じ(縮小で大きくなる)
+      const wrap = /<div class="absolute z-20" style="([^"]*)"/.exec(html)?.[1] ?? ''
+      expect(px(wrap, 'height')).toBe(16 * k + 8 * k)
+      expect(px(wrap, 'top')).toBe(-(16 * k + 4 * k))
+    }
+  })
+
+  test('名前の表示・つかむ場所・入力欄は、同じ scale で、同じ係数(文字の大きさが一致する)', () => {
+    for (const s of [0.05, 0.25, 0.5, 1, 2]) {
+      const factor = titleFactor(s)
+      const labelFont = px(labelStyle(box(s)), 'font-size')
+      const inputHtml = renderToStaticMarkup(
+        createElement(SectionNameEditor, { initial: 'x', factor, onCommit: () => {}, onCancel: () => {} }),
+      )
+      const inputFont = Number(/font-size:([0-9.]+)px/.exec(inputHtml)?.[1])
+      expect(inputFont).toBe(labelFont)
+      expect(labelFont).toBe(LABEL_FONT_PX * factor)
+    }
   })
 })
