@@ -49,6 +49,9 @@ export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
           productMemberId: productMembers.productMemberId,
           userId: productMembers.userId,
           role: productMembers.role,
+          sectionId: productMembers.sectionId,
+          positionX: productMembers.positionX,
+          positionY: productMembers.positionY,
           userName: users.userName,
           avatarUrl: users.avatarUrl,
         })
