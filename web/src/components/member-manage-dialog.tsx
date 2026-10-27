@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Modal } from '#/components/modal'
-import { api, ApiError, type ProductTree, type TreeMember } from '#/lib/api'
+import { eden, edenData } from '#/lib/eden'
+import { ApiError } from '#/lib/api'
+import type { ProductTree, TreeMember } from '#/lib/tree'
 
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
 
@@ -24,9 +26,12 @@ function MemberRow({
   const [confirming, setConfirming] = useState(false)
   const remove = useMutation({
     mutationFn: () =>
-      api<void>(`/api/product/${productId}/member/${member.productMemberId}`, {
-        method: 'DELETE',
-      }),
+      edenData(
+        eden()
+          .api.product({ productId })
+          .member({ memberId: member.productMemberId })
+          .delete(),
+      ),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: ['products', productId, 'tree'],

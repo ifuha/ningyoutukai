@@ -7,10 +7,13 @@
  * ここで環境変数を先にそろえて、どの順でも同じ `auth` になるようにする。
  */
 
-import "../src/lib/load-env"; // .env.local / .env を先に読む(下の環境変数の調整は、その後に効く)
+import { overrideWithEnvLocal } from "../src/lib/load-env"; // .env.local / .env を先に読む(下の環境変数の調整は、その後に効く)
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { createDb } from "../src/db";
 import { dbNameOf, redact, resolveTestDatabaseUrl } from "./test-db";
+
+// bun test は .env を先に環境変数へ入れる。.env.local を優先させる(シェルで明示したテスト用 DB の指定は守る)
+overrideWithEnvLocal(process.env, ["TEST_DATABASE_URL"]);
 
 // 外部認証のプロバイダを有効にする(実際の OAuth 通信はしない。認可 URL を作るだけ)
 process.env.GITHUB_CLIENT_ID = "test-github-client-id";
@@ -28,6 +31,7 @@ process.env.NODE_ENV = "development";
 // .env に RESEND_API_KEY を入れても、テストが実際にメールを送らないようにする(mailer はキーが無いとログだけ出す)
 delete process.env.RESEND_API_KEY;
 delete process.env.MAIL_FROM;
+delete process.env.MAILPIT_URL; // 同様に、ローカルの受信箱(Mailpit)にも送らない
 
 // ---- テスト用 DB への切り替えと、マイグレーション(R2) ----
 // DATABASE_URL が環境にあっても、.env.local から読まれても、テストは必ずテスト用 DB(`_test` で終わる)を使う。

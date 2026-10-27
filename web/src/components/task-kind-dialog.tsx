@@ -1,8 +1,15 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '#/components/modal'
-import { api, type TaskKind } from '#/lib/api'
+import { eden, edenData, type Json } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
+
+type ListResult = Awaited<
+  ReturnType<ReturnType<ReturnType<typeof eden>['api']['product']>['task_kinds']['get']>
+>
+
+// 1 件分の種類。型は api の応答から取る
+type TaskKind = Json<NonNullable<Extract<ListResult, { error: null }>['data']>>[number]
 
 const buttonClass =
   'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
@@ -37,22 +44,19 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
   const invalidate = useInvalidate(productId)
   const [mode, setMode] = useState<'view' | 'edit' | 'confirm'>('view')
   const [name, setName] = useState(kind.taskTypeName)
-  const base = `/api/product/${productId}/task_kinds/${kind.taskTypeId}`
+  const target = () =>
+    eden().api.product({ productId }).task_kinds({ kindId: kind.taskTypeId })
 
   const rename = useMutation({
     mutationFn: () =>
-      api(base, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskTypeName: name }),
-      }),
+      edenData(target().patch({ taskTypeName: name })),
     onSuccess: () => {
       setMode('view')
       invalidate(true)
     },
   })
   const remove = useMutation({
-    mutationFn: () => api(base, { method: 'DELETE' }),
+    mutationFn: () => edenData(target().delete()),
     onSuccess: () => invalidate(true),
   })
   const busy = rename.isPending || remove.isPending
@@ -155,11 +159,7 @@ function AddForm({ productId }: { productId: string }) {
   const [name, setName] = useState('')
   const add = useMutation({
     mutationFn: () =>
-      api(`/api/product/${productId}/task_kinds`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskTypeName: name }),
-      }),
+      edenData(eden().api.product({ productId }).task_kinds.post({ taskTypeName: name })),
     onSuccess: () => {
       setName('')
       invalidate(false)
@@ -212,7 +212,7 @@ export function TaskKindDialog({
 }) {
   const kinds = useQuery({
     queryKey: ['products', productId, 'task_kinds'],
-    queryFn: () => api<TaskKind[]>(`/api/product/${productId}/task_kinds`),
+    queryFn: () => edenData(eden().api.product({ productId }).task_kinds.get()),
     enabled: open,
     retry: false,
   })

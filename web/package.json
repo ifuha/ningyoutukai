@@ -17,6 +17,7 @@
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "@elysiajs/eden": "^1.4.9",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/ai": "0.69.0",
     "@tanstack/ai-anthropic": "0.22.0",

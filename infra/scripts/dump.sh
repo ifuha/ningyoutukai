@@ -12,6 +12,7 @@ set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
 : "${DATABASE_URL:?DATABASE_URL を設定してください}"
+DATABASE_URL="$(clean_db_url "$DATABASE_URL")"
 out_dir="${1:-$(cd "$(dirname "$0")/.." && pwd)/dumps}"
 mkdir -p "$out_dir"
 out_dir="$(cd "$out_dir" && pwd)"

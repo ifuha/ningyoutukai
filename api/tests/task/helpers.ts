@@ -128,9 +128,14 @@ export async function insertTask(
   memberId: string,
   values: Partial<typeof tasks.$inferInsert> = {}
 ) {
+  // status の指定がなければ、日時から決める(マイグレーションの UPDATE と同じ規則)。
+  // 日時だけを指定するテストでも、status が食い違わない
+  const status =
+    values.status ??
+    (values.completedAt ? "completed" : values.reportedAt ? "reported" : "in_progress");
   const [row] = await db
     .insert(tasks)
-    .values({ taskName: "テストタスク", productMemberId: memberId, ...values })
+    .values({ taskName: "テストタスク", productMemberId: memberId, ...values, status })
     .returning();
   return row;
 }

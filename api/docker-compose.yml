@@ -1,6 +1,6 @@
 # ローカル開発用の Postgres(v2.0 の dev 用コンテナ)。
 #
-#   docker compose up -d --wait     # 起動(api ディレクトリで)
+#   docker compose up -d --wait     # 起動(db と mailpit)(api ディレクトリで)
 #   docker compose down             # 停止(データは残る)。データも消すなら `down -v`
 #
 # - 本番(Neon)と同じ Postgres 18。ポートは 5434(ホスト側)。
@@ -31,6 +31,22 @@ services:
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d ningyoutukai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ローカルのメール受信箱。api が送るメールを、外へは出さずにここで受けて、画面で見られる。
+  # api は HTTP の送信 API(POST /api/v1/send)で送る(SMTP は使わない)。メールは消えてよいので永続化しない。
+  #   画面と API: http://localhost:8025 / SMTP(使わないが開いている): localhost:1025
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    container_name: ningyoutukai-dev-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
       interval: 5s
       timeout: 5s
       retries: 10

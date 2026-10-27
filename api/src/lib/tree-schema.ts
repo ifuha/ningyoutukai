@@ -27,6 +27,10 @@ export const TreeNodeSchema = t.Object({
   userName: t.String(),
   avatarUrl: t.Union([t.String(), t.Null()]),
   role: t.Union([t.Literal("leader"), t.Literal("member")]),
+  // セクション(F1)。所属するセクションの ID(無所属は null)と、カードの自由な位置(null は自動配置)
+  sectionId: t.Union([t.String(), t.Null()]),
+  positionX: t.Union([t.Number(), t.Null()]),
+  positionY: t.Union([t.Number(), t.Null()]),
   tasks: t.Array(TreeTaskSchema),
 });
 

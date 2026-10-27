@@ -2,10 +2,14 @@ import { useEffect } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Sidebar } from '#/components/sidebar'
-import { api, type Invitation, type ProductSummary } from '#/lib/api'
+import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
 import { resetSessionExpired } from '#/lib/session-expired'
 import { useDrawer } from '#/lib/use-drawer'
+
+/** `GET /api/product` の応答(api の型から取る) */
+type ProductList = Awaited<ReturnType<typeof listProducts>>
+const listProducts = () => edenData(eden().api.product.get())
 
 type SessionUser = NonNullable<
   ReturnType<typeof authClient.useSession>['data']
@@ -24,7 +28,7 @@ export function AppShell({
   align?: 'center' | 'top' | 'full'
   children: (ctx: {
     user: SessionUser
-    products: UseQueryResult<ProductSummary[]>
+    products: UseQueryResult<ProductList>
   }) => React.ReactNode
 }) {
   const { data: session, isPending } = authClient.useSession()
@@ -44,7 +48,7 @@ export function AppShell({
   // 所属しているプロダクトの一覧(api に、ログインの cookie が届くかの確認も兼ねる)
   const products = useQuery({
     queryKey: ['products'],
-    queryFn: () => api<ProductSummary[]>('/api/product'),
+    queryFn: listProducts,
     enabled: Boolean(session?.user),
     retry: false,
   })
@@ -52,7 +56,7 @@ export function AppShell({
   // 自分宛ての保留中の招待(サイドバーに出す。ホームの「招待」と、同じクエリを共有する)
   const invitations = useQuery({
     queryKey: ['invitations'],
-    queryFn: () => api<Invitation[]>('/api/invitation'),
+    queryFn: () => edenData(eden().api.invitation.get()),
     enabled: Boolean(session?.user),
     retry: false,
   })

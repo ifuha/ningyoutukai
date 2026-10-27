@@ -18,12 +18,12 @@
     "better-auth": "^1.7.10",
     "dotenv": "^18.0.8",
     "drizzle-orm": "1.0.0-rc.4",
-    "elysia": "latest",
+    "elysia": "^1.4.30",
     "pg": "^8.23.1"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",
-    "bun-types": "latest",
+    "bun-types": "^1.4.3",
     "drizzle-kit": "^1.0.0-rc.4",
     "tsx": "^4.23.15",
     "wrangler": "^4.151.3"

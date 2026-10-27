@@ -1,4 +1,4 @@
-import type { Invitation } from '#/lib/api'
+import type { Invitation } from '#/lib/invitation'
 import { useRespondInvitation } from '#/lib/use-respond-invitation'
 
 const buttonClass =

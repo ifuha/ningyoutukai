@@ -105,6 +105,7 @@ describe("各項目の更新", () => {
       taskTypeId: null,
       productMemberId: m.memberId,
       isVisible: false,
+      status: "in_progress",
     });
     const row = (await findTask(task.taskId))!;
     expect(row.taskName).toBe("新しい名前");
