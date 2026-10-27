@@ -124,7 +124,6 @@ export async function createTaskType(productId: string, name = "デザイン") {
 }
 
 /** タスクを DB に直接作る(取得・更新・完了系のテストの前提データ用) */
-/** タスクを DB に直接作る(取得・更新・完了系のテストの前提データ用) */
 export async function insertTask(
   memberId: string,
   values: Partial<typeof tasks.$inferInsert> = {}

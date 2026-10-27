@@ -46,6 +46,12 @@
 | **POST** `/api/product/{productId}/task/{taskId}/complete-report` | タスク完了報告 | 担当メンバーがリーダーに完了を報告する。Resend APIを使用してメール通知する |
 | **PATCH** `/api/product/{productId}/task/{taskId}/complete` | タスク完了確定 | プロダクトリーダーが確認後、タスクを完了状態に変更する |
 
+#### メッセージ
+
+| メソッド・エンドポイント | 名称 | 説明 |
+| --- | --- | --- |
+| **GET** `/api/product/{productId}/task/{taskId}/message` | メッセージ履歴取得 | タスクのメッセージを古い順に取得する。タスクを見られる人（公開タスクはメンバー全員、非公開タスクはリーダーと担当者）は読める。削除済みのメッセージは本文が空で `deleted: true` になる |
+
 #### タスクの種類
 
 | メソッド・エンドポイント | 名称 | 説明 |
