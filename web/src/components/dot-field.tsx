@@ -26,21 +26,21 @@ const smooth = (a: number, b: number, v: number) => {
 }
 
 // 画面の端に向かって、絵を薄く消す倍率(0〜1)。端でぶつっと切れて見えないようにする。
-// 左右は 14%、下は 18%、上は 8% の幅で消える
+// 左右は 14%、下は 12%、上は 8% の幅で消える
 export function edgeFade(nx: number, ny: number): number {
   return (
     smooth(0, 0.14, nx) *
     smooth(0, 0.14, 1 - nx) *
-    smooth(0, 0.18, 1 - ny) *
+    smooth(0, 0.12, 1 - ny) *
     smooth(0, 0.08, ny)
   )
 }
 
 // 時刻 t(秒)の、点 (nx, ny) の大きさ(0〜1)。nx / ny は 0〜1 の位置
 export function dotSize(nx: number, ny: number, t: number): number {
-  // 稜線の高さ(上が 0、下が 1)。画面の高さを使うよう、奥は 5 割、手前は 7 割あたりに置く
-  const far = 0.52 + 0.07 * Math.sin(nx * 6 + t * 0.25) + 0.04 * Math.sin(nx * 15 - t * 0.18)
-  const near = 0.72 + 0.06 * Math.sin(nx * 4 + 1 - t * 0.2) + 0.03 * Math.sin(nx * 11 + t * 0.3)
+  // 稜線の高さ(上が 0、下が 1)。画面の高さを使うよう、奥は 6 割半、手前は 8 割強あたりに置く
+  const far = 0.64 + 0.05 * Math.sin(nx * 6 + t * 0.25) + 0.04 * Math.sin(nx * 15 - t * 0.18)
+  const near = 0.82 + 0.04 * Math.sin(nx * 4 + 1 - t * 0.2) + 0.03 * Math.sin(nx * 11 + t * 0.3)
   // 手前の山 > 奥の山 > 空
   if (ny > near) return 0.5 + 0.35 * smooth(near, near + 0.2, ny)
   if (ny > far) return 0.22 + 0.3 * smooth(far, near, ny)
