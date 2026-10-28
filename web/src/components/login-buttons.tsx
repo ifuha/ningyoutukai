@@ -103,7 +103,7 @@ export function LoginButtons() {
           type="button"
           disabled={pending !== null}
           onClick={() => void signIn(p.id)}
-          className={`group flex h-[60px] w-full items-center gap-3 px-4 text-left font-mono text-[16px] transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none ${p.className}`}
+          className={`group flex h-[60px] w-full items-center gap-3 px-4 text-left font-mono text-l transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none ${p.className}`}
         >
           <span className="opacity-60" aria-hidden="true">
             [{p.key}]
@@ -118,7 +118,7 @@ export function LoginButtons() {
         </button>
       ))}
       {failed && (
-        <p role="alert" className="border-l-2 border-ink pl-3 font-mono text-sm">
+        <p role="alert" className="border-l-2 border-ink pl-3 font-mono text-m">
           ERR {failed}
         </p>
       )}

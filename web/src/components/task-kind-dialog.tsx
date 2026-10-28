@@ -12,13 +12,13 @@ type ListResult = Awaited<
 type TaskKind = Json<NonNullable<Extract<ListResult, { error: null }>['data']>>[number]
 
 const buttonClass =
-  'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+  'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
 const inputClass =
-  'h-9 min-w-0 flex-1 border-2 border-ink bg-surface px-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'h-9 min-w-0 flex-1 border-2 border-ink bg-surface px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
 function ErrorText({ message }: { message: string }) {
   return (
-    <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+    <p role="alert" className="border-l-2 border-ink pl-3 text-m">
       ERR {errorMessage(message)}
     </p>
   )
@@ -63,7 +63,7 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
   const error = rename.error ?? remove.error
 
   return (
-    <li className="space-y-2 text-sm">
+    <li className="space-y-2 text-m">
       {mode === 'edit' ? (
         <form
           className="flex flex-wrap items-center gap-2"
@@ -219,14 +219,14 @@ export function TaskKindDialog({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="text-lg font-bold">種類の管理</h2>
+      <h2 className="text-l font-bold">種類の管理</h2>
       <AddForm productId={productId} />
       {kinds.isPending ? (
-        <p className="text-sm opacity-60">読み込み中…</p>
+        <p className="text-m opacity-60">読み込み中…</p>
       ) : kinds.isError ? (
         <ErrorText message={kinds.error.message} />
       ) : kinds.data.length === 0 ? (
-        <p className="text-sm">種類はまだありません</p>
+        <p className="text-m">種類はまだありません</p>
       ) : (
         <ul className="space-y-3">
           {kinds.data.map((kind) => (

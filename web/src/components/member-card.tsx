@@ -72,16 +72,16 @@ export function MemberCard({
         )}
         <div className="min-w-0">
           <p className="truncate font-bold">{member.userName}</p>
-          <p className="text-xs opacity-70">{roleLabel[member.role]}</p>
+          <p className="text-s opacity-70">{roleLabel[member.role]}</p>
         </div>
       </header>
       <div className="p-2">
         {shown.length === 0 ? (
-          <p className="text-sm opacity-60"># タスクなし</p>
+          <p className="text-m opacity-60"># タスクなし</p>
         ) : (
           <ul className="space-y-2">
             {shown.map((t) => (
-              <li key={t.taskId} className="text-sm">
+              <li key={t.taskId} className="text-m">
                 <div className="flex items-baseline gap-2">
                   {onEditTask ? (
                     <button
@@ -95,13 +95,13 @@ export function MemberCard({
                     <span className="min-w-0 flex-1 truncate">{t.taskName}</span>
                   )}
                   {t.timeLimit && (
-                    <span className="shrink-0 text-xs">
+                    <span className="shrink-0 text-s">
                       {formatLimit(t.timeLimit)}
                     </span>
                   )}
                 </div>
                 {(t.reportedAt || t.taskType) && (
-                  <div className="mt-0.5 flex items-center gap-2 text-xs">
+                  <div className="mt-0.5 flex items-center gap-2 text-s">
                     {t.reportedAt && (
                       <span className="shrink-0 border border-ink px-1">
                         確認待ち
@@ -119,7 +119,7 @@ export function MemberCard({
           </ul>
         )}
       </div>
-      <footer className="flex flex-wrap justify-between gap-x-2 border-t-2 border-ink px-2 py-1 text-xs opacity-80">
+      <footer className="flex flex-wrap justify-between gap-x-2 border-t-2 border-ink px-2 py-1 text-s opacity-80">
         {rest > 0 && onShowTasks ? (
           <button
             type="button"

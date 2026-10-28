@@ -32,7 +32,7 @@ const reportedFormat = new Intl.DateTimeFormat('ja-JP', {
 })
 
 const buttonClass =
-  'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+  'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
 
 // 確認待ち 1 件分の行。成功したらツリーを取り直し、行は消える。
 // 404/409 は、行を残してエラーを読めるようにし、押せないままにする(取り直すと行ごと消える)
@@ -64,17 +64,17 @@ function ReviewRow({
     (complete.error.status === 404 || complete.error.status === 409)
 
   return (
-    <li className="space-y-1 text-sm">
+    <li className="space-y-1 text-m">
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
           <p className="break-words">{task.taskName}</p>
-          <p className="text-xs opacity-60">
+          <p className="text-s opacity-60">
             {member.userName}
             {task.timeLimit && ` / 期限 ${formatLimit(task.timeLimit)}`}
             {` / 報告 ${reportedFormat.format(new Date(task.reportedAt!))}`}
           </p>
           {task.description && (
-            <p className="mt-0.5 line-clamp-3 text-xs break-words whitespace-pre-wrap">
+            <p className="mt-0.5 line-clamp-3 text-s break-words whitespace-pre-wrap">
               {task.description}
             </p>
           )}
@@ -119,7 +119,7 @@ function ReviewRow({
         </div>
       )}
       {complete.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+        <p role="alert" className="border-l-2 border-ink pl-3 text-m">
           ERR {complete.error.message}
         </p>
       )}
@@ -141,9 +141,9 @@ export function ReviewDialog({
 }) {
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="text-lg font-bold">確認待ち({items.length} 件)</h2>
+      <h2 className="text-l font-bold">確認待ち({items.length} 件)</h2>
       {items.length === 0 ? (
-        <p className="text-sm">確認待ちはありません</p>
+        <p className="text-m">確認待ちはありません</p>
       ) : (
         <ul className="space-y-4">
           {items.map((item) => (

@@ -103,17 +103,17 @@ function Product() {
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-48 flex-1">
         {product.isPending ? (
-          <p className="text-sm opacity-60">読み込み中…</p>
+          <p className="text-m opacity-60">読み込み中…</p>
         ) : product.isError ? (
-          <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+          <p role="alert" className="border-l-2 border-ink pl-3 text-m">
             ERR {product.error.message}
           </p>
         ) : (
           <>
-            <h1 className="text-2xl font-bold break-words">
+            <h1 className="text-l font-bold break-words">
               {product.data.productName}
             </h1>
-            <p className="mt-1 text-sm opacity-70">
+            <p className="mt-1 text-m opacity-70">
               {roleLabel[product.data.role]}
             </p>
           </>
@@ -126,7 +126,7 @@ function Product() {
             <button
               type="button"
               onClick={() => setTaskForm({})}
-              className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
+              className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
             >
               タスクを追加
             </button>
@@ -134,7 +134,7 @@ function Product() {
               <button
                 type="button"
                 onClick={() => setReviewOpen(true)}
-                className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
+                className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
               >
                 確認待ち {pendingReviews(tree.data).length} 件
               </button>
@@ -144,7 +144,7 @@ function Product() {
       <button
         type="button"
         onClick={() => void navigate({ to: '/home' })}
-        className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
+        className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
       >
         ホームへ戻る
       </button>
@@ -160,9 +160,9 @@ function Product() {
             <div className="space-y-6 p-4">
               {header}
               {product.isError ? null : product.isPending || tree.isPending ? (
-                <p className="text-sm opacity-60">読み込み中…</p>
+                <p className="text-m opacity-60">読み込み中…</p>
               ) : tree.isError ? (
-                <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+                <p role="alert" className="border-l-2 border-ink pl-3 text-m">
                   ERR {tree.error.message}
                 </p>
               ) : null}
