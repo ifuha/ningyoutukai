@@ -92,3 +92,65 @@ body {
     animation: none;
   }
 }
+
+/*
+ * ホームの飾り: 上から垂れた糸の先で、小さな四角(人形)が揺れる。
+ * 糸は上端を支点に振り子のように揺れ、背景の点は、ゆっくり流れる。
+ */
+@keyframes home-swing {
+  0%,
+  100% {
+    transform: rotate(-9deg);
+  }
+  50% {
+    transform: rotate(9deg);
+  }
+}
+
+@keyframes home-drift {
+  to {
+    background-position: 24px 24px;
+  }
+}
+
+@keyframes home-nod {
+  0%,
+  100% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+  50% {
+    transform: translateX(-50%) rotate(45deg);
+  }
+}
+
+.home-stage {
+  animation: home-drift 6s linear infinite;
+}
+
+.home-string {
+  position: relative;
+  width: 0;
+  border-left: 2px solid var(--color-ink);
+  transform-origin: top center;
+  animation: home-swing ease-in-out infinite;
+}
+
+.home-puppet {
+  position: absolute;
+  bottom: -14px;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  transform: translateX(-50%);
+  animation: home-nod 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-stage,
+  .home-string,
+  .home-puppet {
+    animation: none;
+  }
+}
