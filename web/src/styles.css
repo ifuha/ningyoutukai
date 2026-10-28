@@ -92,33 +92,3 @@ body {
     animation: none;
   }
 }
-
-/*
- * ホームの舞台: Railway の「新規作成」の画面のような、暗い紫の背景。
- * 上からの紫の光と、ゆっくり流れる点のグリッド。色は、ライト / ダークで変えない
- */
-@keyframes home-drift {
-  to {
-    background-position:
-      0 0,
-      24px 24px;
-  }
-}
-
-.railway-bg {
-  color: #e9e6f5;
-  background-color: #100e17;
-  background-image:
-    radial-gradient(ellipse at 50% 0%, rgb(139 92 246 / 0.38), transparent 62%),
-    radial-gradient(rgb(255 255 255 / 0.16) 1px, transparent 1px);
-  background-size:
-    auto,
-    24px 24px;
-  animation: home-drift 6s linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .railway-bg {
-    animation: none;
-  }
-}
