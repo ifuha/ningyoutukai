@@ -48,18 +48,18 @@ function Login() {
             ningyoutukai login
             <span className="cursor ml-1 inline-block h-[1.1em] w-[0.6em] translate-y-[0.2em] bg-ink" aria-hidden="true" />
           </Prompt>
-          <p className="text-sm opacity-60"># 誰が、いつ、何をしているか。ひと目で。</p>
+          <p className="text-m opacity-60"># 誰が、いつ、何をしているか。ひと目で。</p>
         </div>
         <div className="space-y-3">
-          <p className="text-sm">? どのアカウントで続けますか?</p>
+          <p className="text-m">? どのアカウントで続けますか?</p>
           <LoginButtons />
           {error && (
-            <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+            <p role="alert" className="border-l-2 border-ink pl-3 text-m">
               ERR {loginErrorMessage(error)}
             </p>
           )}
         </div>
-        <p className="text-xs opacity-60">キーボードの 1 / 2 でも選べます</p>
+        <p className="text-s opacity-60">キーボードの 1 / 2 でも選べます</p>
       </Terminal>
     </main>
   )

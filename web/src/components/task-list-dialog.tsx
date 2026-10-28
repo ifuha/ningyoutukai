@@ -19,12 +19,12 @@ export function TaskListDialog({
     <Modal open={member !== null} onClose={onClose}>
       {member && (
         <>
-          <h2 className="text-lg font-bold break-words">
+          <h2 className="text-l font-bold break-words">
             {member.userName} のタスク({member.tasks.length} 件)
           </h2>
           <ul className="space-y-2">
             {member.tasks.map((t) => (
-              <li key={t.taskId} className="text-sm">
+              <li key={t.taskId} className="text-m">
                 <div className="flex items-baseline gap-2">
                   {onEditTask && (canOpenTask?.(member) ?? true) ? (
                     <button
@@ -40,12 +40,12 @@ export function TaskListDialog({
                     </span>
                   )}
                   {t.timeLimit && (
-                    <span className="shrink-0 text-xs">
+                    <span className="shrink-0 text-s">
                       {formatLimit(t.timeLimit)}
                     </span>
                   )}
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs">
+                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-s">
                   {t.reportedAt && (
                     <span className="shrink-0 border border-ink px-1">
                       確認待ち
@@ -68,7 +68,7 @@ export function TaskListDialog({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+            className="flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
           >
             閉じる
           </button>

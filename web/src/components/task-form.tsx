@@ -22,9 +22,9 @@ function toIso(value: string): string {
 }
 
 const fieldClass =
-  'w-full border-2 border-ink bg-surface px-3 font-mono text-[16px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'w-full border-2 border-ink bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 const buttonClass =
-  'flex h-10 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-4 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
+  'flex h-10 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-4 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
 type Props = {
   productId: string
@@ -127,10 +127,10 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <h2 className="text-sm font-bold">{heading}</h2>
+      <h2 className="text-m font-bold">{heading}</h2>
 
       <div className="space-y-1">
-        <label htmlFor="task-name" className="block text-sm font-bold">
+        <label htmlFor="task-name" className="block text-m font-bold">
           タスク名
         </label>
         <input
@@ -153,11 +153,11 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="task-assignee" className="block text-sm font-bold">
+        <label htmlFor="task-assignee" className="block text-m font-bold">
           担当者
         </label>
         {assignee ? (
-          <p id="task-assignee" className="text-sm">
+          <p id="task-assignee" className="text-m">
             {assignee.userName}(変更できません)
           </p>
         ) : (
@@ -180,7 +180,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="task-description" className="block text-sm font-bold">
+        <label htmlFor="task-description" className="block text-m font-bold">
           説明
         </label>
         <textarea
@@ -195,7 +195,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="task-time-limit" className="block text-sm font-bold">
+        <label htmlFor="task-time-limit" className="block text-m font-bold">
           期限(日本時間)
         </label>
         <input
@@ -211,7 +211,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="task-kind" className="block text-sm font-bold">
+        <label htmlFor="task-kind" className="block text-m font-bold">
           種類
         </label>
         <select
@@ -230,13 +230,13 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
           ))}
         </select>
         {kinds.isError && (
-          <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+          <p role="alert" className="border-l-2 border-ink pl-3 text-m">
             ERR {kinds.error.message}
           </p>
         )}
       </div>
 
-      <label className="flex items-center gap-2 text-sm font-bold">
+      <label className="flex items-center gap-2 text-m font-bold">
         <input
           type="checkbox"
           checked={isVisible}
@@ -248,7 +248,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       </label>
 
       {save.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+        <p role="alert" className="border-l-2 border-ink pl-3 text-m">
           ERR {errorMessage(save.error.message)}
         </p>
       )}
@@ -273,13 +273,13 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       {initial && (
         <div className="space-y-3 border-t-2 border-ink pt-4">
           {remove.isError && (
-            <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+            <p role="alert" className="border-l-2 border-ink pl-3 text-m">
               ERR {remove.error.message}
             </p>
           )}
           {confirmingRemove ? (
             <>
-              <p className="text-sm font-bold">
+              <p className="text-m font-bold">
                 「{initial.taskName}」を削除しますか? 元に戻せません
               </p>
               <div className="flex gap-3">

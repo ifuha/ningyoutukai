@@ -5,7 +5,7 @@ import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 
 const buttonClass =
-  'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
+  'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
 export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 
@@ -40,28 +40,28 @@ function Detail({
 
   return (
     <>
-      <h2 className="text-lg font-bold break-words">{task.taskName}</h2>
-      <dl className="space-y-2 text-sm">
+      <h2 className="text-l font-bold break-words">{task.taskName}</h2>
+      <dl className="space-y-2 text-m">
         <div>
-          <dt className="text-xs opacity-60">説明</dt>
+          <dt className="text-s opacity-60">説明</dt>
           <dd className="break-words whitespace-pre-wrap">
             {task.description || '—'}
           </dd>
         </div>
         <div>
-          <dt className="text-xs opacity-60">期限</dt>
+          <dt className="text-s opacity-60">期限</dt>
           <dd>{task.timeLimit ? formatDateTime(task.timeLimit) : '—'}</dd>
         </div>
         <div>
-          <dt className="text-xs opacity-60">種類</dt>
+          <dt className="text-s opacity-60">種類</dt>
           <dd className="break-words">{task.taskType?.taskTypeName ?? '—'}</dd>
         </div>
         <div>
-          <dt className="text-xs opacity-60">公開</dt>
+          <dt className="text-s opacity-60">公開</dt>
           <dd>{task.isVisible ? '公開' : '非公開'}</dd>
         </div>
         <div>
-          <dt className="text-xs opacity-60">状態</dt>
+          <dt className="text-s opacity-60">状態</dt>
           <dd>
             {task.reportedAt
               ? `確認待ち(${formatDateTime(task.reportedAt)} に報告)`
@@ -70,7 +70,7 @@ function Detail({
         </div>
       </dl>
       {report.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+        <p role="alert" className="border-l-2 border-ink pl-3 text-m">
           ERR {report.error.message}
         </p>
       )}

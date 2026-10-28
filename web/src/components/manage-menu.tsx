@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 export type ManageMenuItem = { label: string; onSelect: () => void }
 
 const buttonClass =
-  'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none'
+  'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none'
 
 // 見出しの「管理」メニュー。項目を足すときは items に 1 行足す。項目を押すとメニューを閉じてから onSelect を呼ぶ。
 // 項目が 1 つだけ(メンバー向け)のときは、メニューにせず、その項目をボタンとして直接出す
@@ -67,7 +67,7 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
                 setOpen(false)
                 item.onSelect()
               }}
-              className="h-9 whitespace-nowrap px-3 text-left text-sm text-outline hover:bg-ink hover:text-surface focus-visible:bg-ink focus-visible:text-surface focus-visible:outline-none"
+              className="h-9 whitespace-nowrap px-3 text-left text-m text-outline hover:bg-ink hover:text-surface focus-visible:bg-ink focus-visible:text-surface focus-visible:outline-none"
             >
               {item.label}
             </button>

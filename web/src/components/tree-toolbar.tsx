@@ -13,7 +13,7 @@ import type { CanvasTool } from '#/lib/section-interaction-types'
 export type TreeMode = CanvasTool
 
 const buttonClass =
-  'flex size-[60px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1 text-xs hover:bg-side-item focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent'
+  'flex size-[60px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1 text-s hover:bg-side-item focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent'
 
 function ToolButton({
   icon: Icon,

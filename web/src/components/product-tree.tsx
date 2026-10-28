@@ -324,7 +324,7 @@ export function ProductTree({
             )}
             {members.length === 0 ? (
               !leaderPlaced && (
-                <p className="mt-4 text-sm opacity-60"># メンバーは、まだいません</p>
+                <p className="mt-4 text-m opacity-60"># メンバーは、まだいません</p>
               )
             ) : (
               flowMembers.length > 0 && (

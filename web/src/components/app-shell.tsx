@@ -73,11 +73,11 @@ export function AppShell({
           aria-label="メニューを開く"
           aria-expanded={drawer.open}
           aria-controls="app-sidebar"
-          className="flex size-10 items-center justify-center text-xl"
+          className="flex size-10 items-center justify-center text-l"
         >
           ☰
         </button>
-        <p className="text-base font-semibold">人形使い</p>
+        <p className="text-l font-semibold">人形使い</p>
       </header>
       {drawer.open && (
         <div

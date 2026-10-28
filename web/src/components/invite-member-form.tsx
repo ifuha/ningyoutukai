@@ -37,7 +37,7 @@ export function InviteMemberForm({ productId }: { productId: string }) {
 
   return (
     <form onSubmit={submit} className="space-y-2">
-      <label htmlFor="invite-member" className="block text-sm font-bold">
+      <label htmlFor="invite-member" className="block text-m font-bold">
         メンバーを招待
       </label>
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -49,23 +49,23 @@ export function InviteMemberForm({ productId }: { productId: string }) {
           value={value}
           readOnly={invite.isPending}
           onChange={(e) => setValue(e.target.value)}
-          className="h-10 min-w-0 flex-1 border-2 border-ink bg-surface px-3 font-mono text-[16px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
+          className="h-10 min-w-0 flex-1 border-2 border-ink bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
         />
         <button
           type="submit"
           disabled={invite.isPending}
-          className="flex h-10 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-4 text-sm text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          className="flex h-10 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-4 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none"
         >
           {invite.isPending ? '送信中…' : '招待'}
         </button>
       </div>
       {invite.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+        <p role="alert" className="border-l-2 border-ink pl-3 text-m">
           ERR {errorMessage(invite.error.message)}
         </p>
       )}
       {invited && !invite.isError && (
-        <p role="status" className="border-l-2 border-ink pl-3 text-sm">
+        <p role="status" className="border-l-2 border-ink pl-3 text-m">
           招待しました: {invited}
         </p>
       )}
