@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-// 格子の大きさで絵を描く背景(ドットマトリクス)。山の稜線 2 枚と、またたく星。
+// 格子の大きさで絵を描く背景(ドットマトリクス)。山の稜線 2 枚だけ(空は何も描かない)。
 // 四角の大きさ、または記号(. : + # @ など)の濃さで描く。
 // canvas に描く。色は文字色(`--color-ink`)から取り、ライト / ダークの切り替えに追従する。
 // 「動きを減らす」設定のときは、1 枚だけ描いて止める。画面が見えていないあいだは、描かない
@@ -20,11 +20,6 @@ export function layoutFor(width: number): Layout {
 // 文字で描くときの、薄い順の記号(大きさ 0〜1 を、この並びの添字に割り当てる)
 const RAMP = ['.', ':', '-', '=', '+', '*', '#', '%', '@'] as const
 
-function hash(x: number, y: number): number {
-  const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453
-  return n - Math.floor(n)
-}
-
 const smooth = (a: number, b: number, v: number) => {
   const t = Math.min(1, Math.max(0, (v - a) / (b - a)))
   return t * t * (3 - 2 * t)
@@ -42,17 +37,15 @@ export function edgeFade(nx: number, ny: number): number {
 }
 
 // 時刻 t(秒)の、点 (nx, ny) の大きさ(0〜1)。nx / ny は 0〜1 の位置
-export function dotSize(nx: number, ny: number, t: number, gx: number, gy: number): number {
+export function dotSize(nx: number, ny: number, t: number): number {
   // 稜線の高さ(上が 0、下が 1)。画面の高さを使うよう、奥は中ほど、手前は 6 割あたりに置く
   const far = 0.4 + 0.09 * Math.sin(nx * 6 + t * 0.25) + 0.05 * Math.sin(nx * 15 - t * 0.18)
   const near = 0.62 + 0.08 * Math.sin(nx * 4 + 1 - t * 0.2) + 0.04 * Math.sin(nx * 11 + t * 0.3)
   // 手前の山 > 奥の山 > 空
   if (ny > near) return 0.5 + 0.35 * smooth(near, near + 0.2, ny)
   if (ny > far) return 0.22 + 0.3 * smooth(far, near, ny)
-  // 空: 小さな点と、ときどきまたたく星
-  const h = hash(gx, gy)
-  if (h > 0.965) return 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.5 + h * 60))
-  return 0.1
+  // 空: 何も描かない
+  return 0
 }
 
 export function DotField({
@@ -117,9 +110,7 @@ export function DotField({
           const ny = gy / rows
           const fade = edgeFade(nx, ny)
           if (fade <= 0) continue
-          // 星の位置は、絵の中の列で決める(画面の幅が変わっても、同じ星が同じ所に出る)
-          const col = Math.round((nx * designWidth) / STEP)
-          const size = dotSize(nx, ny, t, col, gy) * fade
+          const size = dotSize(nx, ny, t) * fade
           if (shape === 'char') {
             if (size < 0.08) continue
             const glyph = RAMP[Math.min(RAMP.length - 1, Math.floor(size * RAMP.length))]
