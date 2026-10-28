@@ -109,7 +109,9 @@ body {
 
 @keyframes home-drift {
   to {
-    background-position: 24px 24px;
+    background-position:
+      0 0,
+      24px 24px;
   }
 }
 
@@ -130,7 +132,7 @@ body {
 .home-string {
   position: relative;
   width: 0;
-  border-left: 2px solid var(--color-ink);
+  border-left: 2px solid currentColor;
   transform-origin: top center;
   animation: home-swing ease-in-out infinite;
 }
@@ -141,8 +143,8 @@ body {
   left: 0;
   width: 18px;
   height: 18px;
-  border: 2px solid var(--color-ink);
-  background: var(--color-surface);
+  border: 2px solid currentColor;
+  background: #100e17;
   transform: translateX(-50%);
   animation: home-nod 2.4s ease-in-out infinite;
 }
@@ -188,6 +190,67 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .home-bob,
   .home-twinkle {
+    animation: none;
+  }
+}
+
+/*
+ * ホームの背景: Railway のキャンバスのような、暗い紫の舞台。
+ * 上からの紫の光と、流れる点のグリッド。サービスのカードを、流れる破線でつなぐ。
+ * 色は、ライト / ダークで変えない(舞台は、いつも暗い)
+ */
+.railway-bg {
+  color: #e9e6f5;
+  background-color: #100e17;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgb(139 92 246 / 0.38), transparent 62%),
+    radial-gradient(rgb(255 255 255 / 0.16) 1px, transparent 1px);
+  background-size:
+    auto,
+    24px 24px;
+}
+
+@keyframes home-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+@keyframes home-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(74 222 128 / 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgb(74 222 128 / 0);
+  }
+}
+
+.home-link {
+  stroke: rgb(167 139 250 / 0.7);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+  animation: home-flow 1.2s linear infinite;
+}
+
+.home-node {
+  transform: translate(-50%, -50%);
+  background: #1b1829;
+  border: 1px solid rgb(167 139 250 / 0.5);
+  box-shadow: 0 0 24px rgb(139 92 246 / 0.25);
+}
+
+.home-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #4ade80;
+  animation: home-pulse 2s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-link,
+  .home-dot {
     animation: none;
   }
 }

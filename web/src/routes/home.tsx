@@ -23,6 +23,19 @@ const strings = [
   { dur: 4.9, delay: -2.8, len: 42 },
 ] as const
 
+// Railway のキャンバスのような、線でつながれたサービスのカード。位置は舞台の %(中心)
+const nodes = [
+  { name: 'web', x: 16, y: 30, delay: 0 },
+  { name: 'api', x: 50, y: 22, delay: -0.7 },
+  { name: 'db', x: 84, y: 34, delay: -1.4 },
+] as const
+
+// つなぐ線(nodes の添字)
+const links = [
+  [0, 1],
+  [1, 2],
+] as const
+
 // 背景のドット絵の小物。位置(%)・種類・またたきの遅れ(秒)
 const twinkles = [
   { sprite: starSprite, left: 8, top: 18, delay: 0 },
@@ -63,8 +76,38 @@ function Home() {
           {/* 飾り。意味を持たないので、読み上げからは外す */}
           <div
             aria-hidden="true"
-            className="home-stage dot-grid relative h-[60vh] min-h-80 overflow-hidden border-2 border-ink"
+            className="home-stage railway-bg relative h-[60vh] min-h-80 overflow-hidden border-2 border-ink"
           >
+            <svg
+              className="absolute inset-0 size-full"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              {links.map(([a, b]) => (
+                <line
+                  key={`${a}-${b}`}
+                  className="home-link"
+                  x1={nodes[a].x}
+                  y1={nodes[a].y}
+                  x2={nodes[b].x}
+                  y2={nodes[b].y}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+            </svg>
+            {nodes.map((n) => (
+              <div
+                key={n.name}
+                className="home-node absolute flex items-center gap-2 px-3 py-2 font-mono text-s"
+                style={{ left: `${n.x}%`, top: `${n.y}%` }}
+              >
+                <span
+                  className="home-dot"
+                  style={{ animationDelay: `${n.delay}s` }}
+                />
+                {n.name}
+              </div>
+            ))}
             {twinkles.map((t, i) => (
               <span
                 key={i}
