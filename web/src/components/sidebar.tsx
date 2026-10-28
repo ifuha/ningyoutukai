@@ -42,13 +42,13 @@ export function Sidebar({
     <aside className="flex h-screen w-60 shrink-0 flex-col bg-side">
       {/* ロゴ・招待・プロダクト一覧だけがスクロールし、「プロダクト作成」は下に固定する */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-[26px]">
-      <p className="text-[28px] leading-normal font-semibold">
+      <p className="text-l leading-normal font-semibold">
         人形使い
       </p>
 
       {invitations.length > 0 && (
         <section aria-label="招待" className="mt-[26px]">
-          <p className="text-sm font-medium">招待({invitations.length})</p>
+          <p className="text-m font-medium">招待({invitations.length})</p>
           <ul className="mt-[7px] flex flex-col gap-4">
             {invitations.map((i) => (
               <SidebarInvitation key={i.invitationId} invitation={i} />
@@ -58,10 +58,10 @@ export function Sidebar({
       )}
 
       <nav aria-label="プロダクト" className="mt-[26px]">
-        <p className="text-sm">プロダクト</p>
+        <p className="text-m">プロダクト</p>
         <ul className="mt-[7px] flex flex-col gap-2">
           {isLoading ? (
-            <li className="h-12 text-sm leading-[48px] opacity-60">
+            <li className="h-12 text-m leading-[48px] opacity-60">
               読み込み中…
             </li>
           ) : (
@@ -71,7 +71,7 @@ export function Sidebar({
                   type="button"
                   onClick={() => onSelectProduct?.(p.id)}
                   aria-current={p.id === activeProductId ? 'page' : undefined}
-                  className="flex h-12 w-full items-center truncate px-3 text-left text-base font-medium hover:bg-side-item aria-[current=page]:bg-side-item"
+                  className="flex h-12 w-full items-center truncate px-3 text-left text-l font-medium hover:bg-side-item aria-[current=page]:bg-side-item"
                 >
                   <span className="truncate">{p.name}</span>
                 </button>
@@ -86,7 +86,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => onCreateProduct?.()}
-          className="flex h-12 w-full items-center justify-center gap-3 border border-dashed border-ink text-base font-medium hover:bg-side-item"
+          className="flex h-12 w-full items-center justify-center gap-3 border border-dashed border-ink text-l font-medium hover:bg-side-item"
         >
           <PlusIcon />
           プロダクト作成

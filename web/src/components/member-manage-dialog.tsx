@@ -8,7 +8,7 @@ import type { ProductTree, TreeMember } from '#/lib/tree'
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
 
 const buttonClass =
-  'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+  'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
 
 // メンバー 1 人分の行。リーダーが role=member の行で「外す」を押すと、同じ行で確認を出す。
 // 成功したらツリーを取り直し、行は消える。失敗(404/403 など)は行を残し、取り直さない
@@ -41,7 +41,7 @@ function MemberRow({
   const count = member.tasks.length
 
   return (
-    <li className="space-y-2 text-sm">
+    <li className="space-y-2 text-m">
       <div className="flex flex-wrap items-center gap-3">
         {member.avatarUrl ? (
           <img
@@ -59,7 +59,7 @@ function MemberRow({
         )}
         <div className="min-w-0 flex-1">
           <p className="font-bold break-words">{member.userName}</p>
-          <p className="text-xs opacity-60">
+          <p className="text-s opacity-60">
             {roleLabel[member.role]} / タスク {count} 件
           </p>
         </div>
@@ -130,7 +130,7 @@ export function MemberManageDialog({
   const members = [tree.leader, ...tree.members]
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="text-lg font-bold">メンバー({members.length} 人)</h2>
+      <h2 className="text-l font-bold">メンバー({members.length} 人)</h2>
       <ul className="space-y-4">
         {members.map((m) => (
           <MemberRow

@@ -2,7 +2,7 @@ import type { Invitation } from '#/lib/invitation'
 import { useRespondInvitation } from '#/lib/use-respond-invitation'
 
 const buttonClass =
-  'flex h-8 flex-1 items-center justify-center border border-ink text-sm hover:bg-side-item disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent'
+  'flex h-8 flex-1 items-center justify-center border border-ink text-m hover:bg-side-item disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent'
 
 // サイドバー用の、招待 1 件分のコンパクトな行。失敗(404/409)は行を残してエラーを出す
 export function SidebarInvitation({ invitation }: { invitation: Invitation }) {
@@ -11,8 +11,8 @@ export function SidebarInvitation({ invitation }: { invitation: Invitation }) {
 
   return (
     <li className="space-y-1">
-      <p className="truncate text-base font-medium">{invitation.productName}</p>
-      <p className="truncate text-xs opacity-60">
+      <p className="truncate text-l font-medium">{invitation.productName}</p>
+      <p className="truncate text-s opacity-60">
         招待元: {invitation.leaderNames.join('、')}
       </p>
       <div className="flex gap-2">
@@ -34,7 +34,7 @@ export function SidebarInvitation({ invitation }: { invitation: Invitation }) {
         </button>
       </div>
       {respond.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-2 text-xs break-words">
+        <p role="alert" className="border-l-2 border-ink pl-2 text-s break-words">
           ERR {respond.error.message}
         </p>
       )}

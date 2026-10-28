@@ -6,13 +6,13 @@ import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
 const buttonClass =
-  'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-sm text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+  'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
 const inputClass =
-  'h-9 min-w-0 flex-1 border-2 border-ink bg-surface px-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'h-9 min-w-0 flex-1 border-2 border-ink bg-surface px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
 function ErrorText({ message }: { message: string }) {
   return (
-    <p role="alert" className="border-l-2 border-ink pl-3 text-sm">
+    <p role="alert" className="border-l-2 border-ink pl-3 text-m">
       ERR {errorMessage(message)}
     </p>
   )
@@ -47,7 +47,7 @@ function RenameBlock({
         rename.mutate()
       }}
     >
-      <label htmlFor="product-name" className="block text-sm font-bold">
+      <label htmlFor="product-name" className="block text-m font-bold">
         プロダクト名
       </label>
       <div className="flex flex-wrap items-center gap-2">
@@ -70,7 +70,7 @@ function RenameBlock({
           保存
         </button>
       </div>
-      {rename.isSuccess && <p className="text-sm">変更しました</p>}
+      {rename.isSuccess && <p className="text-m">変更しました</p>}
       {rename.isError && <ErrorText message={rename.error.message} />}
     </form>
   )
@@ -99,15 +99,15 @@ function DeleteBlock({
 
   return (
     <div className="space-y-2 border-t-2 border-ink pt-4">
-      <h3 className="text-sm font-bold">危険な操作</h3>
+      <h3 className="text-m font-bold">危険な操作</h3>
       {confirming ? (
         <div className="space-y-2">
-          <p className="break-words text-sm">
+          <p className="break-words text-m">
             「{productName}」を削除しますか?{' '}
             {memberCount === undefined ? 'メンバー' : `メンバー(${memberCount} 人)`}
             、タスク、招待、タスクの種類が、すべて消えます。元に戻せません
           </p>
-          <label htmlFor="delete-confirm" className="block text-sm">
+          <label htmlFor="delete-confirm" className="block text-m">
             確認のため、プロダクト名を入力してください
           </label>
           <input
@@ -172,7 +172,7 @@ export function ProductManageDialog({
 }) {
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="text-lg font-bold">プロダクトの管理</h2>
+      <h2 className="text-l font-bold">プロダクトの管理</h2>
       <RenameBlock productId={productId} productName={productName} />
       <DeleteBlock
         productId={productId}
