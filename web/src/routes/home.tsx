@@ -49,10 +49,10 @@ function Home() {
         const list = products.data ?? []
 
         return (
-          <section aria-label="プロダクト" className="relative z-10 w-full max-w-4xl">
+          <section aria-label="プロダクト" className="relative z-10 w-full max-w-xl">
             {/* 背景。サイドバーの右側いっぱいに敷く(アプリ共通のドットの上に重ねる) */}
             <DotField shape="char" className="pointer-events-none fixed inset-y-0 right-0 left-0 -z-10 h-full w-full md:left-60 md:w-[calc(100%-15rem)]" />
-            <div className="mb-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 font-mono text-s">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 font-mono text-s">
               <span className="min-w-0 truncate opacity-70">&gt; {user.name}</span>
               <span className="flex items-center gap-6">
                 {calendar.isPending ? (
@@ -110,12 +110,12 @@ function Home() {
                     <Link
                       to="/products/$productId"
                       params={{ productId: p.productId }}
-                      className="row-fill group flex min-h-16 items-center gap-6 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
+                      className="row-fill group flex min-h-10 items-center gap-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
                     >
                       <span className="w-8 shrink-0 pl-2 font-mono text-s opacity-70 transition-transform duration-200 group-hover:translate-x-1">
                         {String(i + 1).padStart(2, '0')}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-l font-medium">
+                      <span className="min-w-0 flex-1 truncate text-m font-medium">
                         {p.productName}
                       </span>
                       <span className="shrink-0 text-s opacity-70">
