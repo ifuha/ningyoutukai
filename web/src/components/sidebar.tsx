@@ -71,7 +71,7 @@ export function Sidebar({
                   type="button"
                   onClick={() => onSelectProduct?.(p.id)}
                   aria-current={p.id === activeProductId ? 'page' : undefined}
-                  className="flex h-12 w-full items-center truncate text-left text-base font-medium hover:bg-side-item aria-[current=page]:bg-side-item"
+                  className="flex h-12 w-full items-center truncate px-3 text-left text-base font-medium hover:bg-side-item aria-[current=page]:bg-side-item"
                 >
                   <span className="truncate">{p.name}</span>
                 </button>
