@@ -11,8 +11,12 @@ export const Route = createFileRoute('/home')({ component: Home })
 
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
 
+// 影は、枠と同じ色のずらした四角。押せそうに見せ、ホバーで影の分だけ寄る
 const cardBase =
-  'flex min-h-24 h-full flex-col justify-between gap-3 border-2 border-ink p-4 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
+  'flex min-h-28 h-full flex-col justify-between gap-4 border-2 border-ink p-5 shadow-[4px_4px_0_0_var(--color-ink)] transition-[transform,box-shadow] duration-100 hover:translate-x-0.5 hover:translate-y-0.5 hover:bg-side-item hover:shadow-[2px_2px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
+
+const ghostButton =
+  'h-10 shrink-0 border-2 border-ink px-4 text-m hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
 
 function Home() {
   const navigate = useNavigate()
@@ -45,55 +49,32 @@ function Home() {
   return (
     <AppShell align="top">
       {({ user, products }) => (
-        <div className="w-full max-w-4xl space-y-8">
-          <header className="flex items-start justify-between gap-4">
+        <div className="w-full max-w-4xl space-y-10">
+          <header className="flex items-end justify-between gap-4 border-b-2 border-ink pb-4">
             <div className="min-w-0">
-              <p className="text-m opacity-70">ようこそ</p>
-              <h1 className="truncate text-l leading-normal font-semibold">
+              <p className="font-mono text-s opacity-70">&gt; ようこそ</p>
+              <h1 className="mt-1 truncate text-l leading-normal font-bold">
                 {user.name}
               </h1>
             </div>
             <button
               type="button"
               onClick={() => void signOut()}
-              className="h-10 shrink-0 border-2 border-ink px-4 text-m hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className={ghostButton}
             >
               ログアウト
             </button>
           </header>
 
-          <section
-            aria-label="Googleカレンダー連携"
-            className="flex flex-col gap-3 border-2 border-ink p-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div>
-              <h2 className="text-l font-medium">Googleカレンダー</h2>
-              <p className="mt-1 text-m opacity-70">
-                担当者が連携済みなら、その人のメインカレンダーに期限時刻の予定を追加します。
-              </p>
-              {calendarLinkError && (
-                <p role="alert" className="mt-2 text-m">
-                  Googleカレンダーを連携できませんでした。もう一度お試しください。
-                </p>
+          <section aria-label="プロダクト" className="space-y-4">
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-l font-bold">プロダクト</h2>
+              {products.data && (
+                <span className="font-mono text-s opacity-70">
+                  {products.data.length} 件
+                </span>
               )}
             </div>
-            {calendar.isPending ? (
-              <span className="text-m opacity-60">連携状態を確認中…</span>
-            ) : calendar.data?.connected ? (
-              <span className="shrink-0 text-m font-medium">連携済み</span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void connectGoogleCalendar()}
-                className="h-10 shrink-0 border-2 border-ink px-4 text-m hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-              >
-                Googleカレンダーを連携
-              </button>
-            )}
-          </section>
-
-          <section aria-label="プロダクト" className="space-y-3">
-            <h2 className="text-l font-medium">プロダクト</h2>
             {products.isPending ? (
               <p className="text-m opacity-60">読み込み中…</p>
             ) : products.isError ? (
@@ -101,7 +82,7 @@ function Home() {
                 ERR {products.error.message}
               </p>
             ) : (
-              <ul className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2 xl:grid-cols-3">
+              <ul className="grid grid-cols-1 gap-5 min-[900px]:grid-cols-2 xl:grid-cols-3">
                 {products.data.map((p) => (
                   <li key={p.productId}>
                     <Link
@@ -112,7 +93,11 @@ function Home() {
                       <span className="text-l font-medium break-words">
                         {p.productName}
                       </span>
-                      <span className="text-m opacity-70">
+                      <span
+                        className={`self-start border px-2 text-s ${
+                          p.role === 'leader' ? 'border-ink font-medium' : 'border-ink/50 opacity-70'
+                        }`}
+                      >
                         {roleLabel[p.role]}
                       </span>
                     </Link>
@@ -121,12 +106,44 @@ function Home() {
                 <li>
                   <Link
                     to="/products/new"
-                    className={`${cardBase} items-center justify-center border-dashed text-l font-medium`}
+                    className={`${cardBase} items-center justify-center border-dashed text-l font-medium shadow-none hover:shadow-none`}
                   >
                     ＋ プロダクト作成
                   </Link>
                 </li>
               </ul>
+            )}
+          </section>
+
+          <section
+            aria-label="Googleカレンダー連携"
+            className="flex flex-col gap-3 border-t-2 border-dashed border-ink/40 pt-5 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <h2 className="text-m font-medium">Googleカレンダー</h2>
+              <p className="mt-1 text-s opacity-70">
+                担当者が連携済みなら、その人のメインカレンダーに期限時刻の予定を追加します。
+              </p>
+              {calendarLinkError && (
+                <p role="alert" className="mt-2 text-m">
+                  Googleカレンダーを連携できませんでした。もう一度お試しください。
+                </p>
+              )}
+            </div>
+            {calendar.isPending ? (
+              <span className="text-s opacity-60">連携状態を確認中…</span>
+            ) : calendar.data?.connected ? (
+              <span className="shrink-0 border border-ink px-2 text-s font-medium">
+                連携済み
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void connectGoogleCalendar()}
+                className={ghostButton}
+              >
+                Googleカレンダーを連携
+              </button>
             )}
           </section>
         </div>
