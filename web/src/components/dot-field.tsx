@@ -38,9 +38,9 @@ export function edgeFade(nx: number, ny: number): number {
 
 // 時刻 t(秒)の、点 (nx, ny) の大きさ(0〜1)。nx / ny は 0〜1 の位置
 export function dotSize(nx: number, ny: number, t: number): number {
-  // 稜線の高さ(上が 0、下が 1)。画面の高さを使うよう、奥は中ほど、手前は 6 割あたりに置く
-  const far = 0.4 + 0.09 * Math.sin(nx * 6 + t * 0.25) + 0.05 * Math.sin(nx * 15 - t * 0.18)
-  const near = 0.62 + 0.08 * Math.sin(nx * 4 + 1 - t * 0.2) + 0.04 * Math.sin(nx * 11 + t * 0.3)
+  // 稜線の高さ(上が 0、下が 1)。画面の高さを使うよう、奥は 5 割、手前は 7 割あたりに置く
+  const far = 0.52 + 0.07 * Math.sin(nx * 6 + t * 0.25) + 0.04 * Math.sin(nx * 15 - t * 0.18)
+  const near = 0.72 + 0.06 * Math.sin(nx * 4 + 1 - t * 0.2) + 0.03 * Math.sin(nx * 11 + t * 0.3)
   // 手前の山 > 奥の山 > 空
   if (ny > near) return 0.5 + 0.35 * smooth(near, near + 0.2, ny)
   if (ny > far) return 0.22 + 0.3 * smooth(far, near, ny)
