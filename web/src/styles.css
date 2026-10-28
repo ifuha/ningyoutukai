@@ -25,9 +25,6 @@
   --text-m--line-height: 20px;
   --text-l: 16px;
   --text-l--line-height: 24px;
-  /* 例外: ホームの大見出しと大きな数字だけ。画面の幅に応じて 28〜56px */
-  --text-display: clamp(28px, 6vw, 56px);
-  --text-display--line-height: 1.15;
   --font-sans: Inter, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic",
     Meiryo, system-ui, sans-serif;
   /* 開発者向けの画面(ターミナル風)用の等幅フォント */
@@ -97,8 +94,8 @@ body {
 }
 
 /*
- * ホームの動き。読み込みの順番(上から下へ)と、画面に入ったときの出方、ホバーの反応。
- * 「動きを減らす」設定のときは、すべて止めて、最初から表示する
+ * ホームの一覧の動き。行が上から順に出て、ホバーで左から塗りが広がる。
+ * 「動きを減らす」設定のときは、止めて、最初から表示する
  */
 @keyframes rise {
   from {
@@ -107,41 +104,10 @@ body {
   }
 }
 
-@keyframes line-up {
-  from {
-    transform: translateY(105%);
-  }
-}
-
 .rise {
   animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-.line-mask {
-  display: block;
-  overflow: hidden;
-  padding-bottom: 0.08em;
-}
-
-.line-up {
-  display: block;
-  animation: line-up 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-
-.reveal {
-  opacity: 0;
-  transform: translateY(20px);
-  transition:
-    opacity 0.6s cubic-bezier(0.2, 0.7, 0.2, 1),
-    transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.reveal.is-in {
-  opacity: 1;
-  transform: none;
-}
-
-/* 一覧の行: ホバーで、左から塗りが広がる */
 .row-fill {
   background-image: linear-gradient(var(--color-side-item), var(--color-side-item));
   background-repeat: no-repeat;
@@ -154,33 +120,11 @@ body {
   background-size: 100% 100%;
 }
 
-/* 文字のリンク: 下線が、左から伸びる */
-.link-grow {
-  background-image: linear-gradient(currentColor, currentColor);
-  background-repeat: no-repeat;
-  background-position: 0 100%;
-  background-size: 0% 2px;
-  padding-bottom: 2px;
-  transition: background-size 0.25s ease-out;
-}
-
-.link-grow:hover,
-.link-grow:focus-visible {
-  background-size: 100% 2px;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .rise,
-  .line-up {
+  .rise {
     animation: none;
   }
-  .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-  .row-fill,
-  .link-grow {
+  .row-fill {
     transition: none;
   }
 }
