@@ -1,27 +1,24 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AppShell } from '#/components/app-shell'
 import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
 
 // ホーム(`/home`)。ログイン必須。未ログインなら、ログイン画面(`/`)へ戻す(`AppShell` が行う)。
-// 検索欄と、行の一覧(プロダクトの作成、Google カレンダーの連携、既存のプロダクト)だけの、静かな作り。
-// 配色と枠は、アプリ全体(太い枠、角丸なし)に合わせる
+// TypeSafe AI の Jev のページのように、大きな見出し、3 つの数字、番号つきの一覧、小さなフッターを、
+// 縦に積む。配色と枠は、アプリ全体のもの(ライト / ダークに追従、太い枠、角丸なし)
 export const Route = createFileRoute('/home')({ component: Home })
 
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
 
-const rowClass =
-  'flex min-h-12 w-full items-center justify-between gap-4 px-4 text-left text-m hover:bg-side-item focus-visible:bg-side-item focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink'
+const linkClass =
+  'underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink'
 
 function Home() {
   const navigate = useNavigate()
   const { data: session } = authClient.useSession()
-  const [query, setQuery] = useState('')
   const [calendarLinkError, setCalendarLinkError] = useState(false)
-  const listRef = useRef<HTMLUListElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
   const calendar = useQuery({
     queryKey: ['google-calendar-status'],
     queryFn: () => edenData(eden().api.calendar.status.get()),
@@ -46,137 +43,138 @@ function Home() {
     if (error) setCalendarLinkError(true)
   }
 
-  // ↑ ↓ で、検索欄と一覧の行のあいだを移る(Enter は、リンク・ボタンの標準の動き)
-  function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-    const rows = Array.from(
-      listRef.current?.querySelectorAll<HTMLElement>('[data-row]') ?? [],
-    )
-    const focusables = [inputRef.current, ...rows].filter(
-      (el): el is HTMLElement => el !== null,
-    )
-    const at = focusables.indexOf(document.activeElement as HTMLElement)
-    const next = focusables[at + (e.key === 'ArrowDown' ? 1 : -1)]
-    if (next) {
-      e.preventDefault()
-      next.focus()
-    }
-  }
-
-  const q = query.trim().toLowerCase()
-  const matches = (text: string) => q === '' || text.toLowerCase().includes(q)
-
   return (
     <AppShell align="top">
       {({ user, products }) => {
-        const shown = (products.data ?? []).filter((p) => matches(p.productName))
-        const showCalendar = matches('google カレンダー 連携')
-        const nothing = !matches('プロダクト 作成') && !showCalendar && shown.length === 0
+        const list = products.data ?? []
+        const leading = list.filter((p) => p.role === 'leader').length
 
         return (
-          <div className="w-full max-w-2xl space-y-6" onKeyDown={onKeyDown}>
-            <header className="flex items-center justify-between gap-4">
-              <h1 className="min-w-0 truncate text-l font-bold">{user.name}</h1>
-              <button
-                type="button"
-                onClick={() => void signOut()}
-                className="h-10 shrink-0 border-2 border-ink px-4 text-m hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-              >
-                ログアウト
-              </button>
+          <div className="w-full max-w-4xl">
+            <nav
+              aria-label="ホーム"
+              className="flex items-center justify-between gap-4 pb-16 font-mono text-s"
+            >
+              <span>人形使い</span>
+              <span className="flex items-center gap-6">
+                <Link to="/products/new" className={linkClass}>
+                  プロダクトを作成
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void signOut()}
+                  className={linkClass}
+                >
+                  ログアウト
+                </button>
+              </span>
+            </nav>
+
+            <header>
+              <p className="font-mono text-s opacity-70">&gt; {user.name}</p>
+              <h1 className="mt-4 text-display font-bold break-words">
+                動かす前に、
+                <br />
+                誰が何を持つかを決める。
+              </h1>
+              <p className="mt-6 max-w-xl text-m opacity-70">
+                プロダクトごとにタスクを分け、担当者と期限を決めて、進み具合を一つの画面で見る。
+              </p>
             </header>
 
-            <input
-              ref={inputRef}
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="プロダクトを検索"
-              aria-label="プロダクトを検索"
-              autoFocus
-              className="h-12 w-full border-2 border-ink bg-surface px-4 text-l placeholder:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            />
-
-            <ul
-              ref={listRef}
-              className="divide-y-2 divide-ink border-2 border-ink"
+            <section
+              aria-label="いまの状況"
+              className="mt-20 grid grid-cols-1 border-t-2 border-ink sm:grid-cols-3"
             >
-              {matches('プロダクト 作成') && (
-                <li>
-                  <Link to="/products/new" data-row className={rowClass}>
-                    <span className="font-medium">プロダクトを作成</span>
-                    <span aria-hidden="true">＋</span>
-                  </Link>
-                </li>
-              )}
-
-              {products.isPending && (
-                <li className="flex min-h-12 items-center px-4 text-m opacity-60">
-                  読み込み中…
-                </li>
-              )}
-              {products.isError && (
-                <li
-                  role="alert"
-                  className="flex min-h-12 items-center px-4 text-m"
-                >
-                  ERR {products.error.message}
-                </li>
-              )}
-              {shown.map((p) => (
-                <li key={p.productId}>
-                  <Link
-                    to="/products/$productId"
-                    params={{ productId: p.productId }}
-                    data-row
-                    className={rowClass}
+              <div className="border-b-2 border-ink py-6 sm:border-b-0 sm:pr-6">
+                <p className="text-display font-bold">
+                  {products.isPending ? '–' : list.length}
+                </p>
+                <p className="mt-2 text-m font-medium">プロダクト</p>
+                <p className="text-s opacity-70">参加しているもの</p>
+              </div>
+              <div className="border-b-2 border-ink py-6 sm:border-b-0 sm:border-l-2 sm:px-6">
+                <p className="text-display font-bold">
+                  {products.isPending ? '–' : leading}
+                </p>
+                <p className="mt-2 text-m font-medium">リーダー</p>
+                <p className="text-s opacity-70">自分が率いているもの</p>
+              </div>
+              <div className="py-6 sm:border-l-2 sm:border-ink sm:pl-6">
+                <p className="text-display font-bold">
+                  {calendar.isPending ? '–' : calendar.data?.connected ? 'ON' : 'OFF'}
+                </p>
+                <p className="mt-2 text-m font-medium">Googleカレンダー</p>
+                {calendar.data?.connected ? (
+                  <p className="text-s opacity-70">期限の予定を追加します</p>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={calendar.isPending}
+                    onClick={() => void connectGoogleCalendar()}
+                    className={`${linkClass} text-s disabled:opacity-50`}
                   >
-                    <span className="min-w-0 truncate font-medium">
-                      {p.productName}
-                    </span>
-                    <span className="shrink-0 text-s opacity-70">
-                      {roleLabel[p.role]}
-                    </span>
+                    連携する →
+                  </button>
+                )}
+                {calendarLinkError && (
+                  <p role="alert" className="mt-2 text-s">
+                    連携できませんでした。もう一度お試しください。
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section aria-label="プロダクト" className="mt-20">
+              <h2 className="font-mono text-s opacity-70">01 / プロダクト</h2>
+              {products.isPending ? (
+                <p className="mt-4 text-m opacity-60">読み込み中…</p>
+              ) : products.isError ? (
+                <p role="alert" className="mt-4 border-l-2 border-ink pl-3 text-m">
+                  ERR {products.error.message}
+                </p>
+              ) : list.length === 0 ? (
+                <p className="mt-4 text-m opacity-70">
+                  まだプロダクトがありません。
+                  <Link to="/products/new" className={`${linkClass} underline`}>
+                    最初のプロダクトを作る
                   </Link>
-                </li>
-              ))}
-
-              {showCalendar && (
-                <li>
-                  {calendar.data?.connected ? (
-                    <div className="flex min-h-12 items-center justify-between gap-4 px-4 text-m">
-                      <span>Googleカレンダー</span>
-                      <span className="text-s opacity-70">連携済み</span>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      data-row
-                      disabled={calendar.isPending}
-                      onClick={() => void connectGoogleCalendar()}
-                      className={`${rowClass} disabled:opacity-60`}
-                    >
-                      <span>Googleカレンダーを連携</span>
-                      {calendar.isPending && (
-                        <span className="text-s opacity-70">確認中…</span>
-                      )}
-                    </button>
-                  )}
-                </li>
+                </p>
+              ) : (
+                <ol className="mt-4 border-t-2 border-ink">
+                  {list.map((p, i) => (
+                    <li key={p.productId} className="border-b-2 border-ink">
+                      <Link
+                        to="/products/$productId"
+                        params={{ productId: p.productId }}
+                        className="group flex min-h-16 items-center gap-6 hover:bg-side-item focus-visible:bg-side-item focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
+                      >
+                        <span className="w-8 shrink-0 pl-2 font-mono text-s opacity-70">
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-l font-medium">
+                          {p.productName}
+                        </span>
+                        <span className="shrink-0 text-s opacity-70">
+                          {roleLabel[p.role]}
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className="w-6 shrink-0 font-mono text-m opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+                        >
+                          →
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
               )}
+            </section>
 
-              {nothing && (
-                <li className="flex min-h-12 items-center px-4 text-m opacity-60">
-                  「{query}」に合うものはありません
-                </li>
-              )}
-            </ul>
-
-            {calendarLinkError && (
-              <p role="alert" className="border-l-2 border-ink pl-3 text-m">
-                Googleカレンダーを連携できませんでした。もう一度お試しください。
-              </p>
-            )}
+            <footer className="mt-24 flex items-center justify-between gap-4 border-t-2 border-ink pt-4 font-mono text-s opacity-70">
+              <span>人形使い</span>
+              <span>Version 2.0</span>
+            </footer>
           </div>
         )
       }}

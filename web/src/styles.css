@@ -25,6 +25,9 @@
   --text-m--line-height: 20px;
   --text-l: 16px;
   --text-l--line-height: 24px;
+  /* 例外: ホームの大見出しと大きな数字だけ。画面の幅に応じて 28〜56px */
+  --text-display: clamp(28px, 6vw, 56px);
+  --text-display--line-height: 1.15;
   --font-sans: Inter, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic",
     Meiryo, system-ui, sans-serif;
   /* 開発者向けの画面(ターミナル風)用の等幅フォント */
