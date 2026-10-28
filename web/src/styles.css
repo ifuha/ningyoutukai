@@ -95,3 +95,92 @@ body {
     animation: none;
   }
 }
+
+/*
+ * ホームの動き。読み込みの順番(上から下へ)と、画面に入ったときの出方、ホバーの反応。
+ * 「動きを減らす」設定のときは、すべて止めて、最初から表示する
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes line-up {
+  from {
+    transform: translateY(105%);
+  }
+}
+
+.rise {
+  animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.line-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+}
+
+.line-up {
+  display: block;
+  animation: line-up 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.6s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* 一覧の行: ホバーで、左から塗りが広がる */
+.row-fill {
+  background-image: linear-gradient(var(--color-side-item), var(--color-side-item));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  transition: background-size 0.25s ease-out;
+}
+
+.row-fill:hover,
+.row-fill:focus-visible {
+  background-size: 100% 100%;
+}
+
+/* 文字のリンク: 下線が、左から伸びる */
+.link-grow {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 2px;
+  padding-bottom: 2px;
+  transition: background-size 0.25s ease-out;
+}
+
+.link-grow:hover,
+.link-grow:focus-visible {
+  background-size: 100% 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .line-up {
+    animation: none;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .row-fill,
+  .link-grow {
+    transition: none;
+  }
+}
