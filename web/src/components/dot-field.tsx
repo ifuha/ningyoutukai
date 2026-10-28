@@ -25,6 +25,17 @@ const smooth = (a: number, b: number, v: number) => {
   return t * t * (3 - 2 * t)
 }
 
+// 画面の端に向かって、絵を薄く消す倍率(0〜1)。端でぶつっと切れて見えないようにする。
+// 左右は 14%、下は 30%、上は 8% の幅で消える
+export function edgeFade(nx: number, ny: number): number {
+  return (
+    smooth(0, 0.14, nx) *
+    smooth(0, 0.14, 1 - nx) *
+    smooth(0, 0.3, 1 - ny) *
+    smooth(0, 0.08, ny)
+  )
+}
+
 // 時刻 t(秒)の、点 (nx, ny) の大きさ(0〜1)。nx / ny は 0〜1 の位置
 export function dotSize(nx: number, ny: number, t: number, gx: number, gy: number): number {
   const far = 0.6 + 0.07 * Math.sin(nx * 6 + t * 0.25) + 0.04 * Math.sin(nx * 15 - t * 0.18)
@@ -94,7 +105,9 @@ export function DotField({
       const rows = Math.ceil(height / STEP)
       for (let gy = 0; gy < rows; gy++) {
         for (let gx = 0; gx < cols; gx++) {
-          const size = dotSize(gx / cols, gy / rows, t, gx, gy)
+          const nx = gx / cols
+          const ny = gy / rows
+          const size = dotSize(nx, ny, t, gx, gy) * edgeFade(nx, ny)
           if (shape === 'char') {
             if (size < 0.08) continue
             const glyph = RAMP[Math.min(RAMP.length - 1, Math.floor(size * RAMP.length))]

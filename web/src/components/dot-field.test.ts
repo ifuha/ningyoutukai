@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { dotSize, stepFor } from './dot-field'
+import { dotSize, edgeFade, stepFor } from './dot-field'
 
 describe('dotSize', () => {
   test('同じ入力には、同じ大きさを返す(星の位置が、描くたびに変わらない)', () => {
@@ -36,5 +36,29 @@ describe('stepFor', () => {
   test('狭すぎても広すぎても、決めた範囲に収まる', () => {
     expect(stepFor(100)).toBe(9)
     expect(stepFor(10000)).toBe(28)
+  })
+})
+
+describe('edgeFade', () => {
+  test('中央では消えず、端では 0 になる', () => {
+    expect(edgeFade(0.5, 0.5)).toBe(1)
+    expect(edgeFade(0, 0.5)).toBe(0)
+    expect(edgeFade(1, 0.5)).toBe(0)
+    expect(edgeFade(0.5, 1)).toBe(0)
+  })
+
+  test('端に近いほど薄い', () => {
+    expect(edgeFade(0.05, 0.5)).toBeLessThan(edgeFade(0.1, 0.5))
+    expect(edgeFade(0.5, 0.95)).toBeLessThan(edgeFade(0.5, 0.85))
+  })
+
+  test('いつも 0〜1 に収まる', () => {
+    for (let i = 0; i <= 20; i++) {
+      for (let j = 0; j <= 20; j++) {
+        const v = edgeFade(i / 20, j / 20)
+        expect(v).toBeGreaterThanOrEqual(0)
+        expect(v).toBeLessThanOrEqual(1)
+      }
+    }
   })
 })
