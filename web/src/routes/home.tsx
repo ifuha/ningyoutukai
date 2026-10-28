@@ -51,7 +51,7 @@ function Home() {
         return (
           <section aria-label="プロダクト" className="relative z-10 w-full max-w-4xl">
             {/* 背景。サイドバーの右側いっぱいに敷く(アプリ共通のドットの上に重ねる) */}
-            <DotField className="pointer-events-none fixed inset-y-0 right-0 left-0 z-0 h-full w-full md:left-60 md:w-[calc(100%-15rem)]" />
+            <DotField className="pointer-events-none fixed inset-y-0 right-0 left-0 -z-10 h-full w-full md:left-60 md:w-[calc(100%-15rem)]" />
             <div className="mb-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 font-mono text-s">
               <span className="min-w-0 truncate opacity-70">&gt; {user.name}</span>
               <span className="flex items-center gap-6">
