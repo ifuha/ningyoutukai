@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { dotSize } from './dot-field'
+import { dotSize, stepFor } from './dot-field'
 
 describe('dotSize', () => {
   test('同じ入力には、同じ大きさを返す(星の位置が、描くたびに変わらない)', () => {
@@ -25,5 +25,16 @@ describe('dotSize', () => {
         }
       }
     }
+  })
+})
+
+describe('stepFor', () => {
+  test('画面が広いほど、1 マスが大きい', () => {
+    expect(stepFor(1600)).toBeGreaterThan(stepFor(800))
+  })
+
+  test('狭すぎても広すぎても、決めた範囲に収まる', () => {
+    expect(stepFor(100)).toBe(9)
+    expect(stepFor(10000)).toBe(28)
   })
 })

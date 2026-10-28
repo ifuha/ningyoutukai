@@ -4,7 +4,13 @@ import { useEffect, useRef } from 'react'
 // 四角の大きさ、または記号(. : + # @ など)の濃さで描く。
 // canvas に描く。色は文字色(`--color-ink`)から取り、ライト / ダークの切り替えに追従する。
 // 「動きを減らす」設定のときは、1 枚だけ描いて止める。画面が見えていないあいだは、描かない
-const STEP = 14
+// 格子の 1 マスの大きさは、画面の幅に合わせる(横に約 COLS マス。広い画面では大きく、狭い画面では小さく)。
+// 読めなくなったり重くなったりしないよう、STEP_MIN〜STEP_MAX px に収める
+const COLS = 90
+const STEP_MIN = 9
+const STEP_MAX = 28
+export const stepFor = (width: number) =>
+  Math.min(STEP_MAX, Math.max(STEP_MIN, width / COLS))
 
 // 文字で描くときの、薄い順の記号(大きさ 0〜1 を、この並びの添字に割り当てる)
 const RAMP = ['.', ':', '-', '=', '+', '*', '#', '%', '@'] as const
@@ -76,6 +82,7 @@ export function DotField({
       ctx.fillStyle = paper
       ctx.fillRect(0, 0, width, height)
       // 文字は、四角より細いので、少し濃くする
+      const STEP = stepFor(width)
       ctx.globalAlpha = shape === 'char' ? 0.3 : 0.16
       ctx.fillStyle = color
       if (shape === 'char') {
