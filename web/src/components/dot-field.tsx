@@ -4,13 +4,18 @@ import { useEffect, useRef } from 'react'
 // 四角の大きさ、または記号(. : + # @ など)の濃さで描く。
 // canvas に描く。色は文字色(`--color-ink`)から取り、ライト / ダークの切り替えに追従する。
 // 「動きを減らす」設定のときは、1 枚だけ描いて止める。画面が見えていないあいだは、描かない
-// 格子の 1 マスの大きさは、画面の幅に合わせる(横に約 COLS マス。広い画面では大きく、狭い画面では小さく)。
-// 読めなくなったり重くなったりしないよう、STEP_MIN〜STEP_MAX px に収める
-const COLS = 90
-const STEP_MIN = 9
-const STEP_MAX = 28
-export const stepFor = (width: number) =>
-  Math.min(STEP_MAX, Math.max(STEP_MIN, width / COLS))
+// 絵は、2 つの幅向けに作る。1440px 向け(1 マス 16px)と、2000px 向け(1 マス 22px)。
+// 画面の幅が 1720px 以上なら 2000px 向け、それ未満なら 1440px 向けを、中央に置く。
+// 絵より画面が広ければ、余った左右は何も描かず、狭ければ、はみ出す左右は薄く消える。
+// 1000px 未満の狭い画面だけは、絵の全体が収まるよう、幅に合わせて縮める(横に 90 マス、1 マスは 9px 以上)
+export type Layout = { step: number; designWidth: number }
+const PRESET_1440: Layout = { step: 16, designWidth: 1440 }
+const PRESET_2000: Layout = { step: 22, designWidth: 2000 }
+export function layoutFor(width: number): Layout {
+  if (width >= 1720) return PRESET_2000
+  if (width >= 1000) return PRESET_1440
+  return { step: Math.max(9, width / 90), designWidth: width }
+}
 
 // 文字で描くときの、薄い順の記号(大きさ 0〜1 を、この並びの添字に割り当てる)
 const RAMP = ['.', ':', '-', '=', '+', '*', '#', '%', '@'] as const
@@ -93,7 +98,8 @@ export function DotField({
       ctx.fillStyle = paper
       ctx.fillRect(0, 0, width, height)
       // 文字は、四角より細いので、少し濃くする
-      const STEP = stepFor(width)
+      const { step: STEP, designWidth } = layoutFor(width)
+      const left = (width - designWidth) / 2
       ctx.globalAlpha = shape === 'char' ? 0.3 : 0.16
       ctx.fillStyle = color
       if (shape === 'char') {
@@ -105,9 +111,14 @@ export function DotField({
       const rows = Math.ceil(height / STEP)
       for (let gy = 0; gy < rows; gy++) {
         for (let gx = 0; gx < cols; gx++) {
-          const nx = gx / cols
+          // 絵の中の位置(0〜1)。絵の外は edgeFade が 0 にする
+          const nx = (gx * STEP + STEP / 2 - left) / designWidth
           const ny = gy / rows
-          const size = dotSize(nx, ny, t, gx, gy) * edgeFade(nx, ny)
+          const fade = edgeFade(nx, ny)
+          if (fade <= 0) continue
+          // 星の位置は、絵の中の列で決める(画面の幅が変わっても、同じ星が同じ所に出る)
+          const col = Math.round((nx * designWidth) / STEP)
+          const size = dotSize(nx, ny, t, col, gy) * fade
           if (shape === 'char') {
             if (size < 0.08) continue
             const glyph = RAMP[Math.min(RAMP.length - 1, Math.floor(size * RAMP.length))]

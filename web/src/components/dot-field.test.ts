@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { dotSize, edgeFade, stepFor } from './dot-field'
+import { dotSize, edgeFade, layoutFor } from './dot-field'
 
 describe('dotSize', () => {
   test('同じ入力には、同じ大きさを返す(星の位置が、描くたびに変わらない)', () => {
@@ -28,14 +28,22 @@ describe('dotSize', () => {
   })
 })
 
-describe('stepFor', () => {
-  test('画面が広いほど、1 マスが大きい', () => {
-    expect(stepFor(1600)).toBeGreaterThan(stepFor(800))
+describe('layoutFor', () => {
+  test('1440px 付近は 1440px 向け(1 マス 16px)', () => {
+    expect(layoutFor(1440)).toEqual({ step: 16, designWidth: 1440 })
+    expect(layoutFor(1000)).toEqual({ step: 16, designWidth: 1440 })
+    expect(layoutFor(1719)).toEqual({ step: 16, designWidth: 1440 })
   })
 
-  test('狭すぎても広すぎても、決めた範囲に収まる', () => {
-    expect(stepFor(100)).toBe(9)
-    expect(stepFor(10000)).toBe(28)
+  test('2000px 付近は 2000px 向け(1 マス 22px)', () => {
+    expect(layoutFor(1720)).toEqual({ step: 22, designWidth: 2000 })
+    expect(layoutFor(2000)).toEqual({ step: 22, designWidth: 2000 })
+    expect(layoutFor(3840)).toEqual({ step: 22, designWidth: 2000 })
+  })
+
+  test('1000px 未満は、絵の全体が収まるよう、幅に合わせて縮める', () => {
+    expect(layoutFor(900)).toEqual({ step: 10, designWidth: 900 })
+    expect(layoutFor(300)).toEqual({ step: 9, designWidth: 300 })
   })
 })
 
