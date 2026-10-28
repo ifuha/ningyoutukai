@@ -68,7 +68,7 @@ export function DotField({ className }: { className?: string }) {
       ctx.globalAlpha = 1
       ctx.fillStyle = paper
       ctx.fillRect(0, 0, width, height)
-      ctx.globalAlpha = 0.5
+      ctx.globalAlpha = 0.16
       ctx.fillStyle = color
       const cols = Math.ceil(width / STEP)
       const rows = Math.ceil(height / STEP)
