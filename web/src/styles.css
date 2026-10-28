@@ -94,19 +94,9 @@ body {
 }
 
 /*
- * ホームの飾り: 上から垂れた糸の先で、小さな四角(人形)が揺れる。
- * 糸は上端を支点に振り子のように揺れ、背景の点は、ゆっくり流れる。
+ * ホームの舞台: Railway の「新規作成」の画面のような、暗い紫の背景。
+ * 上からの紫の光と、ゆっくり流れる点のグリッド。色は、ライト / ダークで変えない
  */
-@keyframes home-swing {
-  0%,
-  100% {
-    transform: rotate(-9deg);
-  }
-  50% {
-    transform: rotate(9deg);
-  }
-}
-
 @keyframes home-drift {
   to {
     background-position:
@@ -115,90 +105,6 @@ body {
   }
 }
 
-@keyframes home-nod {
-  0%,
-  100% {
-    transform: translateX(-50%) rotate(0deg);
-  }
-  50% {
-    transform: translateX(-50%) rotate(45deg);
-  }
-}
-
-.home-stage {
-  animation: home-drift 6s linear infinite;
-}
-
-.home-string {
-  position: relative;
-  width: 0;
-  border-left: 2px solid currentColor;
-  transform-origin: top center;
-  animation: home-swing ease-in-out infinite;
-}
-
-.home-puppet {
-  position: absolute;
-  bottom: -14px;
-  left: 0;
-  width: 18px;
-  height: 18px;
-  border: 2px solid currentColor;
-  background: #100e17;
-  transform: translateX(-50%);
-  animation: home-nod 2.4s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-stage,
-  .home-string,
-  .home-puppet {
-    animation: none;
-  }
-}
-
-/* ホームのドット絵: 人形は 2 コマで上下にゆれ、星とハートは点滅する(コマ送りで、ドット絵らしく) */
-@keyframes home-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes home-twinkle {
-  0%,
-  59% {
-    opacity: 0.85;
-  }
-  60%,
-  100% {
-    opacity: 0.2;
-  }
-}
-
-.home-bob {
-  animation: home-bob 1.6s steps(2, jump-none) infinite;
-}
-
-.home-twinkle {
-  animation: home-twinkle 2.2s steps(1) infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-bob,
-  .home-twinkle {
-    animation: none;
-  }
-}
-
-/*
- * ホームの背景: Railway のキャンバスのような、暗い紫の舞台。
- * 上からの紫の光と、流れる点のグリッド。サービスのカードを、流れる破線でつなぐ。
- * 色は、ライト / ダークで変えない(舞台は、いつも暗い)
- */
 .railway-bg {
   color: #e9e6f5;
   background-color: #100e17;
@@ -208,49 +114,11 @@ body {
   background-size:
     auto,
     24px 24px;
-}
-
-@keyframes home-flow {
-  to {
-    stroke-dashoffset: -24;
-  }
-}
-
-@keyframes home-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgb(74 222 128 / 0.6);
-  }
-  50% {
-    box-shadow: 0 0 0 6px rgb(74 222 128 / 0);
-  }
-}
-
-.home-link {
-  stroke: rgb(167 139 250 / 0.7);
-  stroke-width: 2;
-  stroke-dasharray: 6 6;
-  animation: home-flow 1.2s linear infinite;
-}
-
-.home-node {
-  transform: translate(-50%, -50%);
-  background: #1b1829;
-  border: 1px solid rgb(167 139 250 / 0.5);
-  box-shadow: 0 0 24px rgb(139 92 246 / 0.25);
-}
-
-.home-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-  background: #4ade80;
-  animation: home-pulse 2s ease-out infinite;
+  animation: home-drift 6s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-link,
-  .home-dot {
+  .railway-bg {
     animation: none;
   }
 }
