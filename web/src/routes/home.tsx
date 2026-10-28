@@ -71,7 +71,7 @@ function Home() {
                 <button
                   type="button"
                   onClick={() => void signOut()}
-                  className={barLink}
+                  className="h-8 border-2 border-ink bg-surface px-3 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                   ログアウト
                 </button>
