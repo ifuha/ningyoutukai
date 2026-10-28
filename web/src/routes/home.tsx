@@ -1,5 +1,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
+import {
+  PixelSprite,
+  heartSprite,
+  puppetSprite,
+  starSprite,
+} from '#/components/pixel-sprite'
 import { authClient } from '#/lib/auth-client'
 
 // ホーム(`/home`)。ログイン必須。未ログインなら、ログイン画面(`/`)へ戻す(`AppShell` が行う)。
@@ -15,6 +21,15 @@ const strings = [
   { dur: 5.6, delay: -3.1, len: 54 },
   { dur: 4.0, delay: -1.9, len: 66 },
   { dur: 4.9, delay: -2.8, len: 42 },
+] as const
+
+// 背景のドット絵の小物。位置(%)・種類・またたきの遅れ(秒)
+const twinkles = [
+  { sprite: starSprite, left: 8, top: 18, delay: 0 },
+  { sprite: heartSprite, left: 86, top: 24, delay: -0.8 },
+  { sprite: starSprite, left: 22, top: 62, delay: -1.5 },
+  { sprite: starSprite, left: 74, top: 56, delay: -0.4 },
+  { sprite: heartSprite, left: 40, top: 12, delay: -1.1 },
 ] as const
 
 function Home() {
@@ -50,6 +65,22 @@ function Home() {
             aria-hidden="true"
             className="home-stage dot-grid relative h-[60vh] min-h-80 overflow-hidden border-2 border-ink"
           >
+            {twinkles.map((t, i) => (
+              <span
+                key={i}
+                className="home-twinkle absolute"
+                style={{
+                  left: `${t.left}%`,
+                  top: `${t.top}%`,
+                  animationDelay: `${t.delay}s`,
+                }}
+              >
+                <PixelSprite rows={t.sprite} pixel={4} />
+              </span>
+            ))}
+            <div className="home-bob absolute bottom-6 left-1/2 -ml-20">
+              <PixelSprite rows={puppetSprite} pixel={10} />
+            </div>
             <div className="absolute inset-x-0 top-0 flex h-full justify-around px-6">
               {strings.map((s, i) => (
                 <div

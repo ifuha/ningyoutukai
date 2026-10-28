@@ -154,3 +154,40 @@ body {
     animation: none;
   }
 }
+
+/* ホームのドット絵: 人形は 2 コマで上下にゆれ、星とハートは点滅する(コマ送りで、ドット絵らしく) */
+@keyframes home-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes home-twinkle {
+  0%,
+  59% {
+    opacity: 0.85;
+  }
+  60%,
+  100% {
+    opacity: 0.2;
+  }
+}
+
+.home-bob {
+  animation: home-bob 1.6s steps(2, jump-none) infinite;
+}
+
+.home-twinkle {
+  animation: home-twinkle 2.2s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-bob,
+  .home-twinkle {
+    animation: none;
+  }
+}
