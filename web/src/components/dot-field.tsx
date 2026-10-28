@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-// 点の格子の大きさで絵を描く背景(ドットマトリクス)。山の稜線 2 枚、月、またたく星。
+// 四角の格子の大きさで絵を描く背景(ドットマトリクス)。山の稜線 2 枚と、またたく星。
 // canvas に描く。色は文字色(`--color-ink`)から取り、ライト / ダークの切り替えに追従する。
 // 「動きを減らす」設定のときは、1 枚だけ描いて止める。画面が見えていないあいだは、描かない
 const STEP = 14
@@ -22,12 +22,6 @@ export function dotSize(nx: number, ny: number, t: number, gx: number, gy: numbe
   // 手前の山 > 奥の山 > 空
   if (ny > near) return 0.5 + 0.35 * smooth(near, near + 0.2, ny)
   if (ny > far) return 0.22 + 0.3 * smooth(far, near, ny)
-  // 月(円の中が大きな点。縁はなだらか)
-  const dx = nx - 0.76
-  const dy = (ny - 0.26) * 0.6
-  const d = Math.sqrt(dx * dx + dy * dy * 1.6)
-  const moon = 1 - smooth(0.085, 0.1, d)
-  if (moon > 0) return 0.25 + 0.7 * moon
   // 空: 小さな点と、ときどきまたたく星
   const h = hash(gx, gy)
   if (h > 0.965) return 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.5 + h * 60))
@@ -75,11 +69,15 @@ export function DotField({ className }: { className?: string }) {
       for (let gy = 0; gy < rows; gy++) {
         for (let gx = 0; gx < cols; gx++) {
           const size = dotSize(gx / cols, gy / rows, t, gx, gy)
-          const r = (STEP / 2) * size
-          if (r < 0.4) continue
-          ctx.beginPath()
-          ctx.arc(gx * STEP + STEP / 2, gy * STEP + STEP / 2, r, 0, Math.PI * 2)
-          ctx.fill()
+          // 四角。格子の中心に置き、大きさが 1 のとき、格子の 9 割の辺になる
+          const side = STEP * 0.9 * size
+          if (side < 1) continue
+          ctx.fillRect(
+            gx * STEP + (STEP - side) / 2,
+            gy * STEP + (STEP - side) / 2,
+            side,
+            side,
+          )
         }
       }
     }

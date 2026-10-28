@@ -10,8 +10,9 @@ describe('dotSize', () => {
     expect(dotSize(0.2, 0.95, 0, 5, 20)).toBeGreaterThan(dotSize(0.2, 0.05, 0, 5, 1))
   })
 
-  test('月の中は、まわりの空より大きな点になる', () => {
-    expect(dotSize(0.76, 0.26, 0, 20, 5)).toBeGreaterThan(dotSize(0.4, 0.26, 0, 10, 5))
+  test('空には、月のような大きな塊がない(星でない点は、どこでも同じ小さな大きさ)', () => {
+    // hash が 0.965 を超えない格子の位置を選ぶ(星ではない点)
+    expect(dotSize(0.76, 0.26, 0, 20, 5)).toBe(dotSize(0.4, 0.26, 0, 10, 5))
   })
 
   test('大きさは、いつも 0〜1 に収まる', () => {
