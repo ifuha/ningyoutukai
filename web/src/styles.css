@@ -128,3 +128,40 @@ body {
     transition: none;
   }
 }
+
+/*
+ * ホームの背景: 方眼紙のような格子(細い線と、5 マスごとの太い線)。端に向かって薄く消える。
+ * 色は文字色から作るので、ライト / ダークに追従する。ごくゆっくり流れる(動きを減らす設定では止める)
+ */
+@keyframes blueprint-pan {
+  to {
+    background-position:
+      200px 200px,
+      200px 200px,
+      200px 200px,
+      200px 200px;
+  }
+}
+
+.blueprint-bg {
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--color-ink) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-ink) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--color-ink) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-ink) 7%, transparent) 1px, transparent 1px);
+  background-size:
+    200px 200px,
+    200px 200px,
+    40px 40px,
+    40px 40px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 25%, transparent 85%);
+  mask-image: radial-gradient(ellipse at 50% 30%, #000 25%, transparent 85%);
+  animation: blueprint-pan 60s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blueprint-bg {
+    animation: none;
+  }
+}

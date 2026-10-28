@@ -14,7 +14,12 @@ function Home() {
         const list = products.data ?? []
 
         return (
-          <section aria-label="プロダクト" className="w-full max-w-4xl">
+          <section aria-label="プロダクト" className="relative z-10 w-full max-w-4xl">
+            {/* 背景。サイドバーの右側いっぱいに敷く(アプリ共通のドットの上に重ねる) */}
+            <div
+              aria-hidden="true"
+              className="blueprint-bg pointer-events-none fixed inset-y-0 right-0 left-0 z-0 md:left-60"
+            />
             <h1 className="font-mono text-s opacity-70">01 / プロダクト</h1>
             {products.isPending ? (
               <p className="mt-4 text-m opacity-60">読み込み中…</p>
