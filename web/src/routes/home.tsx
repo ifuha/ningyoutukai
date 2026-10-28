@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
+import { DotField } from '#/components/dot-field'
 
 // ホーム(`/home`)。ログイン必須。未ログインなら、ログイン画面(`/`)へ戻す(`AppShell` が行う)。
 // 番号つきのプロダクトの一覧だけ。配色と枠は、アプリ全体のもの(ライト / ダークに追従、太い枠、角丸なし)
@@ -16,10 +17,7 @@ function Home() {
         return (
           <section aria-label="プロダクト" className="relative z-10 w-full max-w-4xl">
             {/* 背景。サイドバーの右側いっぱいに敷く(アプリ共通のドットの上に重ねる) */}
-            <div
-              aria-hidden="true"
-              className="blueprint-bg pointer-events-none fixed inset-y-0 right-0 left-0 z-0 md:left-60"
-            />
+            <DotField className="pointer-events-none fixed inset-y-0 right-0 left-0 z-0 h-full w-full md:left-60 md:w-[calc(100%-15rem)]" />
             <h1 className="font-mono text-s opacity-70">01 / プロダクト</h1>
             {products.isPending ? (
               <p className="mt-4 text-m opacity-60">読み込み中…</p>
@@ -38,7 +36,7 @@ function Home() {
                 </Link>
               </p>
             ) : (
-              <ol className="mt-4 border-t-2 border-ink">
+              <ol className="mt-4 border-t-2 border-ink bg-surface">
                 {list.map((p, i) => (
                   <li
                     key={p.productId}
