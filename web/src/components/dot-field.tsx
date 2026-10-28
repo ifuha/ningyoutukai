@@ -1,9 +1,13 @@
 import { useEffect, useRef } from 'react'
 
-// 四角の格子の大きさで絵を描く背景(ドットマトリクス)。山の稜線 2 枚と、またたく星。
+// 格子の大きさで絵を描く背景(ドットマトリクス)。山の稜線 2 枚と、またたく星。
+// 四角の大きさ、または記号(. : + # @ など)の濃さで描く。
 // canvas に描く。色は文字色(`--color-ink`)から取り、ライト / ダークの切り替えに追従する。
 // 「動きを減らす」設定のときは、1 枚だけ描いて止める。画面が見えていないあいだは、描かない
 const STEP = 14
+
+// 文字で描くときの、薄い順の記号(大きさ 0〜1 を、この並びの添字に割り当てる)
+const RAMP = ['.', ':', '-', '=', '+', '*', '#', '%', '@'] as const
 
 function hash(x: number, y: number): number {
   const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453
@@ -28,7 +32,14 @@ export function dotSize(nx: number, ny: number, t: number, gx: number, gy: numbe
   return 0.1
 }
 
-export function DotField({ className }: { className?: string }) {
+export function DotField({
+  className,
+  shape = 'square',
+}: {
+  className?: string
+  // 'square': 四角の大きさで描く / 'char': 記号の濃さで描く
+  shape?: 'square' | 'char'
+}) {
   const ref = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -38,6 +49,7 @@ export function DotField({ className }: { className?: string }) {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)')
     let color = '#000'
     let paper = '#fff'
+    let mono = 'monospace'
     let width = 0
     let height = 0
     let frame = 0
@@ -48,6 +60,7 @@ export function DotField({ className }: { className?: string }) {
       const style = getComputedStyle(document.documentElement)
       color = style.getPropertyValue('--color-ink').trim() || '#000'
       paper = style.getPropertyValue('--color-surface').trim() || '#fff'
+      mono = style.getPropertyValue('--font-mono').trim() || 'monospace'
     }
     const resize = () => {
       const dpr = window.devicePixelRatio || 1
@@ -62,13 +75,25 @@ export function DotField({ className }: { className?: string }) {
       ctx.globalAlpha = 1
       ctx.fillStyle = paper
       ctx.fillRect(0, 0, width, height)
-      ctx.globalAlpha = 0.16
+      // 文字は、四角より細いので、少し濃くする
+      ctx.globalAlpha = shape === 'char' ? 0.3 : 0.16
       ctx.fillStyle = color
+      if (shape === 'char') {
+        ctx.font = `${STEP}px ${mono}`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+      }
       const cols = Math.ceil(width / STEP)
       const rows = Math.ceil(height / STEP)
       for (let gy = 0; gy < rows; gy++) {
         for (let gx = 0; gx < cols; gx++) {
           const size = dotSize(gx / cols, gy / rows, t, gx, gy)
+          if (shape === 'char') {
+            if (size < 0.08) continue
+            const glyph = RAMP[Math.min(RAMP.length - 1, Math.floor(size * RAMP.length))]
+            ctx.fillText(glyph, gx * STEP + STEP / 2, gy * STEP + STEP / 2)
+            continue
+          }
           // 四角。格子の中心に置き、大きさが 1 のとき、格子の 9 割の辺になる
           const side = STEP * 0.9 * size
           if (side < 1) continue
@@ -120,7 +145,7 @@ export function DotField({ className }: { className?: string }) {
       scheme.removeEventListener('change', onScheme)
       reduce.removeEventListener('change', start)
     }
-  }, [])
+  }, [shape])
 
   return <canvas ref={ref} aria-hidden="true" className={className} />
 }
