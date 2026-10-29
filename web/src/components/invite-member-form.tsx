@@ -113,8 +113,22 @@ export function InviteMemberForm({ productId }: { productId: string }) {
                     pick(i)
                   }}
                   onMouseEnter={() => setActive(i)}
-                  className={`flex cursor-pointer items-baseline gap-3 px-3 py-2 text-m ${i === active ? 'bg-ink text-surface' : ''}`}
+                  className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-m ${i === active ? 'bg-ink text-surface' : ''}`}
                 >
+                  {c.avatarUrl ? (
+                    <img
+                      src={c.avatarUrl}
+                      alt=""
+                      className="size-8 shrink-0 border border-current object-cover"
+                    />
+                  ) : (
+                    <span
+                      aria-hidden="true"
+                      className="flex size-8 shrink-0 items-center justify-center border border-current font-bold"
+                    >
+                      {[...c.userName][0] ?? '?'}
+                    </span>
+                  )}
                   <span className="font-bold">{c.userName}</span>
                   <span className="min-w-0 truncate font-mono">{candidateValue(c)}</span>
                 </li>
