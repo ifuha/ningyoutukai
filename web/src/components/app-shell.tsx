@@ -65,7 +65,7 @@ export function AppShell({
 
   return (
     <div className="flex h-screen flex-col md:flex-row">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-ink px-2 md:hidden">
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line px-2 md:hidden">
         <button
           type="button"
           ref={drawer.buttonRef}

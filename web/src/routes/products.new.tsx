@@ -74,7 +74,7 @@ function NewProduct() {
                 value={name}
                 readOnly={pending}
                 onChange={(e) => setName(e.target.value)}
-                className="h-12 w-full border-2 border-ink bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
+                className="h-12 w-full border-2 border-line bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
               />
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -89,13 +89,13 @@ function NewProduct() {
                 type="button"
                 disabled={pending}
                 onClick={() => void navigate({ to: '/home' })}
-                className={`${buttonBase} border-outline bg-secondary text-outline sm:w-40`}
+                className={`${buttonBase} border-line bg-secondary text-outline sm:w-40`}
               >
                 キャンセル
               </button>
             </div>
             {error && (
-              <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+              <p role="alert" className="border-l-2 border-line pl-3 text-m">
                 ERR {errorMessage(error)}
               </p>
             )}

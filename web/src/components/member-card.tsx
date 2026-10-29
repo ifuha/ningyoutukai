@@ -51,10 +51,10 @@ export function MemberCard({
   return (
     <article
       data-card-id={cardId}
-      className="w-[240px] shrink-0 border-2 border-ink bg-surface text-left"
+      className="w-[240px] shrink-0 border-2 border-line bg-surface text-left"
     >
       <header
-        className={`flex items-center gap-2 border-b-2 border-ink p-2 ${isLeader ? 'bg-ink text-surface' : ''}`}
+        className={`flex items-center gap-2 border-b-2 border-line p-2 ${isLeader ? 'bg-ink text-surface' : ''}`}
       >
         {member.avatarUrl ? (
           <img
@@ -103,7 +103,7 @@ export function MemberCard({
                 {(t.reportedAt || t.taskType) && (
                   <div className="mt-0.5 flex items-center gap-2 text-s">
                     {t.reportedAt && (
-                      <span className="shrink-0 border border-ink px-1">
+                      <span className="shrink-0 border border-line px-1">
                         確認待ち
                       </span>
                     )}
@@ -119,7 +119,7 @@ export function MemberCard({
           </ul>
         )}
       </div>
-      <footer className="flex flex-wrap justify-between gap-x-2 border-t-2 border-ink px-2 py-1 text-s opacity-80">
+      <footer className="flex flex-wrap justify-between gap-x-2 border-t-2 border-line px-2 py-1 text-s opacity-80">
         {rest > 0 && onShowTasks ? (
           <button
             type="button"

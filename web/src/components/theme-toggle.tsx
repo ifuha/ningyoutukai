@@ -27,7 +27,7 @@ export function ThemeToggle() {
   }
 
   return (
-    <div role="group" aria-label="表示モード" className="flex border-2 border-ink">
+    <div role="group" aria-label="表示モード" className="flex border-2 border-line">
       {themes.map((t) => (
         <button
           key={t.value}

@@ -37,7 +37,7 @@ export function Modal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] border-2 border-ink bg-surface text-ink backdrop:bg-black/40"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] border-2 border-line bg-surface text-ink backdrop:bg-black/40"
     >
       {open && <div className="space-y-4 p-6">{children}</div>}
     </dialog>

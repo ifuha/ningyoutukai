@@ -48,7 +48,7 @@ const providers: {
     key: '2',
     label: 'Googleではじめる',
     icon: <GoogleLogo className="h-5 w-5" />,
-    className: 'bg-secondary text-outline border-2 border-outline',
+    className: 'bg-secondary text-outline border-2 border-line',
   },
 ]
 
@@ -118,7 +118,7 @@ export function LoginButtons() {
         </button>
       ))}
       {failed && (
-        <p role="alert" className="border-l-2 border-ink pl-3 font-mono text-m">
+        <p role="alert" className="border-l-2 border-line pl-3 font-mono text-m">
           ERR {failed}
         </p>
       )}

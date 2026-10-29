@@ -396,7 +396,7 @@ export function SectionEditor({
             data-resize-handle={h.handle}
             aria-hidden="true"
             {...grab({ type: 'resize', handle: h.handle })}
-            className="pointer-events-auto absolute z-30 border-ink bg-surface"
+            className="pointer-events-auto absolute z-30 border-line bg-surface"
             style={{
               left: h.cx - h.size / 2,
               top: h.cy - h.size / 2,

@@ -73,7 +73,7 @@ export function TreeToolbar({
     <div
       role="toolbar"
       aria-label="ツリーの道具"
-      className="flex h-[86px] w-[344px] max-w-[calc(100vw-1.5rem)] items-center gap-1.5 overflow-x-auto border-2 border-ink bg-surface/90"
+      className="flex h-[86px] w-[344px] max-w-[calc(100vw-1.5rem)] items-center gap-1.5 overflow-x-auto border-2 border-line bg-surface/90"
     >
       <ToolButton
         icon={MousePointer2}

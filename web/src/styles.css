@@ -18,6 +18,8 @@
   /* サイドバーの背景と、項目のマウスオーバー・選択中の背景(Figma `side-light` / `side-dark`) */
   --color-side: #edebe4;
   --color-side-item: #e2dfd4;
+  /* 枠線の色。文字色より落ち着かせる(文字色 40% + 紙の色 60%)。濃さは、この割合で変える */
+  --color-line: color-mix(in srgb, var(--color-ink) 40%, var(--color-surface));
   /* 文字の大きさは、小・中・大の 3 つだけ(text-s / text-m / text-l) */
   --text-s: 12px;
   --text-s--line-height: 16px;
