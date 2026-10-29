@@ -1,4 +1,5 @@
 import { SidebarInvitation } from '#/components/sidebar-invitation'
+import { ThemeToggle } from '#/components/theme-toggle'
 import type { Invitation } from '#/lib/invitation'
 
 export type SidebarProduct = { id: string; name: string }
@@ -91,6 +92,9 @@ export function Sidebar({
           <PlusIcon />
           プロダクト作成
         </button>
+        <div className="mt-3">
+          <ThemeToggle />
+        </div>
       </div>
     </aside>
   )
