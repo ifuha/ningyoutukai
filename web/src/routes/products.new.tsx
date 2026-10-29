@@ -16,9 +16,6 @@ export const Route = createFileRoute('/products/new')({
   component: NewProduct,
 })
 
-const buttonBase =
-  'flex h-[48px] items-center justify-center border px-4 text-l transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
-
 function NewProduct() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -96,10 +93,7 @@ function NewProduct() {
                 size="lg"
                 disabled={pending}
                 onClick={() => void navigate({ to: '/home' })}
-                className={`${buttonBase} border-line bg-secondary text-outline sm:w-40`}
-              >
-                キャンセル
-              </button>
+              />
             </div>
             {error && (
               <p role="alert" className="border-l border-line pl-3 text-m">

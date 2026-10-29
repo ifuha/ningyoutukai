@@ -69,14 +69,14 @@ export function Sidebar({
       </div>
 
       <div className="shrink-0 px-4 pt-3 pb-6">
-        <button
-          type="button"
-          onClick={() => onCreateProduct?.()}
-          className="flex h-12 w-full items-center justify-center gap-3 border border-dashed border-line text-l font-medium hover:bg-side-item"
-        >
-          <PlusIcon />
-          プロダクト作成
-        </button>
+        <div className="flex justify-center">
+          <IconButton
+            icon={Plus}
+            label="プロダクト作成"
+            variant="outline"
+            onClick={() => onCreateProduct?.()}
+          />
+        </div>
         <div className="mt-3">
           <ThemeToggle />
         </div>

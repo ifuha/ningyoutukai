@@ -49,7 +49,7 @@ describe('IconButton', () => {
   test('大きさとバリアントが効く', () => {
     expect(render({ size: 'lg' })).toContain('size-12')
     expect(render({ size: 'sm' })).toContain('size-7')
-    expect(render({ variant: 'outline' })).toContain('border-2 border-ink')
+    expect(render({ variant: 'outline' })).toContain('border border-line')
   })
 
   test('onClick や data- などの属性を、ボタンに渡す', () => {

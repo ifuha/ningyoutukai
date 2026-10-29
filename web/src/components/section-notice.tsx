@@ -34,10 +34,7 @@ export function SectionNotice({
         size="sm"
         side="left"
         onClick={onDismiss}
-        className="shrink-0 border border-line px-1.5 leading-none hover:bg-side-item"
-      >
-        ×
-      </button>
+      />
     </p>
   )
 }

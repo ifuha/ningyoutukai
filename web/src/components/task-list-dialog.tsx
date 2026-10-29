@@ -67,13 +67,7 @@ export function TaskListDialog({
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 items-center justify-center border border-line bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
-          >
-            閉じる
-          </button>
+          <IconButton icon={X} label="閉じる" variant="outline" onClick={onClose} />
         </>
       )}
     </Modal>
