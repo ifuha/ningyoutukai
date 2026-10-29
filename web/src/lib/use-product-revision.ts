@@ -5,7 +5,7 @@ import { isDragEngaged } from '#/lib/drag-session'
 import { revisionAction } from '#/lib/revision-sync'
 
 // 他の人の変更を、画面に反映する(プロダクトの画面で使う)。
-// 数秒ごとに、プロダクトの版(api の `GET /api/product/:productId/revision`)を見て、変わったときだけ、
+// 10 秒ごとに、プロダクトの版(api の `GET /api/product/:productId/revision`)を見て、変わったときだけ、
 // そのプロダクトのデータ(ツリー・セクション・メンバー・タスクなど。`['products', productId]` 以下)を取り直す。
 // - タブが見えていないあいだは、見に行かない。見えるようになったら、すぐ見る(react-query の標準の動き)
 // - ドラッグの最中は、取り直しを待つ(終わったあとに反映する。30 秒を超えたら、待たずに反映する)
@@ -13,7 +13,7 @@ import { revisionAction } from '#/lib/revision-sync'
 // - 版が取れなかったとき(通信の失敗など)は、何もしない。次の呼び出しで、また試す
 
 /** 版を見に行く間隔(ミリ秒) */
-export const REVISION_POLL_MS = 4000
+export const REVISION_POLL_MS = 10_000
 /** ドラッグの最中に、取り直しを待つ間隔(ミリ秒) */
 const DEFER_MS = 400
 /** 待つ上限(ミリ秒)。ドラッグが何かの拍子に終わらなくても、反映が止まりつづけないように */
