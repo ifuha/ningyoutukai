@@ -62,6 +62,7 @@ function Home() {
                   <IconButton
                     icon={CalendarPlus}
                     label="Googleカレンダーを連携"
+                    showLabel
                     size="sm"
                     side="bottom"
                     onClick={() => void connectGoogleCalendar()}

@@ -59,4 +59,23 @@ describe('IconButton', () => {
     expect(html).toContain('data-row="true"')
     expect(html).toContain('form="f1"')
   })
+
+  test('showLabel: アイコンの右に文字も出し、ツールチップは出さない', () => {
+    const html = render({ showLabel: true, label: 'プロダクト作成' })
+    expect(html).toContain('>プロダクト作成</span>')
+    expect(html).toContain('aria-label="プロダクト作成"')
+    expect(html).not.toContain('group-hover/tip:opacity-100') // ツールチップなし
+    expect(html).toContain('h-10') // 文字つきは、高さだけ決めて、幅は中身
+    expect(html).not.toContain('size-10')
+  })
+
+  test('showLabel でも、tip を渡せば、ツールチップを出す', () => {
+    const html = render({ showLabel: true, label: '追加', tip: 'リーダーのみ' })
+    expect(html).toContain('>リーダーのみ</span>')
+  })
+
+  test('block: 横幅いっぱい', () => {
+    const html = render({ showLabel: true, block: true })
+    expect(html).toContain('w-full')
+  })
 })

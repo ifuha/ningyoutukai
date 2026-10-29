@@ -128,6 +128,7 @@ function Product() {
             <IconButton
               icon={Plus}
               label="タスクを追加"
+              showLabel
               variant="outline"
               side="bottom"
               onClick={() => setTaskForm({})}

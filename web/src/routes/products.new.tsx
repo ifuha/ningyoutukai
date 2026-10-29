@@ -79,8 +79,8 @@ function NewProduct() {
             <div className="flex gap-3">
               <IconButton
                 icon={Check}
-                label="作成"
-                tip={pending ? '作成中…' : undefined}
+                label={pending ? '作成中…' : '作成'}
+                showLabel
                 type="submit"
                 variant="solid"
                 size="lg"
@@ -89,6 +89,7 @@ function NewProduct() {
               <IconButton
                 icon={X}
                 label="キャンセル"
+                showLabel
                 variant="outline"
                 size="lg"
                 disabled={pending}

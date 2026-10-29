@@ -260,6 +260,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
           type="submit"
           icon={initial ? Check : Plus}
           label={save.isPending ? '送信中…' : initial ? '保存' : '追加'}
+          showLabel
           variant="outline"
           disabled={save.isPending || remove.isPending}
         />

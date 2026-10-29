@@ -78,6 +78,7 @@ function Detail({
           <IconButton
             icon={Check}
             label="完了を報告"
+            showLabel
             variant="outline"
             disabled={report.isPending}
             onClick={() => report.mutate()}

@@ -57,6 +57,7 @@ export function InviteMemberForm({ productId }: { productId: string }) {
           type="submit"
           icon={Send}
           label="招待"
+          showLabel
           variant="outline"
           side="bottom"
           disabled={invite.isPending}
