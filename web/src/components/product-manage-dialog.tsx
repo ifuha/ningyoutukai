@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Pencil, Trash2, X } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { Modal } from '#/components/modal'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
@@ -62,13 +64,13 @@ function RenameBlock({
           }}
           className={inputClass}
         />
-        <button
+        <IconButton
           type="submit"
+          icon={Pencil}
+          label="名前の変更"
+          variant="outline"
           disabled={rename.isPending || !name.trim() || unchanged}
-          className={buttonClass}
-        >
-          保存
-        </button>
+        />
       </div>
       {rename.isSuccess && <p className="text-m">変更しました</p>}
       {rename.isError && <ErrorText message={rename.error.message} />}
@@ -127,28 +129,26 @@ function DeleteBlock({
             >
               削除する
             </button>
-            <button
-              type="button"
+            <IconButton
+              icon={X}
+              label="やめる"
+              variant="outline"
               disabled={remove.isPending}
               onClick={() => {
                 setConfirming(false)
                 setTyped('')
                 remove.reset()
               }}
-              className={buttonClass}
-            >
-              やめる
-            </button>
+            />
           </div>
         </div>
       ) : (
-        <button
-          type="button"
+        <IconButton
+          icon={Trash2}
+          label="このプロダクトを削除"
+          variant="outline"
           onClick={() => setConfirming(true)}
-          className={buttonClass}
-        >
-          このプロダクトを削除
-        </button>
+        />
       )}
       {remove.isError && <ErrorText message={remove.error.message} />}
     </div>
@@ -179,9 +179,12 @@ export function ProductManageDialog({
         productName={productName}
         memberCount={memberCount}
       />
-      <button type="button" onClick={onClose} className={buttonClass}>
-        閉じる
-      </button>
+      <IconButton
+        icon={X}
+        label="閉じる"
+        variant="outline"
+        onClick={onClose}
+      />
     </Modal>
   )
 }
