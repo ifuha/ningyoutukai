@@ -84,6 +84,7 @@ function ReviewRow({
         <IconButton
           icon={Check}
           label="完了を確定"
+          showLabel
           variant="outline"
           disabled={complete.isPending || stale || confirming}
           onClick={() => setConfirming(true)}

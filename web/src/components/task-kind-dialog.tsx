@@ -86,6 +86,7 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
             type="submit"
             icon={Check}
             label="保存"
+            showLabel
             variant="outline"
             disabled={busy || !name.trim()}
           />
@@ -193,6 +194,7 @@ function AddForm({ productId }: { productId: string }) {
           type="submit"
           icon={Plus}
           label="追加"
+          showLabel
           variant="outline"
           disabled={add.isPending || !name.trim()}
         />

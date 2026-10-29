@@ -73,6 +73,8 @@ export function Sidebar({
           <IconButton
             icon={Plus}
             label="プロダクト作成"
+            showLabel
+            block
             variant="outline"
             onClick={() => onCreateProduct?.()}
           />

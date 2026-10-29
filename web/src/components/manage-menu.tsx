@@ -35,6 +35,7 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
       <IconButton
         icon={Settings}
         label={items[0].label}
+        showLabel
         variant="outline"
         side="bottom"
         onClick={items[0].onSelect}
@@ -52,6 +53,7 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
         <IconButton
           icon={Settings}
           label="管理"
+          showLabel
           variant="outline"
           side="bottom"
           aria-haspopup="menu"
