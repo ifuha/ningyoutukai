@@ -19,7 +19,8 @@ describe('IconButton', () => {
     const html = render()
     expect(html).toMatch(/<span aria-hidden="true"[^>]*>削除<\/span>/)
     expect(html).toContain('group-hover/tip:opacity-100')
-    expect(html).toContain('group-focus-within/tip:opacity-100')
+    expect(html).toContain('group-has-[:focus-visible]/tip:opacity-100')
+    expect(html).not.toContain('group-focus-within')
   })
 
   test('tip を渡すと、ツールチップの文字だけ変わる(名前は変わらない)', () => {
