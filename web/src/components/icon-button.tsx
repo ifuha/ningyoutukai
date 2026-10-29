@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react'
 import type { LucideIcon } from 'lucide-react'
 
-// アイコンだけのボタン。文字の代わりにアイコンを出し、ホバー(とキーボードのフォーカス)で、何のボタンかを示すツールチップを出す。
+// アイコンだけのボタン。文字の代わりにアイコンを出し、ホバー(とキーボードでのフォーカス)で、何のボタンかを示すツールチップを出す。
 // - `label` は、ボタンの名前(`aria-label`)。スクリーンリーダーと、ツールチップの文字になる
 // - `tip` を渡すと、ツールチップの文字だけ変える(例: 押せない理由「リーダーのみ」)。名前(`label`)は変わらない
 // - ツールチップは見た目だけ(`aria-hidden`)。名前は `aria-label` が受け持つ
@@ -72,7 +72,7 @@ export function IconButton({
       </button>
       <span
         aria-hidden="true"
-        className={`pointer-events-none absolute z-50 whitespace-nowrap bg-ink px-2 py-1 text-s text-surface opacity-0 transition-opacity duration-100 group-focus-within/tip:opacity-100 group-hover/tip:opacity-100 group-hover/tip:delay-300 ${sideClass[side]}`}
+        className={`pointer-events-none absolute z-50 whitespace-nowrap bg-ink px-2 py-1 text-s text-surface opacity-0 transition-opacity duration-100 group-has-[:focus-visible]/tip:opacity-100 group-hover/tip:opacity-100 group-hover/tip:delay-300 ${sideClass[side]}`}
       >
         {tip ?? label}
       </span>
