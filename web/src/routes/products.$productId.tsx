@@ -16,6 +16,7 @@ import {
   type TaskDetailTarget,
 } from '#/components/task-detail-dialog'
 import { TaskListDialog } from '#/components/task-list-dialog'
+import { useProductRevision } from '#/lib/use-product-revision'
 import {
   TaskFormDialog,
   type TaskFormTarget,
@@ -48,6 +49,8 @@ function Product() {
   const [kindsOpen, setKindsOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [productManageOpen, setProductManageOpen] = useState(false)
+  // 他の人の変更を、数秒ごとに見に行って、変わったときだけ取り直す(ドラッグの最中は待つ)
+  useProductRevision(productId)
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => edenData(eden().api.product({ productId }).get()),
