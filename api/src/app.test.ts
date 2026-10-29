@@ -36,6 +36,7 @@ const EXPECTED_ROUTES = [
   "PATCH /api/product/:productId/task/:taskId/complete",
   "PATCH /api/product/:productId/task/:taskId/task_kinds/:kindId",
   "PATCH /api/product/:productId/task_kinds/:kindId",
+  "PATCH /api/product/:productId/task/:taskId/message/:messageId",
   "POST /api/invitation/:invitationId/accept",
   "POST /api/invitation/:invitationId/reject",
   "POST /api/product/",
