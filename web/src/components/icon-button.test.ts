@@ -49,7 +49,8 @@ describe('IconButton', () => {
 
   test('大きさとバリアントが効く', () => {
     expect(render({ size: 'lg' })).toContain('size-12')
-    expect(render({ size: 'sm' })).toContain('size-7')
+    expect(render({ size: 'sm' })).toContain('size-8')
+    expect(render()).toContain('size-10')
     expect(render({ variant: 'outline' })).toContain('border border-line')
   })
 
