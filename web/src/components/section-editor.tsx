@@ -7,6 +7,7 @@ import { collectFollowers, type FollowRoot } from '#/lib/drag-follow'
 import type { DragTarget } from '#/lib/drag-session'
 import type { SectionColor } from '#/lib/section'
 import type { Point, Rect } from '#/lib/section-edit-geometry'
+import type { ConnectorFollower } from '#/lib/connector-follow'
 import { createSectionDragController, type SectionDragController } from '#/lib/section-drag-controller'
 import {
   NUDGE_SETTLE_MS,
@@ -80,6 +81,8 @@ export type SectionEditorProps = {
   onPreview?: (rect: Rect | null) => void
   /** 移動で、四角・編集枠と一緒に動かす、位置を持つ所属メンバー(api と同じ規則)。省略は、なし */
   followMemberIds?: readonly string[]
+  /** 移動で、親子の線(SVG)を、動くカードに追従させる部品を作る。省略は、線を動かさない */
+  getConnectors?: () => ConnectorFollower | null
   /** 名前の入力欄を、最初から開いた状態で描く(ダブルクリックしたあとの見た目を、サーバー描画のテストで確かめるため)。省略は false(普通は閉じている) */
   startRenaming?: boolean
 }
@@ -90,6 +93,7 @@ type Latest = {
   selected: boolean
   sectionId: string
   followMemberIds?: readonly string[]
+  getConnectors?: () => ConnectorFollower | null
   onSelect: () => void
   onChange: (rect: Rect) => void
   onPreview?: (rect: Rect | null) => void
@@ -110,6 +114,7 @@ export function SectionEditor({
   interiorSelectable = false,
   onPreview,
   followMemberIds,
+  getConnectors,
   startRenaming = false,
 }: SectionEditorProps) {
   const base: Rect = { x: section.x, y: section.y, width: section.width, height: section.height }
@@ -121,6 +126,7 @@ export function SectionEditor({
     selected,
     sectionId: section.sectionId,
     followMemberIds,
+    getConnectors,
     onSelect,
     onChange,
     onPreview,
@@ -131,6 +137,7 @@ export function SectionEditor({
     selected,
     sectionId: section.sectionId,
     followMemberIds,
+    getConnectors,
     onSelect,
     onChange,
     onPreview,
@@ -162,6 +169,7 @@ export function SectionEditor({
           latest.current.sectionId,
           latest.current.followMemberIds ?? [],
         ),
+      getConnectors: () => latest.current.getConnectors?.() ?? null,
       batch: (fn) => flushSync(fn),
       onCommit: (rect) => latest.current.onChange(rect),
       onPreview: (rect) => latest.current.onPreview?.(rect),

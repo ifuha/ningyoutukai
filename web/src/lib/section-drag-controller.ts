@@ -1,6 +1,7 @@
 import { startDragSession } from '#/lib/drag-session'
 import type { DragLock, DragSession, DragTarget, FrameScheduler } from '#/lib/drag-session'
 import { createFollower } from '#/lib/drag-follow'
+import type { ConnectorFollower } from '#/lib/connector-follow'
 import type { FollowElement, Follower } from '#/lib/drag-follow'
 import type { Rect } from '#/lib/section-edit-geometry'
 import {
@@ -43,6 +44,8 @@ export type SectionDragDeps = {
   getScale: () => number
   /** 移動で、一緒に動かす要素を集める(ドラッグが確定したときに 1 回) */
   getFollowers: () => FollowElement[]
+  /** 移動で、親子の線(SVG)を、動くカードに追従させる部品を作る(ドラッグが確定したときに 1 回)。省略可 */
+  getConnectors?: () => ConnectorFollower | null
   /** 離したときの、見た目の更新と、確定(楽観更新)を、同時に反映する(通常は flushSync) */
   batch: (fn: () => void) => void
   /** 確定した四角(1 回のドラッグにつき、多くても 1 回。動かなかったら呼ばない) */
@@ -79,6 +82,7 @@ export function createSectionDragController(deps: SectionDragDeps): SectionDragC
   let state: DragState = IDLE
   let session: DragSession | null = null
   let follower: Follower | null = null
+  let connectors: ConnectorFollower | null = null
   // いまの Esc で、ドラッグを取り消したか(同じタスクの中だけ有効。次のタスクで落とす)
   let escaped = false
 
@@ -86,6 +90,8 @@ export function createSectionDragController(deps: SectionDragDeps): SectionDragC
   const cleanup = () => {
     follower?.reset()
     follower = null
+    connectors?.finish(false)
+    connectors = null
     deps.onLive(null)
     deps.onActive(false)
     deps.onPreview(null)
@@ -96,6 +102,8 @@ export function createSectionDragController(deps: SectionDragDeps): SectionDragC
     session = null
     follower?.reset()
     follower = null
+    connectors?.finish(false)
+    connectors = null
 
     const base = deps.getBase()
     const client = { x: e.clientX, y: e.clientY }
@@ -113,7 +121,10 @@ export function createSectionDragController(deps: SectionDragDeps): SectionDragC
       s.engage()
       deps.onActive(true)
       deps.onPreview(state.origin)
-      if (state.kind.type === 'move') follower = createFollower(deps.getFollowers())
+      if (state.kind.type === 'move') {
+        follower = createFollower(deps.getFollowers())
+        connectors = deps.getConnectors?.() ?? null
+      }
       s.requestFrame()
     }
 
@@ -136,6 +147,7 @@ export function createSectionDragController(deps: SectionDragDeps): SectionDragC
         const preview = state.preview
         if (state.kind.type === 'move') {
           follower?.apply(preview.x - state.origin.x, preview.y - state.origin.y)
+          connectors?.apply(preview.x - state.origin.x, preview.y - state.origin.y)
         } else {
           deps.onLive(preview)
         }
@@ -155,6 +167,8 @@ export function createSectionDragController(deps: SectionDragDeps): SectionDragC
         })
         follower?.reset()
         follower = null
+        connectors?.finish(Boolean(result.commit))
+        connectors = null
       },
       onCancel: (reason) => {
         session = null
@@ -196,6 +210,8 @@ export function createSectionDragController(deps: SectionDragDeps): SectionDragC
       state = IDLE
       follower?.reset()
       follower = null
+      connectors?.finish(false)
+      connectors = null
       if (wasDragging) deps.onPreview(null)
     },
   }

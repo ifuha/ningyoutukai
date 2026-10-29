@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ConnectorFollower } from '#/lib/connector-follow'
 import type { PointerEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { startDragSession } from '#/lib/drag-session'
@@ -233,6 +234,8 @@ export type UseCardDragOptions = {
   // ドラッグが終わって、位置が決まったとき(1 回のドラッグにつき、多くても 1 回)。position はカードの左上
   // sectionId は、その位置で入るセクション(どこにも入らなければ null=無所属)
   onDrop: (memberId: string, position: Point, sectionId: string | null) => void
+  // ドラッグ中、親子の線(SVG)を、動くカードに追従させる部品を作る(ドラッグが確定したときに 1 回)。省略は、線を動かさない
+  getConnectors?: (memberId: string) => ConnectorFollower | null
 }
 
 // カードの要素に付けるハンドラ。押したところだけ。動き・離し・取り消しは、押した瞬間から window で受ける(drag-session)
@@ -285,6 +288,8 @@ export type CardDragControllerDeps = {
   /** ドラッグ中の、テキストの選択とカーソルの固定の対象。省略可 */
   getLock?: () => DragLock | undefined
   getOptions: () => UseCardDragOptions
+  /** ドラッグ中、親子の線(SVG)を、動くカードに追従させる部品を作る(ドラッグが確定したときに 1 回)。省略可 */
+  getConnectors?: (memberId: string) => ConnectorFollower | null
   /** ドラッグの見え方(開始・終了・ドロップ先の変化)を、React に伝える */
   onView: (view: DragView | null) => void
   /** 離したときの、見え方の消去と、楽観更新を、同時に反映する(通常は flushSync) */
@@ -318,9 +323,13 @@ export function createCardDragController(deps: CardDragControllerDeps): CardDrag
   // 影のカードの位置(カードの左上のキャンバス座標)。動くたびに更新し、1 フレームに 1 回、transform に書く
   let position: Point | null = null
   let origin: Point | null = null
+  // 親子の線(SVG)を、影のカードに追従させる部品。ドラッグが確定してから、終わるまで
+  let connectors: ConnectorFollower | null = null
 
   const writeGhost = () => {
-    if (!ghost || !position || !origin) return
+    if (!position || !origin) return
+    connectors?.apply(position.x - origin.x, position.y - origin.y)
+    if (!ghost) return
     ghost.style.transform = `translate(${position.x - origin.x}px, ${position.y - origin.y}px)`
   }
 
@@ -331,6 +340,12 @@ export function createCardDragController(deps: CardDragControllerDeps): CardDrag
     if (next.phase === 'dragging') {
       position = next.position
       origin = { x: next.startRect.x, y: next.startRect.y }
+    }
+    // ドラッグが確定したら線の部品を作り、ドラッグでなくなったら片付ける(落とした = 確定なら、線は戻さない)
+    if (effect.started && next.phase === 'dragging') connectors = deps.getConnectors?.(next.memberId) ?? null
+    if (next.phase !== 'dragging' && connectors) {
+      connectors.finish(Boolean(effect.drop))
+      connectors = null
     }
     const nextView = viewOf(next)
     if (!sameView(view, nextView)) {
@@ -474,6 +489,7 @@ export function useCardDrag(options: UseCardDragOptions) {
       getTarget: () => window as unknown as DragTarget,
       getLock: () => ({ body: document.body, cursor: 'grabbing' }),
       getOptions: () => optionsRef.current,
+      getConnectors: (memberId) => optionsRef.current.getConnectors?.(memberId) ?? null,
       onView: setView,
       batch: (fn) => flushSync(fn),
       suppressClick: suppressNextClick,
