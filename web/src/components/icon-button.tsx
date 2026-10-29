@@ -25,9 +25,9 @@ const variantClass: Record<IconButtonVariant, string> = {
 const pressedClass = 'bg-ink text-surface hover:bg-ink'
 
 const sizeClass: Record<IconButtonSize, { box: string; icon: number }> = {
-  sm: { box: 'size-7', icon: 16 },
-  md: { box: 'size-9', icon: 20 },
-  lg: { box: 'size-12', icon: 24 },
+  sm: { box: 'size-8', icon: 20 },
+  md: { box: 'size-10', icon: 24 },
+  lg: { box: 'size-12', icon: 28 },
 }
 
 const sideClass: Record<TipSide, string> = {
