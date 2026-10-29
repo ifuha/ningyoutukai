@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Check, X } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { AppShell } from '#/components/app-shell'
 import { Prompt, Terminal } from '#/components/terminal'
 import { eden, edenData } from '#/lib/eden'
@@ -13,9 +15,6 @@ const createProduct = (productName: string) =>
 export const Route = createFileRoute('/products/new')({
   component: NewProduct,
 })
-
-const buttonBase =
-  'flex h-[48px] items-center justify-center border-2 px-4 text-l transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
 function NewProduct() {
   const navigate = useNavigate()
@@ -77,22 +76,24 @@ function NewProduct() {
                 className="h-12 w-full border-2 border-ink bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
               />
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
+            <div className="flex gap-3">
+              <IconButton
+                icon={Check}
+                label="作成"
+                tip={pending ? '作成中…' : undefined}
                 type="submit"
+                variant="solid"
+                size="lg"
                 disabled={pending}
-                className={`${buttonBase} flex-1 border-primary bg-primary text-on-primary`}
-              >
-                {pending ? '作成中…' : '作成'}
-              </button>
-              <button
-                type="button"
+              />
+              <IconButton
+                icon={X}
+                label="キャンセル"
+                variant="outline"
+                size="lg"
                 disabled={pending}
                 onClick={() => void navigate({ to: '/home' })}
-                className={`${buttonBase} border-outline bg-secondary text-outline sm:w-40`}
-              >
-                キャンセル
-              </button>
+              />
             </div>
             {error && (
               <p role="alert" className="border-l-2 border-ink pl-3 text-m">
