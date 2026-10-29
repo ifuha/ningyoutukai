@@ -1,6 +1,8 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { CalendarPlus, LogOut } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { AppShell } from '#/components/app-shell'
 import { DotField } from '#/components/dot-field'
 import { eden, edenData } from '#/lib/eden'
@@ -11,9 +13,6 @@ import { authClient } from '#/lib/auth-client'
 export const Route = createFileRoute('/home')({ component: Home })
 
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
-
-const barLink =
-  'underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink'
 
 function Home() {
   const navigate = useNavigate()
@@ -60,16 +59,20 @@ function Home() {
                 ) : calendar.data?.connected ? (
                   <span className="opacity-70">Googleカレンダー: 連携済み</span>
                 ) : (
-                  <button
-                    type="button"
+                  <IconButton
+                    icon={CalendarPlus}
+                    label="Googleカレンダーを連携"
+                    size="sm"
+                    side="bottom"
                     onClick={() => void connectGoogleCalendar()}
-                    className={barLink}
-                  >
-                    Googleカレンダーを連携
-                  </button>
+                  />
                 )}
-                <button
-                  type="button"
+                <IconButton
+                  icon={LogOut}
+                  label="ログアウト"
+                  variant="outline"
+                  size="sm"
+                  side="bottom"
                   onClick={() => void signOut()}
                   className="h-8 border border-line bg-surface px-3 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >

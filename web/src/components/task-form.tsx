@@ -4,6 +4,8 @@ import { ApiError } from '#/lib/api'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
+import { IconButton } from '#/components/icon-button'
+import { Check, Plus, Trash2, X } from 'lucide-react'
 
 // 期限は日本時間(+09:00)として扱う。`datetime-local` の値(`2026-12-01T09:00`)と ISO を行き来する
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
@@ -254,20 +256,20 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       )}
 
       <div className="flex gap-3">
-        <button
+        <IconButton
           type="submit"
+          icon={initial ? Check : Plus}
+          label={save.isPending ? '送信中…' : initial ? '保存' : '追加'}
+          variant="outline"
           disabled={save.isPending || remove.isPending}
-          className={buttonClass}>
-          {save.isPending ? '送信中…' : initial ? '保存' : '追加'}
-        </button>
-        <button
-          type="button"
+        />
+        <IconButton
+          icon={X}
+          label="閉じる"
+          variant="outline"
           disabled={save.isPending || remove.isPending}
           onClick={onDone}
-          className={buttonClass}
-        >
-          閉じる
-        </button>
+        />
       </div>
 
       {initial && (
@@ -294,28 +296,26 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
                 >
                   {remove.isPending ? '削除中…' : '削除する'}
                 </button>
-                <button
-                  type="button"
+                <IconButton
+                  icon={X}
+                  label="やめる"
+                  variant="outline"
                   disabled={remove.isPending}
                   onClick={() => {
                     remove.reset()
                     setConfirmingRemove(false)
                   }}
-                  className={buttonClass}
-                >
-                  やめる
-                </button>
+                />
               </div>
             </>
           ) : (
-            <button
-              type="button"
+            <IconButton
+              icon={Trash2}
+              label="このタスクを削除"
+              variant="outline"
               disabled={save.isPending}
               onClick={() => setConfirmingRemove(true)}
-              className={buttonClass}
-            >
-              このタスクを削除
-            </button>
+            />
           )}
         </div>
       )}

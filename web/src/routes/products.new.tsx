@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Check, X } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { AppShell } from '#/components/app-shell'
 import { Prompt, Terminal } from '#/components/terminal'
 import { eden, edenData } from '#/lib/eden'
@@ -77,16 +79,21 @@ function NewProduct() {
                 className="h-12 w-full border border-line bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
               />
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
+            <div className="flex gap-3">
+              <IconButton
+                icon={Check}
+                label="作成"
+                tip={pending ? '作成中…' : undefined}
                 type="submit"
+                variant="solid"
+                size="lg"
                 disabled={pending}
-                className={`${buttonBase} flex-1 border-primary bg-primary text-on-primary`}
-              >
-                {pending ? '作成中…' : '作成'}
-              </button>
-              <button
-                type="button"
+              />
+              <IconButton
+                icon={X}
+                label="キャンセル"
+                variant="outline"
+                size="lg"
                 disabled={pending}
                 onClick={() => void navigate({ to: '/home' })}
                 className={`${buttonBase} border-line bg-secondary text-outline sm:w-40`}

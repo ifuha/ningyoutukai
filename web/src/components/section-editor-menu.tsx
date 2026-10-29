@@ -1,3 +1,5 @@
+import { Trash2, X } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { SectionColorPicker } from '#/components/section-color-picker'
 import type { SectionColor } from '#/lib/section'
 import { inverseScaleStyle, type MenuState } from '#/lib/section-editor-state'
@@ -59,17 +61,25 @@ export function SectionEditorMenu({
               <button type="button" onClick={onConfirmDelete} className={buttonClass}>
                 削除する
               </button>
-              <button type="button" onClick={onCancelDelete} className={buttonClass}>
-                やめる
-              </button>
+              <IconButton
+                icon={X}
+                label="やめる"
+                variant="outline"
+                side="bottom"
+                onClick={onCancelDelete}
+              />
             </div>
           </>
         ) : (
           <>
             <SectionColorPicker value={color} onPick={onPickColor} />
-            <button type="button" onClick={onAskDelete} className={buttonClass}>
-              削除
-            </button>
+            <IconButton
+              icon={Trash2}
+              label="削除"
+              variant="outline"
+              side="bottom"
+              onClick={onAskDelete}
+            />
           </>
         )}
       </div>

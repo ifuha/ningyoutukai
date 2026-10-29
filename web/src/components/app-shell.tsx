@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { Menu } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { Sidebar } from '#/components/sidebar'
 import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
@@ -75,8 +77,15 @@ export function AppShell({
           aria-controls="app-sidebar"
           className="flex size-10 items-center justify-center text-l"
         >
-          ☰
-        </button>
+          <IconButton
+            icon={Menu}
+            label="メニューを開く"
+            side="bottom"
+            onClick={() => drawer.setOpen(true)}
+            aria-expanded={drawer.open}
+            aria-controls="app-sidebar"
+          />
+        </span>
         <p className="text-l font-semibold">人形使い</p>
       </header>
       {drawer.open && (

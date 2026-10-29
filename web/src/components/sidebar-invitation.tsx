@@ -1,3 +1,5 @@
+import { Check, X } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import type { Invitation } from '#/lib/invitation'
 import { useRespondInvitation } from '#/lib/use-respond-invitation'
 
@@ -15,23 +17,23 @@ export function SidebarInvitation({ invitation }: { invitation: Invitation }) {
       <p className="truncate text-s opacity-60">
         招待元: {invitation.leaderNames.join('、')}
       </p>
-      <div className="flex gap-2">
-        <button
-          type="button"
+      <div className="flex justify-center gap-2">
+        <IconButton
+          icon={Check}
+          label="承認"
+          variant="outline"
+          size="sm"
           disabled={disabled}
           onClick={() => respond.mutate('accept')}
-          className={buttonClass}
-        >
-          承認
-        </button>
-        <button
-          type="button"
+        />
+        <IconButton
+          icon={X}
+          label="拒否"
+          variant="outline"
+          size="sm"
           disabled={disabled}
           onClick={() => respond.mutate('reject')}
-          className={buttonClass}
-        >
-          拒否
-        </button>
+        />
       </div>
       {respond.isError && (
         <p role="alert" className="border-l border-line pl-2 text-s break-words">

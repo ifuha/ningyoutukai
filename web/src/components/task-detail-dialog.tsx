@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
 import { Modal } from '#/components/modal'
+import { IconButton } from '#/components/icon-button'
+import { Check, Pencil, X } from 'lucide-react'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 
@@ -76,28 +78,24 @@ function Detail({
       )}
       <div className="flex flex-wrap gap-3">
         {!task.reportedAt && (
-          <button
-            type="button"
+          <IconButton
+            icon={Check}
+            label="完了を報告"
+            variant="outline"
             disabled={report.isPending}
             onClick={() => report.mutate()}
-            className={buttonClass}
-          >
-            完了を報告
-          </button>
+          />
         )}
         {onEdit && (
-          <button
-            type="button"
+          <IconButton
+            icon={Pencil}
+            label="編集"
+            variant="outline"
             disabled={report.isPending}
             onClick={onEdit}
-            className={buttonClass}
-          >
-            編集
-          </button>
+          />
         )}
-        <button type="button" onClick={onClose} className={buttonClass}>
-          閉じる
-        </button>
+        <IconButton icon={X} label="閉じる" variant="outline" onClick={onClose} />
       </div>
     </>
   )

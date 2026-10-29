@@ -1,3 +1,5 @@
+import { X } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { InviteMemberForm } from '#/components/invite-member-form'
 import { Modal } from '#/components/modal'
 
@@ -18,9 +20,12 @@ export function InviteMemberDialog({
   return (
     <Modal open={open} onClose={onClose}>
       <InviteMemberForm productId={productId} />
-      <button type="button" onClick={onClose} className={buttonClass}>
-        閉じる
-      </button>
+      <IconButton
+        icon={X}
+        label="閉じる"
+        variant="outline"
+        onClick={onClose}
+      />
     </Modal>
   )
 }

@@ -1,5 +1,7 @@
 import { formatLimit } from '#/components/member-card'
 import { Modal } from '#/components/modal'
+import { IconButton } from '#/components/icon-button'
+import { X } from 'lucide-react'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 
 // その人の全タスクの一覧(カードには 3 件までしか出ないので、その続きを見る・選ぶ画面)。並びはツリー API の順(期限が近い順)

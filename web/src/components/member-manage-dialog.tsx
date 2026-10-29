@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Check, Trash2, X } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { Modal } from '#/components/modal'
 import { eden, edenData } from '#/lib/eden'
 import { ApiError } from '#/lib/api'
@@ -64,14 +66,15 @@ function MemberRow({
           </p>
         </div>
         {canRemove && !confirming && (
-          <button
-            type="button"
+          <IconButton
+            icon={Trash2}
+            label="外す"
+            variant="outline"
+            size="sm"
+            side="left"
             disabled={gone}
             onClick={() => setConfirming(true)}
-            className={buttonClass}
-          >
-            外す
-          </button>
+          />
         )}
       </div>
       {canRemove && confirming && (
@@ -81,25 +84,23 @@ function MemberRow({
             {count > 0 && ` 担当の ${count} 件のタスクも消えます`}
           </p>
           <div className="flex gap-3">
-            <button
-              type="button"
+            <IconButton
+              icon={Check}
+              label="外す(確定)"
+              variant="outline"
               disabled={remove.isPending || gone}
               onClick={() => remove.mutate()}
-              className={buttonClass}
-            >
-              外す(確定)
-            </button>
-            <button
-              type="button"
+            />
+            <IconButton
+              icon={X}
+              label="やめる"
+              variant="outline"
               disabled={remove.isPending}
               onClick={() => {
                 setConfirming(false)
                 remove.reset()
               }}
-              className={buttonClass}
-            >
-              やめる
-            </button>
+            />
           </div>
         </div>
       )}
@@ -141,9 +142,12 @@ export function MemberManageDialog({
           />
         ))}
       </ul>
-      <button type="button" onClick={onClose} className={buttonClass}>
-        閉じる
-      </button>
+      <IconButton
+        icon={X}
+        label="閉じる"
+        variant="outline"
+        onClick={onClose}
+      />
     </Modal>
   )
 }

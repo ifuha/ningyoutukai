@@ -1,3 +1,5 @@
+import { Settings } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { useEffect, useRef, useState } from 'react'
 
 export type ManageMenuItem = { label: string; onSelect: () => void }
@@ -10,7 +12,7 @@ const buttonClass =
 export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -33,24 +35,33 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
 
   if (items.length === 1) {
     return (
-      <button type="button" onClick={items[0].onSelect} className={buttonClass}>
-        {items[0].label}
-      </button>
+      <IconButton
+        icon={Settings}
+        label={items[0].label}
+        variant="outline"
+        side="bottom"
+        onClick={items[0].onSelect}
+      />
     )
   }
 
   return (
     <div ref={rootRef} className="relative">
-      <button
-        ref={buttonRef}
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className={buttonClass}
+      <span
+        ref={(el) => {
+          buttonRef.current = el?.querySelector('button') ?? null
+        }}
       >
-        管理 ▾
-      </button>
+        <IconButton
+          icon={Settings}
+          label="管理"
+          variant="outline"
+          side="bottom"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        />
+      </span>
       {open && (
         <div
           role="menu"
