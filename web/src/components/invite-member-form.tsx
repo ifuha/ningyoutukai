@@ -99,7 +99,7 @@ export function InviteMemberForm({ productId }: { productId: string }) {
             <ul
               id="invite-member-candidates"
               role="listbox"
-              className="absolute inset-x-0 top-full z-10 mt-1 border border-line bg-surface"
+              className="absolute inset-x-0 top-full z-10 mt-1 border border-line bg-surface shadow-lg"
             >
               {candidates.map((c, i) => (
                 <li
