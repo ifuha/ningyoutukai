@@ -1,6 +1,7 @@
 // 楽観更新の実行(画面・react-query に依存しない)。
 // 手順: 事前の確認(`before`。進行中の取得の取り消しなど)→ いまの値を控える → 画面の値を先に更新(`apply`)
-//   → api を呼ぶ(`call`)→ 失敗したら、控えた値に戻して、`onError` を呼ぶ。成功・失敗のあとは `settle`(サーバーの値で取り直す)。
+//   → api を呼ぶ(`call`)→ 失敗したら、控えた値に戻して、`onError` を呼ぶ。成功・失敗のあとは `settle(ok)` を呼ぶ。
+//   `settle` に、成功したか(`ok`)を渡す。呼び出し側は、成功したら何もせず(画面の予測を信じ、api に取り直しを頼まない)、失敗したときだけ、サーバーの値で取り直す。
 // `apply` が null を返したら、先に更新しない(api だけ呼ぶ)。
 // 値の読み書きは `store` に任せる(react-query のキャッシュを、アダプタで包む。テストでは、ただのオブジェクト)。
 
@@ -24,8 +25,9 @@ export async function runOptimistic<Snapshot, R>({
   apply: (current: Snapshot) => Snapshot | null
   call: () => Promise<R>
   onError: (error: unknown) => void
-  settle?: () => void
+  settle?: (ok: boolean) => void
 }): Promise<OptimisticResult<R>> {
+  let ok = false
   try {
     await before?.()
     const previous = store.read()
@@ -33,6 +35,7 @@ export async function runOptimistic<Snapshot, R>({
     if (next) store.write(next)
     try {
       const value = await call()
+      ok = true
       return { ok: true, value }
     } catch (error) {
       // 失敗: 先に更新したときだけ、元に戻す(更新していないなら、その間に入った他の更新を、古い値で上書きしない)
@@ -41,6 +44,6 @@ export async function runOptimistic<Snapshot, R>({
       return { ok: false, error }
     }
   } finally {
-    settle?.()
+    settle?.(ok)
   }
 }
