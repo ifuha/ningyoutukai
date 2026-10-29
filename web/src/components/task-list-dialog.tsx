@@ -49,12 +49,12 @@ export function TaskListDialog({
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2 text-s">
                   {t.reportedAt && (
-                    <span className="shrink-0 border border-ink px-1">
+                    <span className="shrink-0 border border-line px-1">
                       確認待ち
                     </span>
                   )}
                   {!t.isVisible && (
-                    <span className="shrink-0 border border-ink px-1">
+                    <span className="shrink-0 border border-line px-1">
                       非公開
                     </span>
                   )}
@@ -67,7 +67,13 @@ export function TaskListDialog({
               </li>
             ))}
           </ul>
-          <IconButton icon={X} label="閉じる" variant="outline" onClick={onClose} />
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 items-center justify-center border border-line bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+          >
+            閉じる
+          </button>
         </>
       )}
     </Modal>

@@ -3,6 +3,9 @@ import { IconButton } from '#/components/icon-button'
 import type { Invitation } from '#/lib/invitation'
 import { useRespondInvitation } from '#/lib/use-respond-invitation'
 
+const buttonClass =
+  'flex h-8 flex-1 items-center justify-center border border-line text-m hover:bg-side-item disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent'
+
 // サイドバー用の、招待 1 件分のコンパクトな行。失敗(404/409)は行を残してエラーを出す
 export function SidebarInvitation({ invitation }: { invitation: Invitation }) {
   const { respond, stale } = useRespondInvitation(invitation.invitationId)
@@ -33,7 +36,7 @@ export function SidebarInvitation({ invitation }: { invitation: Invitation }) {
         />
       </div>
       {respond.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-2 text-s break-words">
+        <p role="alert" className="border-l border-line pl-2 text-s break-words">
           ERR {respond.error.message}
         </p>
       )}

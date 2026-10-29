@@ -9,6 +9,9 @@ import type { ProductTree, TreeMember } from '#/lib/tree'
 
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
 
+const buttonClass =
+  'flex h-9 items-center justify-center border border-line bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+
 // メンバー 1 人分の行。リーダーが role=member の行で「外す」を押すと、同じ行で確認を出す。
 // 成功したらツリーを取り直し、行は消える。失敗(404/403 など)は行を残し、取り直さない
 // (取り直すと行ごと消えてエラーが読めない)。404 は押せないままにする
@@ -46,12 +49,12 @@ function MemberRow({
           <img
             src={member.avatarUrl}
             alt=""
-            className="size-8 shrink-0 border-2 border-current object-cover"
+            className="size-8 shrink-0 border border-current object-cover"
           />
         ) : (
           <span
             aria-hidden="true"
-            className="flex size-8 shrink-0 items-center justify-center border-2 border-current font-bold"
+            className="flex size-8 shrink-0 items-center justify-center border border-current font-bold"
           >
             {[...member.userName][0] ?? '?'}
           </span>
@@ -75,7 +78,7 @@ function MemberRow({
         )}
       </div>
       {canRemove && confirming && (
-        <div className="space-y-2 border-l-2 border-ink pl-3">
+        <div className="space-y-2 border-l border-line pl-3">
           <p>
             {member.userName} を外しますか?
             {count > 0 && ` 担当の ${count} 件のタスクも消えます`}
@@ -102,7 +105,7 @@ function MemberRow({
         </div>
       )}
       {remove.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-3">
+        <p role="alert" className="border-l border-line pl-3">
           ERR {remove.error.message}
         </p>
       )}

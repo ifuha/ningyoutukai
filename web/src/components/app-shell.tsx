@@ -67,11 +67,15 @@ export function AppShell({
 
   return (
     <div className="flex h-screen flex-col md:flex-row">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-ink px-2 md:hidden">
-        <span
-          ref={(el) => {
-            drawer.buttonRef.current = el?.querySelector('button') ?? null
-          }}
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line px-2 md:hidden">
+        <button
+          type="button"
+          ref={drawer.buttonRef}
+          onClick={() => drawer.setOpen(true)}
+          aria-label="メニューを開く"
+          aria-expanded={drawer.open}
+          aria-controls="app-sidebar"
+          className="flex size-10 items-center justify-center text-l"
         >
           <IconButton
             icon={Menu}

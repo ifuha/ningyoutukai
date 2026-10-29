@@ -107,7 +107,7 @@ function Product() {
         {product.isPending ? (
           <p className="text-m opacity-60">読み込み中…</p>
         ) : product.isError ? (
-          <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+          <p role="alert" className="border-l border-line pl-3 text-m">
             ERR {product.error.message}
           </p>
         ) : (
@@ -131,12 +131,15 @@ function Product() {
               variant="outline"
               side="bottom"
               onClick={() => setTaskForm({})}
-            />
+              className="flex h-9 shrink-0 items-center justify-center border border-line bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
+            >
+              タスクを追加
+            </button>
             {tree.data && (
               <button
                 type="button"
                 onClick={() => setReviewOpen(true)}
-                className="flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
+                className="flex h-9 shrink-0 items-center justify-center border border-line bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
               >
                 確認待ち {pendingReviews(tree.data).length} 件
               </button>
@@ -149,7 +152,10 @@ function Product() {
         variant="outline"
         side="bottom"
         onClick={() => void navigate({ to: '/home' })}
-      />
+        className="flex h-9 shrink-0 items-center justify-center border border-line bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
+      >
+        ホームへ戻る
+      </button>
       </div>
     </div>
   )
@@ -164,7 +170,7 @@ function Product() {
               {product.isError ? null : product.isPending || tree.isPending ? (
                 <p className="text-m opacity-60">読み込み中…</p>
               ) : tree.isError ? (
-                <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+                <p role="alert" className="border-l border-line pl-3 text-m">
                   ERR {tree.error.message}
                 </p>
               ) : null}

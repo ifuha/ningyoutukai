@@ -162,7 +162,7 @@ describe('TreeToolbar', () => {
   const bar = (props: Record<string, unknown>) =>
     renderToStaticMarkup(createElement(TreeToolbar, { mode: 'select', onModeChange: () => {}, ...props } as never))
 
-  test('並びと寸法(344×86、ボタン 60×60)で、5 つのボタンと 2 つの区切りがある。「移動」はない', () => {
+  test('並びと寸法(342×86、ボタン 60×60)で、5 つのボタンと 2 つの区切りがある。「移動」はない', () => {
     const html = bar({ onOpenMembers: () => {} })
     const labels = ['選択', 'メンバー', 'セクション', 'メモ', '検索']
     let last = -1
@@ -172,7 +172,7 @@ describe('TreeToolbar', () => {
       last = at
     }
     expect(html).not.toContain('移動')
-    expect(html).toContain('w-[344px]')
+    expect(html).toContain('w-[342px]')
     expect(html).toContain('h-[86px]')
     expect(html.split('size-[60px]').length - 1).toBe(5)
     expect(html.split('w-0.5').length - 1).toBe(2)

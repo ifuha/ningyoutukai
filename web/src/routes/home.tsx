@@ -74,11 +74,14 @@ function Home() {
                   size="sm"
                   side="bottom"
                   onClick={() => void signOut()}
-                />
+                  className="h-8 border border-line bg-surface px-3 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                >
+                  ログアウト
+                </button>
               </span>
             </div>
             {calendarLinkError && (
-              <p role="alert" className="-mt-6 mb-8 border-l-2 border-ink pl-3 text-m">
+              <p role="alert" className="-mt-6 mb-8 border-l border-line pl-3 text-m">
                 Googleカレンダーを連携できませんでした。もう一度お試しください。
               </p>
             )}
@@ -86,7 +89,7 @@ function Home() {
             {products.isPending ? (
               <p className="mt-4 text-m opacity-60">読み込み中…</p>
             ) : products.isError ? (
-              <p role="alert" className="mt-4 border-l-2 border-ink pl-3 text-m">
+              <p role="alert" className="mt-4 border-l border-line pl-3 text-m">
                 ERR {products.error.message}
               </p>
             ) : list.length === 0 ? (
@@ -100,11 +103,11 @@ function Home() {
                 </Link>
               </p>
             ) : (
-              <ol className="mt-4 border-t-2 border-ink bg-surface">
+              <ol className="mt-4 border-t border-line bg-surface">
                 {list.map((p, i) => (
                   <li
                     key={p.productId}
-                    className="rise border-b-2 border-ink"
+                    className="rise border-b border-line"
                     style={{ animationDelay: `${i * 70}ms` }}
                   >
                     <Link

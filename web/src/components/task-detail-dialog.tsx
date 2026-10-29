@@ -6,6 +6,9 @@ import { Check, Pencil, X } from 'lucide-react'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 
+const buttonClass =
+  'flex h-9 items-center justify-center border border-line bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
+
 export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 
 function Detail({
@@ -69,7 +72,7 @@ function Detail({
         </div>
       </dl>
       {report.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+        <p role="alert" className="border-l border-line pl-3 text-m">
           ERR {report.error.message}
         </p>
       )}

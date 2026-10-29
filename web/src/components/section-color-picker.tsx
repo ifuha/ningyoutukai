@@ -22,7 +22,7 @@ export function SectionColorPicker({
           title={SECTION_COLOR_LABELS[color]}
           onClick={() => onPick(color)}
           data-swatch={color}
-          className={`size-7 cursor-pointer border-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${color === value ? 'border-ink' : 'border-transparent hover:border-ink/50'}`}
+          className={`size-7 cursor-pointer border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${color === value ? 'border-line' : 'border-transparent hover:border-ink/50'}`}
           style={{ backgroundColor: sectionStyle(color).line }}
         />
       ))}

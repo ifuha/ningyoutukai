@@ -34,7 +34,7 @@ const reportedFormat = new Intl.DateTimeFormat('ja-JP', {
 })
 
 const buttonClass =
-  'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+  'flex h-9 items-center justify-center border border-line bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
 
 // 確認待ち 1 件分の行。成功したらツリーを取り直し、行は消える。
 // 404/409 は、行を残してエラーを読めるようにし、押せないままにする(取り直すと行ごと消える)
@@ -90,7 +90,7 @@ function ReviewRow({
         />
       </div>
       {confirming && (
-        <div className="space-y-2 border-l-2 border-ink pl-3">
+        <div className="space-y-2 border-l border-line pl-3">
           <p>
             「{task.taskName}」を完了にしますか?
             完了にすると、{member.userName} さんの表示から消えます(データは残ります)。
@@ -119,7 +119,7 @@ function ReviewRow({
         </div>
       )}
       {complete.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+        <p role="alert" className="border-l border-line pl-3 text-m">
           ERR {complete.error.message}
         </p>
       )}

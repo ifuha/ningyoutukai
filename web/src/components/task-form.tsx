@@ -24,9 +24,9 @@ function toIso(value: string): string {
 }
 
 const fieldClass =
-  'w-full border-2 border-ink bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'w-full border border-line bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 const buttonClass =
-  'flex h-10 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-4 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
+  'flex h-10 shrink-0 items-center justify-center border border-line bg-secondary px-4 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
 type Props = {
   productId: string
@@ -232,7 +232,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
           ))}
         </select>
         {kinds.isError && (
-          <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+          <p role="alert" className="border-l border-line pl-3 text-m">
             ERR {kinds.error.message}
           </p>
         )}
@@ -250,7 +250,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       </label>
 
       {save.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+        <p role="alert" className="border-l border-line pl-3 text-m">
           ERR {errorMessage(save.error.message)}
         </p>
       )}
@@ -273,9 +273,9 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       </div>
 
       {initial && (
-        <div className="space-y-3 border-t-2 border-ink pt-4">
+        <div className="space-y-3 border-t border-line pt-4">
           {remove.isError && (
-            <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+            <p role="alert" className="border-l border-line pl-3 text-m">
               ERR {remove.error.message}
             </p>
           )}
