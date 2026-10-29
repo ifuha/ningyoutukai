@@ -17,6 +17,7 @@ import {
 } from '#/components/task-detail-dialog'
 import { TaskListDialog } from '#/components/task-list-dialog'
 import { useProductRevision } from '#/lib/use-product-revision'
+import { retryDelay, retryTransient } from '#/lib/query-retry'
 import {
   TaskFormDialog,
   type TaskFormTarget,
@@ -54,7 +55,8 @@ function Product() {
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => edenData(eden().api.product({ productId }).get()),
-    retry: false,
+    retry: retryTransient,
+    retryDelay,
   })
   const tree = useQuery({
     queryKey: ['products', productId, 'tree'],
@@ -65,7 +67,8 @@ function Product() {
       if (!t.leader) throw new ApiError(500, 'エラーが発生しました')
       return { ...t, leader: t.leader }
     },
-    retry: false,
+    retry: retryTransient,
+    retryDelay,
   })
 
   // セクションの四角(F1)。補助の表示なので、取得に失敗しても、ツリーは出す(セクションだけ出ない)
@@ -107,12 +110,12 @@ function Product() {
   const header = (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-48 flex-1">
-        {product.isPending ? (
-          <p className="text-m opacity-60">読み込み中…</p>
-        ) : product.isError ? (
+        {product.isError && product.data === undefined ? (
           <p role="alert" className="border-l border-line pl-3 text-m">
             ERR {product.error.message}
           </p>
+        ) : product.data === undefined ? (
+          <p className="text-m opacity-60">読み込み中…</p>
         ) : (
           <>
             <h1 className="text-l font-bold break-words">
@@ -162,16 +165,17 @@ function Product() {
     <AppShell activeProductId={productId} align="full">
       {() => (
         <div className="relative h-full min-w-0">
-          {product.isError || product.isPending || tree.isPending || tree.isError ? (
+          {/* 今あるデータは、取り直しに失敗しても出しつづける(一時的な失敗で、ツリーが消えて ERR に置き換わらない) */}
+          {product.data === undefined || tree.data === undefined ? (
             <div className="space-y-6 p-4">
               {header}
-              {product.isError ? null : product.isPending || tree.isPending ? (
-                <p className="text-m opacity-60">読み込み中…</p>
-              ) : tree.isError ? (
+              {product.isError && product.data === undefined ? null : tree.isError && tree.data === undefined ? (
                 <p role="alert" className="border-l border-line pl-3 text-m">
                   ERR {tree.error.message}
                 </p>
-              ) : null}
+              ) : (
+                <p className="text-m opacity-60">読み込み中…</p>
+              )}
             </div>
           ) : (
             <>
