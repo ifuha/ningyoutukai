@@ -7,6 +7,7 @@ import { calendarRoutes } from "./routes/calendar";
 import { invitationRoutes } from "./routes/invitation";
 import { memberRoutes } from "./routes/member";
 import { productRoutes } from "./routes/product";
+import { productRevisionRoutes } from "./routes/product-revision";
 import { productManageRoutes } from "./routes/product-manage";
 import { productTreeRoutes } from "./routes/product-tree";
 import { sectionRoutes } from "./routes/section";
@@ -30,6 +31,7 @@ export const app = new Elysia()
   .use(calendarRoutes)
   .use(productRoutes)
   .use(productTreeRoutes)
+  .use(productRevisionRoutes)
   .use(sectionRoutes)
   .use(taskRoutes)
   .use(productManageRoutes)
