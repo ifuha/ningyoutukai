@@ -160,12 +160,16 @@ export function DotField({
       if (reduce.matches) draw(0)
     }
     scheme.addEventListener('change', onScheme)
+    // 表示モードの切り替え(`<html data-theme>` の変化)にも追従する
+    const mo = new MutationObserver(onScheme)
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
     reduce.addEventListener('change', start)
     return () => {
       cancelAnimationFrame(frame)
       ro.disconnect()
       io.disconnect()
       scheme.removeEventListener('change', onScheme)
+      mo.disconnect()
       reduce.removeEventListener('change', start)
     }
   }, [shape])

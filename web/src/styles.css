@@ -32,8 +32,35 @@
     "Hiragino Sans", "Yu Gothic", monospace;
 }
 
+/*
+ * ダーク。`<html data-theme>` で固定した選択が、OS の設定より優先される。
+ * - data-theme="dark": いつもダーク
+ * - data-theme="light": いつもライト(上の既定のまま)
+ * - 付いていない(自動): OS の設定に従う
+ * 同じ値を 2 か所に書く(CSS は、メディアクエリと属性の条件で、値を共有できないため)
+ */
+:root {
+  color-scheme: light dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+    --color-surface: #1b1f2a;
+    --color-ink: #ebebeb;
+    --color-primary: #ebebeb;
+    --color-on-primary: #1b1f2a;
+    --color-secondary: #1b1f2a;
+    --color-outline: #ebebeb;
+    --color-side: #0e1015;
+    --color-side-item: #2a2e39;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --color-surface: #1b1f2a;
     --color-ink: #ebebeb;
     --color-primary: #ebebeb;
