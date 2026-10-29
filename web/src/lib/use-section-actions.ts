@@ -63,6 +63,22 @@ export const NO_SECTION_ACTIONS: SectionActions = {
 
 type Snapshot = { sections: Section[] | undefined; tree: ProductTree | undefined }
 
+/**
+ * 確定(api の呼び出し)が終わったあとの取り直し。**成功したら、取り直さない。**
+ * 位置などの計算は画面で済ませてあり(楽観更新)、api は、マウスを離したときの確定だけを受ける。
+ * 画面の予測とサーバーの結果が食い違っても、数秒ごとの版の確認(`useProductRevision`)が、あとから合わせる。
+ * 失敗したときだけ、すぐ取り直す(ロールバックした値を、サーバーの値に合わせる)。
+ */
+export function resyncOnFailure(
+  client: { invalidateQueries(filters: { queryKey: readonly unknown[] }): unknown },
+  keys: readonly (readonly unknown[])[],
+): (ok: boolean) => void {
+  return (ok) => {
+    if (ok) return
+    for (const queryKey of keys) void client.invalidateQueries({ queryKey })
+  }
+}
+
 export function useSectionActions(productId: string): SectionActions {
   const queryClient = useQueryClient()
   const [notice, setNotice] = useState<SectionNotice | null>(null)
@@ -99,10 +115,7 @@ export function useSectionActions(productId: string): SectionActions {
       handleApiError(error) // 401(セッション切れ)の共通処理
       notify(sectionErrorMessage(error))
     },
-    settle: () => {
-      void queryClient.invalidateQueries({ queryKey: sectionsKey })
-      void queryClient.invalidateQueries({ queryKey: treeKey })
-    },
+    settle: resyncOnFailure(queryClient, [sectionsKey, treeKey]),
   }
 
   const updateSection: SectionActions['updateSection'] = async (sectionId, patch) => {
