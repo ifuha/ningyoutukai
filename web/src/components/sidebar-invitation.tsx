@@ -34,7 +34,7 @@ export function SidebarInvitation({ invitation }: { invitation: Invitation }) {
         </button>
       </div>
       {respond.isError && (
-        <p role="alert" className="border-l-2 border-line pl-2 text-s break-words">
+        <p role="alert" className="border-l border-line pl-2 text-s break-words">
           ERR {respond.error.message}
         </p>
       )}

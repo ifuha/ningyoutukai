@@ -6,13 +6,13 @@ import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
 const buttonClass =
-  'flex h-9 shrink-0 items-center justify-center border-2 border-line bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+  'flex h-9 shrink-0 items-center justify-center border border-line bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
 const inputClass =
-  'h-9 min-w-0 flex-1 border-2 border-line bg-surface px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'h-9 min-w-0 flex-1 border border-line bg-surface px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
 function ErrorText({ message }: { message: string }) {
   return (
-    <p role="alert" className="border-l-2 border-line pl-3 text-m">
+    <p role="alert" className="border-l border-line pl-3 text-m">
       ERR {errorMessage(message)}
     </p>
   )
@@ -98,7 +98,7 @@ function DeleteBlock({
   })
 
   return (
-    <div className="space-y-2 border-t-2 border-line pt-4">
+    <div className="space-y-2 border-t border-line pt-4">
       <h3 className="text-m font-bold">危険な操作</h3>
       {confirming ? (
         <div className="space-y-2">

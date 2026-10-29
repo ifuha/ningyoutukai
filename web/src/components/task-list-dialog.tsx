@@ -68,7 +68,7 @@ export function TaskListDialog({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 items-center justify-center border-2 border-line bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+            className="flex h-9 items-center justify-center border border-line bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
           >
             閉じる
           </button>

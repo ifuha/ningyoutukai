@@ -15,7 +15,7 @@ export const Route = createFileRoute('/products/new')({
 })
 
 const buttonBase =
-  'flex h-[48px] items-center justify-center border-2 px-4 text-l transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
+  'flex h-[48px] items-center justify-center border px-4 text-l transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
 function NewProduct() {
   const navigate = useNavigate()
@@ -74,7 +74,7 @@ function NewProduct() {
                 value={name}
                 readOnly={pending}
                 onChange={(e) => setName(e.target.value)}
-                className="h-12 w-full border-2 border-line bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
+                className="h-12 w-full border border-line bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
               />
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -95,7 +95,7 @@ function NewProduct() {
               </button>
             </div>
             {error && (
-              <p role="alert" className="border-l-2 border-line pl-3 text-m">
+              <p role="alert" className="border-l border-line pl-3 text-m">
                 ERR {errorMessage(error)}
               </p>
             )}

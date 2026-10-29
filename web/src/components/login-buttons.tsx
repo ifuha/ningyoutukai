@@ -41,14 +41,14 @@ const providers: {
     key: '1',
     label: 'GitHubではじめる',
     icon: <Github className="h-5 w-5" aria-hidden="true" />,
-    className: 'bg-primary text-on-primary border-2 border-primary',
+    className: 'bg-primary text-on-primary border border-primary',
   },
   {
     id: 'google',
     key: '2',
     label: 'Googleではじめる',
     icon: <GoogleLogo className="h-5 w-5" />,
-    className: 'bg-secondary text-outline border-2 border-line',
+    className: 'bg-secondary text-outline border border-line',
   },
 ]
 
@@ -118,7 +118,7 @@ export function LoginButtons() {
         </button>
       ))}
       {failed && (
-        <p role="alert" className="border-l-2 border-line pl-3 font-mono text-m">
+        <p role="alert" className="border-l border-line pl-3 font-mono text-m">
           ERR {failed}
         </p>
       )}
