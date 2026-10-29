@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { X } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 
 // セクションの操作が失敗したときの通知(1 行)。`role="alert"` で、数秒で自動的に閉じる(×でも閉じられる)
 // 既存のエラー表示(`border-l-2 border-ink pl-3 text-m`)の流儀に合わせる
@@ -26,14 +28,13 @@ export function SectionNotice({
       className="flex items-center gap-3 border-l-2 border-ink bg-surface/90 px-3 py-2 text-m"
     >
       <span>ERR {message}</span>
-      <button
-        type="button"
-        aria-label="閉じる"
+      <IconButton
+        icon={X}
+        label="閉じる"
+        size="sm"
+        side="left"
         onClick={onDismiss}
-        className="shrink-0 border border-ink px-1.5 leading-none hover:bg-side-item"
-      >
-        ×
-      </button>
+      />
     </p>
   )
 }

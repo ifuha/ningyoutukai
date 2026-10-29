@@ -1,5 +1,9 @@
+import { Monitor, Moon, Sun, type LucideIcon } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { useEffect, useState } from 'react'
 import { THEME_KEY, applyTheme, parseTheme, themes, type Theme } from '#/lib/theme'
+
+const icons: Record<Theme, LucideIcon> = { system: Monitor, light: Sun, dark: Moon }
 
 // 表示モード(自動 / ライト / ダーク)の切り替え。サイドバーの下に置く。
 // 保存は localStorage。使えない環境(プライベートモードなど)でも、その場の切り替えは動く
@@ -27,19 +31,16 @@ export function ThemeToggle() {
   }
 
   return (
-    <div role="group" aria-label="表示モード" className="flex border-2 border-ink">
+    <div role="group" aria-label="表示モード" className="grid grid-cols-3 justify-items-center border-2 border-ink">
       {themes.map((t) => (
-        <button
+        <IconButton
           key={t.value}
-          type="button"
-          aria-pressed={theme === t.value}
+          icon={icons[t.value]}
+          label={t.label}
+          size="sm"
+          pressed={theme === t.value}
           onClick={() => choose(t.value)}
-          className={`h-8 flex-1 text-s hover:bg-side-item focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${
-            theme === t.value ? 'bg-ink text-surface hover:bg-ink' : ''
-          }`}
-        >
-          {t.label}
-        </button>
+        />
       ))}
     </div>
   )

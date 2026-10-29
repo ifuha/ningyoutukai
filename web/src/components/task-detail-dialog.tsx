@@ -1,11 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
 import { Modal } from '#/components/modal'
+import { IconButton } from '#/components/icon-button'
+import { Check, Pencil, X } from 'lucide-react'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
-
-const buttonClass =
-  'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
 export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 
@@ -76,28 +75,24 @@ function Detail({
       )}
       <div className="flex flex-wrap gap-3">
         {!task.reportedAt && (
-          <button
-            type="button"
+          <IconButton
+            icon={Check}
+            label="完了を報告"
+            variant="outline"
             disabled={report.isPending}
             onClick={() => report.mutate()}
-            className={buttonClass}
-          >
-            完了を報告
-          </button>
+          />
         )}
         {onEdit && (
-          <button
-            type="button"
+          <IconButton
+            icon={Pencil}
+            label="編集"
+            variant="outline"
             disabled={report.isPending}
             onClick={onEdit}
-            className={buttonClass}
-          >
-            編集
-          </button>
+          />
         )}
-        <button type="button" onClick={onClose} className={buttonClass}>
-          閉じる
-        </button>
+        <IconButton icon={X} label="閉じる" variant="outline" onClick={onClose} />
       </div>
     </>
   )

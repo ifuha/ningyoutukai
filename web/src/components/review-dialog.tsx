@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatLimit } from '#/components/member-card'
 import { Modal } from '#/components/modal'
+import { IconButton } from '#/components/icon-button'
+import { Check, X } from 'lucide-react'
 import { eden, edenData } from '#/lib/eden'
 import { ApiError } from '#/lib/api'
 import type { ProductTree, TreeMember, TreeTask } from '#/lib/tree'
@@ -79,14 +81,13 @@ function ReviewRow({
             </p>
           )}
         </div>
-        <button
-          type="button"
+        <IconButton
+          icon={Check}
+          label="完了を確定"
+          variant="outline"
           disabled={complete.isPending || stale || confirming}
           onClick={() => setConfirming(true)}
-          className={buttonClass}
-        >
-          完了を確定
-        </button>
+        />
       </div>
       {confirming && (
         <div className="space-y-2 border-l-2 border-ink pl-3">
@@ -104,17 +105,16 @@ function ReviewRow({
             >
               完了にする
             </button>
-            <button
-              type="button"
+            <IconButton
+              icon={X}
+              label="やめる"
+              variant="outline"
               disabled={complete.isPending}
               onClick={() => {
                 setConfirming(false)
                 complete.reset()
               }}
-              className={buttonClass}
-            >
-              やめる
-            </button>
+            />
           </div>
         </div>
       )}
@@ -151,9 +151,7 @@ export function ReviewDialog({
           ))}
         </ul>
       )}
-      <button type="button" onClick={onClose} className={buttonClass}>
-        閉じる
-      </button>
+      <IconButton icon={X} label="閉じる" variant="outline" onClick={onClose} />
     </Modal>
   )
 }

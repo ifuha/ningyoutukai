@@ -210,7 +210,7 @@ describe('SectionEditorMenu(「⋯」のボタンは無い。キーボードの 
     expect(html).toContain('「設計チーム」を削除しますか?')
     expect(html).toContain('中のメンバーは無所属に戻ります')
     expect(html).toContain('削除する')
-    expect(html).toContain('やめる')
+    expect(html).toContain('aria-label="やめる"')
     expect(html).not.toContain('セクションの色')
     expect(html).not.toContain('aria-haspopup')
     expect(html).not.toContain('aria-label="セクションのメニュー"')
