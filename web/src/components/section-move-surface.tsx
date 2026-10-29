@@ -5,6 +5,7 @@ import type { SectionEditorProps } from '#/components/section-editor'
 import { collectFollowers, type FollowRoot } from '#/lib/drag-follow'
 import type { DragTarget } from '#/lib/drag-session'
 import type { Rect } from '#/lib/section-edit-geometry'
+import type { ConnectorFollower } from '#/lib/connector-follow'
 import { createSectionDragController, type SectionDragController } from '#/lib/section-drag-controller'
 
 // セクションの内側の「動かす面」。セクションを、カードのように、内側の空いている場所をつかんでドラッグして動かせるようにする。
@@ -28,9 +29,11 @@ export type SectionMoveSurfaceProps = Pick<
 > & {
   /** 一緒に動かす、位置を持つ所属メンバー(api と同じ規則)。省略は、なし */
   followMemberIds?: readonly string[]
+  /** 親子の線(SVG)を、動くカードに追従させる部品を作る。省略は、線を動かさない */
+  getConnectors?: () => ConnectorFollower | null
 }
 
-type Latest = Pick<SectionMoveSurfaceProps, 'scale' | 'onSelect' | 'onChange' | 'onPreview' | 'followMemberIds' | 'section'> & {
+type Latest = Pick<SectionMoveSurfaceProps, 'scale' | 'onSelect' | 'onChange' | 'onPreview' | 'followMemberIds' | 'getConnectors' | 'section'> & {
   base: Rect
 }
 
@@ -42,14 +45,15 @@ export function SectionMoveSurface({
   onChange,
   onPreview,
   followMemberIds,
+  getConnectors,
   offsetX = 0,
   offsetY = 0,
 }: SectionMoveSurfaceProps) {
   const base: Rect = { x: section.x, y: section.y, width: section.width, height: section.height }
 
   // イベントの中(古い render の関数)から、最新の値を読むための入れ物
-  const latest = useRef<Latest>({ base, scale, onSelect, onChange, onPreview, followMemberIds, section })
-  latest.current = { base, scale, onSelect, onChange, onPreview, followMemberIds, section }
+  const latest = useRef<Latest>({ base, scale, onSelect, onChange, onPreview, followMemberIds, getConnectors, section })
+  latest.current = { base, scale, onSelect, onChange, onPreview, followMemberIds, getConnectors, section }
 
   // カーソル(つかんでいる間は grabbing)のためだけの状態。動くたびには変わらない(確定と終わりのときだけ)
   const [dragging, setDragging] = useState(false)
@@ -67,6 +71,7 @@ export function SectionMoveSurface({
           latest.current.section.sectionId,
           latest.current.followMemberIds ?? [],
         ),
+      getConnectors: () => latest.current.getConnectors?.() ?? null,
       batch: (fn) => flushSync(fn),
       onCommit: (rect) => latest.current.onChange(rect),
       // 親に、動かしている最中か(四角あり)を知らせる。Esc の優先順位に使う(動くたびには呼ばない)

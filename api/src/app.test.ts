@@ -19,6 +19,7 @@ const EXPECTED_ROUTES = [
   "GET /api/product/:productId/member",
   "GET /api/product/:productId/member/:memberId",
   "GET /api/product/:productId/member/:memberId/task",
+  "GET /api/product/:productId/revision",
   "GET /api/product/:productId/section",
   "GET /api/product/:productId/task",
   "GET /api/product/:productId/task/:taskId",
@@ -36,6 +37,7 @@ const EXPECTED_ROUTES = [
   "PATCH /api/product/:productId/task/:taskId/complete",
   "PATCH /api/product/:productId/task/:taskId/task_kinds/:kindId",
   "PATCH /api/product/:productId/task_kinds/:kindId",
+  "PATCH /api/product/:productId/task/:taskId/message/:messageId",
   "POST /api/invitation/:invitationId/accept",
   "POST /api/invitation/:invitationId/reject",
   "POST /api/product/",
@@ -44,6 +46,7 @@ const EXPECTED_ROUTES = [
   "POST /api/product/:productId/task",
   "POST /api/product/:productId/task/:taskId/complete-report",
   "POST /api/product/:productId/task_kinds",
+  "POST /api/product/:productId/task/:taskId/message",
 ];
 
 const registered = app.routes.map((r) => `${r.method} ${r.path}`);

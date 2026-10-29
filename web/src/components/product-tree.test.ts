@@ -160,46 +160,58 @@ describe('ProductTree(カードの位置。座標は左上)', () => {
 
 describe('TreeToolbar', () => {
   const bar = (props: Record<string, unknown>) =>
-    renderToStaticMarkup(createElement(TreeToolbar, { mode: 'pan', onModeChange: () => {}, ...props } as never))
+    renderToStaticMarkup(createElement(TreeToolbar, { mode: 'select', onModeChange: () => {}, ...props } as never))
 
-  test('Figma の並びと寸法(410×86、ボタン 60×60)で、6 つのボタンと 2 つの区切りがある', () => {
+  test('並びと寸法(高さ 56、ボタン 40×40)で、5 つのボタンと 2 つの区切りがある。「移動」はない', () => {
     const html = bar({ onOpenMembers: () => {} })
-    const labels = ['選択', '移動', 'メンバー', 'セクション', 'メモ', '検索']
+    const labels = ['選択', 'メンバー', 'セクション', 'メモ', '検索']
     let last = -1
     for (const l of labels) {
-      const at = html.indexOf(`<span>${l}</span>`)
+      const at = html.indexOf(`aria-label="${l}"`)
       expect(at).toBeGreaterThan(last)
       last = at
     }
-    expect(html).toContain('w-[410px]')
-    expect(html).toContain('h-[86px]')
-    expect(html.split('size-[60px]').length - 1).toBe(6)
+    expect(html).not.toContain('移動')
+    expect(html).toContain('h-14')
+    expect(html.split('size-10').length - 1).toBe(5)
     expect(html.split('w-0.5').length - 1).toBe(2)
   })
+  test('アイコンの下に文字(ラベル)を出さない。名前は aria-label とツールチップだけ', () => {
+    const html = bar({ onOpenMembers: () => {} })
+    // ボタンの中は svg だけ(ラベルの <span>選択</span> などが無い)
+    for (const l of ['選択', 'メンバー', 'セクション', 'メモ', '検索']) {
+      expect(html).not.toContain(`<span>${l}</span>`)
+    }
+    expect(html).toContain('>選択</span>') // ツールチップ(aria-hidden の span)
+  })
+  test('ツールチップが切れないよう、バーに overflow を付けない', () => {
+    const html = bar({})
+    expect(html).not.toMatch(/role="toolbar"[^>]*overflow/)
+  })
   test('選択された方のモードが、押された状態になる', () => {
-    expect(bar({ mode: 'pan' })).toMatch(/aria-pressed="true"[^>]*>(?:(?!<button).)*移動/s)
-    expect(bar({ mode: 'select' })).toMatch(/aria-pressed="true"[^>]*>(?:(?!<button).)*選択/s)
+    expect(bar({ mode: 'select' })).toMatch(/aria-label="選択" aria-pressed="true"/)
+    expect(bar({ mode: 'section', canEditSections: true })).toMatch(/aria-label="選択" aria-pressed="false"/)
   })
   test('メモ・検索は、無効(準備中)。セクションは、リーダーでなければ無効', () => {
     const html = bar({ onOpenMembers: () => {} })
-    expect(html.split('title="準備中"').length - 1).toBe(2) // メモ・検索
+    expect(html.split('(準備中)</span>').length - 1).toBe(2) // メモ・検索のツールチップ
     expect(html.split('disabled=""').length - 1).toBe(3) // メモ・検索・セクション(リーダーでない)
   })
   test('セクションは、リーダー(canEditSections)のときだけ押せる', () => {
     const leader = bar({ onOpenMembers: () => {}, canEditSections: true })
     expect(leader.split('disabled=""').length - 1).toBe(2) // メモ・検索だけ
-    expect(leader).toContain('title="セクションを置く(Esc で戻る)"')
+    expect(leader).toContain('>セクションを置く(Esc で戻る)</span>')
     const notLeader = bar({ onOpenMembers: () => {}, canEditSections: false })
-    expect(notLeader).toContain('title="リーダーのみ"')
+    expect(notLeader).toContain('>セクション(リーダーのみ)</span>')
   })
   test('「セクション」の道具が選ばれているとき、セクションが押された状態になる', () => {
-    expect(bar({ mode: 'section', canEditSections: true })).toMatch(/aria-pressed="true"[^>]*>(?:(?!<button).)*セクション/s)
+    expect(bar({ mode: 'section', canEditSections: true })).toMatch(/aria-label="セクション" aria-pressed="true"/)
   })
   test('メンバーは、リーダーのときだけ押せる', () => {
     expect(bar({ onOpenMembers: () => {} }).split('disabled=""').length - 1).toBe(3)
     const member = bar({})
     expect(member.split('disabled=""').length - 1).toBe(4)
-    expect(member).toContain('title="リーダーのみ"')
+    expect(member).toContain('>メンバーの管理(リーダーのみ)</span>')
   })
 })
 
@@ -227,17 +239,19 @@ describe('ProductTree(表示の整理: 操作のヒントと、倍率の表示(%
 })
 
 describe('ProductTree(道具・カーソル・リーダー)', () => {
-  test('初期の道具は「移動」: つかむカーソル', () => {
-    expect(render({ tree: tree(L, [M1]) })).toContain('cursor-grab')
+  test('初期の道具は「選択」: 通常の矢印のカーソル(つかむ手ではない)', () => {
+    const html = render({ tree: tree(L, [M1]) })
+    expect(html).toContain('cursor-default')
+    expect(html).not.toContain('cursor-grab')
   })
   test('リーダーでなければ、「セクション」は押せない(セクションを選ぶこともできない)', () => {
     const html = render({ tree: tree(L, [M1]), sections: [section()], canEditSections: false })
-    expect(html).toContain('title="リーダーのみ"')
+    expect(html).toContain('>セクション(リーダーのみ)</span>')
     expect(html).not.toContain('data-selected')
   })
   test('リーダー(canEditSections)なら、「セクション」が押せる', () => {
     const html = render({ tree: tree(L, [M1]), canEditSections: true })
-    expect(html).toContain('title="セクションを置く(Esc で戻る)"')
+    expect(html).toContain('>セクションを置く(Esc で戻る)</span>')
   })
   test('通知(失敗の知らせ)がなければ、role="alert" は出ない。あれば、メッセージが出る', () => {
     expect(render({ tree: tree(L, [M1]) })).not.toContain('role="alert"')

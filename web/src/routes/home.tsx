@@ -1,6 +1,8 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { CalendarPlus, LogOut } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { AppShell } from '#/components/app-shell'
 import { DotField } from '#/components/dot-field'
 import { eden, edenData } from '#/lib/eden'
@@ -11,9 +13,6 @@ import { authClient } from '#/lib/auth-client'
 export const Route = createFileRoute('/home')({ component: Home })
 
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
-
-const barLink =
-  'underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink'
 
 function Home() {
   const navigate = useNavigate()
@@ -60,25 +59,27 @@ function Home() {
                 ) : calendar.data?.connected ? (
                   <span className="opacity-70">Googleカレンダー: 連携済み</span>
                 ) : (
-                  <button
-                    type="button"
+                  <IconButton
+                    icon={CalendarPlus}
+                    label="Googleカレンダーを連携"
+                    showLabel
+                    size="sm"
+                    side="bottom"
                     onClick={() => void connectGoogleCalendar()}
-                    className={barLink}
-                  >
-                    Googleカレンダーを連携
-                  </button>
+                  />
                 )}
-                <button
-                  type="button"
+                <IconButton
+                  icon={LogOut}
+                  label="ログアウト"
+                  variant="outline"
+                  size="sm"
+                  side="bottom"
                   onClick={() => void signOut()}
-                  className="h-8 border-2 border-ink bg-surface px-3 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                >
-                  ログアウト
-                </button>
+                />
               </span>
             </div>
             {calendarLinkError && (
-              <p role="alert" className="-mt-6 mb-8 border-l-2 border-ink pl-3 text-m">
+              <p role="alert" className="-mt-6 mb-8 border-l border-line pl-3 text-m">
                 Googleカレンダーを連携できませんでした。もう一度お試しください。
               </p>
             )}
@@ -86,7 +87,7 @@ function Home() {
             {products.isPending ? (
               <p className="mt-4 text-m opacity-60">読み込み中…</p>
             ) : products.isError ? (
-              <p role="alert" className="mt-4 border-l-2 border-ink pl-3 text-m">
+              <p role="alert" className="mt-4 border-l border-line pl-3 text-m">
                 ERR {products.error.message}
               </p>
             ) : list.length === 0 ? (
@@ -100,11 +101,11 @@ function Home() {
                 </Link>
               </p>
             ) : (
-              <ol className="mt-4 border-t-2 border-ink bg-surface">
+              <ol className="mt-4 border-t border-line bg-surface">
                 {list.map((p, i) => (
                   <li
                     key={p.productId}
-                    className="rise border-b-2 border-ink"
+                    className="rise border-b border-line"
                     style={{ animationDelay: `${i * 70}ms` }}
                   >
                     <Link

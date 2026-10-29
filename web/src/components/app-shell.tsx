@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { Menu } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { Sidebar } from '#/components/sidebar'
 import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
@@ -65,18 +67,21 @@ export function AppShell({
 
   return (
     <div className="flex h-screen flex-col md:flex-row">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-ink px-2 md:hidden">
-        <button
-          type="button"
-          ref={drawer.buttonRef}
-          onClick={() => drawer.setOpen(true)}
-          aria-label="メニューを開く"
-          aria-expanded={drawer.open}
-          aria-controls="app-sidebar"
-          className="flex size-10 items-center justify-center text-l"
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line px-2 md:hidden">
+        <span
+          ref={(el) => {
+            drawer.buttonRef.current = el?.querySelector('button') ?? null
+          }}
         >
-          ☰
-        </button>
+          <IconButton
+            icon={Menu}
+            label="メニューを開く"
+            side="bottom"
+            onClick={() => drawer.setOpen(true)}
+            aria-expanded={drawer.open}
+            aria-controls="app-sidebar"
+          />
+        </span>
         <p className="text-l font-semibold">人形使い</p>
       </header>
       {drawer.open && (

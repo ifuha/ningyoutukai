@@ -45,7 +45,7 @@ export function useSectionInteraction({
   getCardRect: (memberId: string) => Rect | null
 }) {
   // 道具・選択は、保持している値と、いまの状態(リーダーか・セクションが残っているか)を突き合わせて使う
-  const [toolRaw, setToolRaw] = useState<CanvasTool>('pan') // 初期は「移動」(これまでの、つかむカーソルと同じ見た目)
+  const [toolRaw, setToolRaw] = useState<CanvasTool>('select')
   const [selectedRaw, setSelectedRaw] = useState<string | null>(null)
   const tool = normalizeTool(toolRaw, canEdit)
   const selectedSectionId = reconcileSelection(selectedRaw, sections, canEdit)

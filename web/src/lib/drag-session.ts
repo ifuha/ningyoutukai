@@ -92,11 +92,26 @@ export function defaultScheduler(): FrameScheduler {
 
 const CAPTURE = { capture: true } as const
 
+// いま、ドラッグが確定している操作の数。画面のデータを取り直して再描画する処理(他の人の変更の反映など)が、
+// ドラッグの最中を避けるために読む
+let engagedCount = 0
+
+/** ドラッグが確定している操作の数(クリックの判定中は含まない) */
+export function engagedDragCount(): number {
+  return engagedCount
+}
+
+/** ドラッグが確定している操作が、1 つでもあるか */
+export function isDragEngaged(): boolean {
+  return engagedCount > 0
+}
+
 export function startDragSession(options: DragSessionOptions): DragSession {
   const { target, pointerId } = options
   const scheduler = options.scheduler ?? defaultScheduler()
   let active = true
   let frameId: number | null = null
+  let engaged = false
 
   // ドラッグが確定してからの、テキストの選択とカーソルの固定(元の値を覚えておき、終わったら戻す)
   const lock = options.lock
@@ -138,6 +153,10 @@ export function startDragSession(options: DragSessionOptions): DragSession {
   function finish() {
     if (!active) return
     active = false
+    if (engaged) {
+      engaged = false
+      engagedCount--
+    }
     if (frameId !== null) {
       scheduler.cancel(frameId)
       frameId = null
@@ -167,7 +186,12 @@ export function startDragSession(options: DragSessionOptions): DragSession {
       return active
     },
     engage() {
-      if (!active || !lock || saved) return
+      if (!active) return
+      if (!engaged) {
+        engaged = true
+        engagedCount++
+      }
+      if (!lock || saved) return
       saved = { userSelect: lock.body.style.userSelect, cursor: lock.body.style.cursor }
       lock.body.style.userSelect = 'none'
       lock.body.style.cursor = lock.cursor

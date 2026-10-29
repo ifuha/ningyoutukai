@@ -1,3 +1,5 @@
+import { Trash2, X } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { SectionColorPicker } from '#/components/section-color-picker'
 import type { SectionColor } from '#/lib/section'
 import { inverseScaleStyle, type MenuState } from '#/lib/section-editor-state'
@@ -10,7 +12,7 @@ import { inverseScaleStyle, type MenuState } from '#/lib/section-editor-state'
 // 位置(`offset`)は、名前をつかむ場所のすぐ下の左端(`section-label.ts` の `confirmPanelOffset`)
 // キャンバスの拡大率を打ち消して、拡大率に関わらず読める大きさにする(左上を基準に 1 / scale)
 const buttonClass =
-  'cursor-pointer border-2 border-ink px-2 py-1 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
+  'cursor-pointer border border-line px-2 py-1 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
 
 export function SectionEditorMenu({
   name,
@@ -48,7 +50,7 @@ export function SectionEditorMenu({
       <div
         role={menu === 'confirm-delete' ? 'alertdialog' : 'menu'}
         aria-label={menu === 'confirm-delete' ? 'セクションの削除の確認' : 'セクションのメニュー'}
-        className="absolute top-0 left-0 w-60 space-y-2 border-2 border-ink bg-surface p-2 text-m text-ink"
+        className="absolute top-0 left-0 w-60 space-y-2 border border-line bg-surface p-2 text-m text-ink"
       >
         {menu === 'confirm-delete' ? (
           <>
@@ -59,17 +61,25 @@ export function SectionEditorMenu({
               <button type="button" onClick={onConfirmDelete} className={buttonClass}>
                 削除する
               </button>
-              <button type="button" onClick={onCancelDelete} className={buttonClass}>
-                やめる
-              </button>
+              <IconButton
+                icon={X}
+                label="やめる"
+                variant="outline"
+                side="bottom"
+                onClick={onCancelDelete}
+              />
             </div>
           </>
         ) : (
           <>
             <SectionColorPicker value={color} onPick={onPickColor} />
-            <button type="button" onClick={onAskDelete} className={buttonClass}>
-              削除
-            </button>
+            <IconButton
+              icon={Trash2}
+              label="削除"
+              variant="outline"
+              side="bottom"
+              onClick={onAskDelete}
+            />
           </>
         )}
       </div>

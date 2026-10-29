@@ -22,6 +22,7 @@ import {
   connectorKind,
   hasPosition,
   splitByPosition,
+  type Box,
 } from '#/lib/tree-layout'
 import type {
   ProductTree as ProductTreeData,
@@ -31,16 +32,18 @@ import type {
 import { useCanvasSize } from '#/lib/use-canvas-size'
 import { useCardDrag } from '#/lib/use-card-drag'
 import { boxWithin, useCardBoxes } from '#/lib/use-card-boxes'
+import { collectConnectorTargets, createConnectorFollower } from '#/lib/connector-follow'
+import type { ConnectorFollower } from '#/lib/connector-follow'
 import { usePanZoom } from '#/lib/use-pan-zoom'
 
 // セクションがないときに渡す、空の配列(毎回新しい配列を作らない)
 const NO_SECTIONS: Section[] = []
 
-// 下に重ねる道具のバー(高さ 86px、下から 12px)の分の余白(px)。全体表示は、この分を避ける
-// 通知は、道具のバーと重ならないよう、その上に置く(下から 104px)。右下の倍率の表示は、置かない
+// 下に重ねる道具のバー(高さ 56px、下から 12px)の分の余白(px)。全体表示は、この分を避ける
+// 通知は、道具のバーと重ならないよう、その上に置く(下から 74px)。右下の倍率の表示は、置かない
 // (拡大縮小は、ホイール・ピンチ・キー(+ -)、全体表示は、キー(0))
-const BOTTOM_INSET = 100
-const ABOVE_TOOLBAR = 'bottom-[104px]'
+const BOTTOM_INSET = 70
+const ABOVE_TOOLBAR = 'bottom-[74px]'
 
 // リーダーを一番上、その下にメンバーを横に並べる木構造。線は破線(CSS だけ)、矢印は子から親へ向く
 // 領域は、親(メイン領域)いっぱいの、自由にパン(移動)とズームができるキャンバス(スクロールバーは出さない)。初期表示は、全体が収まる倍率
@@ -50,7 +53,7 @@ const ABOVE_TOOLBAR = 'bottom-[104px]'
 // `onEditTask` を渡すと、タスクが押せて、押した人とタスクを渡す(`canOpenTask` があれば、それが true の人のタスクだけ)
 // `onShowTasks` を渡すと、「他 N 件」が押せて、その人を渡す(全員向け)
 // 下の中央の道具のバー(`TreeToolbar`)。`onOpenMembers` を渡すと(リーダーのみ)「メンバー」が押せて、メンバーの管理を開く
-// 道具(モード)は「選択」「移動」「セクション」(`useSectionInteraction`)。初期は「移動」(これまでの、つかむカーソルと同じ見た目)。
+// 道具(モード)は「選択」「セクション」(`useSectionInteraction`)。初期は「選択」。キャンバスのドラッグでの移動は、「セクション」以外ではいつでも動く。
 //   「セクション」を選ぶと、キャンバスのカーソルが十字になり、ドラッグでの移動は止まる(描く層が受ける)。Esc か「選択」で戻る
 //   `canEditSections`(リーダー)でなければ、「セクション」は押せず、セクションを選択もできない
 // 拡大縮小は、ホイール・ピンチ・キー(+ -)、全体表示はキー(0)。右下は倍率(%)の表示だけ(+/- と「全体表示」のボタンと、操作のヒントの文字は置かない)
@@ -131,7 +134,7 @@ export function ProductTree({
     headerHeight,
     BOTTOM_INSET,
   )
-  const { view, dragging, freeze, shiftOrigin, handlers } = usePanZoom(containerRef, size)
+  const { view, freeze, shiftOrigin, handlers } = usePanZoom(containerRef, size)
   // 中身のずらし量(負の座標を表示するための、中身の最小座標から決まる値)が変わったとき、どの要素も画面上の位置が変わらないよう、
   // パンを逆向きに補正する(セクションを左・上へ動かして範囲が変わっても、見ている画面が勝手に動かない)。
   // レイアウトの直後・描画の前に行うので、ちらつかない。楽観更新の取り消しで、ずらし量が元に戻るときも、同じ計算で元の見え方に戻る
@@ -188,7 +191,32 @@ export function ProductTree({
     getCardRect,
   })
   // C: カードのドラッグ(リーダーだけ。「セクション」の道具で描いている間は動かさない)
-  const cardDrag = useCardDrag(interaction.cardDragOptions)
+  // ドラッグ中に、親子の線(SVG)を、動くカードに追従させる。線の元の端点は、描画のたびに ref に入れる(下の `boxes` から)
+  const connectorSourceRef = useRef<{
+    leaderId: string
+    leaderBox: Box
+    targets: { id: string; box: Box }[]
+  } | null>(null)
+  const makeConnectors = useCallback(
+    (movingIds: readonly string[]): ConnectorFollower | null => {
+      const source = connectorSourceRef.current
+      const content = contentRef.current
+      if (!source || !content) return null
+      const targets = collectConnectorTargets(content, source.targets)
+      if (targets.length === 0) return null
+      return createConnectorFollower({
+        parentId: source.leaderId,
+        parent: source.leaderBox,
+        targets,
+        moving: new Set(movingIds),
+      })
+    },
+    [contentRef],
+  )
+  const cardDrag = useCardDrag({
+    ...interaction.cardDragOptions,
+    getConnectors: (memberId) => makeConnectors([memberId]),
+  })
   const dragHandlersFor = (memberId: string) =>
     interaction.cardDragOptions.enabled ? cardDrag.getDragHandlers(memberId) : undefined
   // ドラッグの最中かを、Esc の優先順位(土台)に知らせる(ドラッグ中の Esc は、選択を外さず、ドラッグの取り消しだけ)
@@ -225,6 +253,10 @@ export function ProductTree({
     const box = boxes?.get(m.productMemberId)
     return box ? [{ id: m.productMemberId, box }] : []
   })
+  connectorSourceRef.current =
+    leaderBox && connectorTargets.length > 0
+      ? { leaderId: leader.productMemberId, leaderBox, targets: connectorTargets }
+      : null
 
   return (
     <div className="relative h-full w-full">
@@ -246,7 +278,7 @@ export function ProductTree({
             toCanvas({ x: e.clientX, y: e.clientY }),
           )
         }
-        className={`absolute inset-0 touch-none select-none overflow-clip overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${cursorClass(mode, dragging)}`}
+        className={`absolute inset-0 touch-none select-none overflow-clip overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${cursorClass(mode)}`}
       >
         <div
           ref={contentRef}
@@ -286,6 +318,7 @@ export function ProductTree({
                   onChange={e.onChange}
                   onPreview={e.onPreview}
                   followMemberIds={followIdsFor(s.sectionId)}
+                  getConnectors={() => makeConnectors(followIdsFor(s.sectionId))}
                   offsetX={bounds.offsetX}
                   offsetY={bounds.offsetY}
                 />
@@ -422,6 +455,7 @@ export function ProductTree({
                   key={s.sectionId}
                   {...interaction.editorPropsFor(s)}
                   followMemberIds={followIdsFor(s.sectionId)}
+                  getConnectors={() => makeConnectors(followIdsFor(s.sectionId))}
                   offsetX={bounds.offsetX}
                   offsetY={bounds.offsetY}
                 />

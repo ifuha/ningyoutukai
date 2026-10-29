@@ -1,14 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Check, Trash2, X } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { Modal } from '#/components/modal'
 import { eden, edenData } from '#/lib/eden'
 import { ApiError } from '#/lib/api'
 import type { ProductTree, TreeMember } from '#/lib/tree'
 
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
-
-const buttonClass =
-  'flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
 
 // メンバー 1 人分の行。リーダーが role=member の行で「外す」を押すと、同じ行で確認を出す。
 // 成功したらツリーを取り直し、行は消える。失敗(404/403 など)は行を残し、取り直さない
@@ -47,12 +46,12 @@ function MemberRow({
           <img
             src={member.avatarUrl}
             alt=""
-            className="size-8 shrink-0 border-2 border-current object-cover"
+            className="size-8 shrink-0 border border-current object-cover"
           />
         ) : (
           <span
             aria-hidden="true"
-            className="flex size-8 shrink-0 items-center justify-center border-2 border-current font-bold"
+            className="flex size-8 shrink-0 items-center justify-center border border-current font-bold"
           >
             {[...member.userName][0] ?? '?'}
           </span>
@@ -64,47 +63,46 @@ function MemberRow({
           </p>
         </div>
         {canRemove && !confirming && (
-          <button
-            type="button"
+          <IconButton
+            icon={Trash2}
+            label="外す"
+            variant="outline"
+            size="sm"
+            side="left"
             disabled={gone}
             onClick={() => setConfirming(true)}
-            className={buttonClass}
-          >
-            外す
-          </button>
+          />
         )}
       </div>
       {canRemove && confirming && (
-        <div className="space-y-2 border-l-2 border-ink pl-3">
+        <div className="space-y-2 border-l border-line pl-3">
           <p>
             {member.userName} を外しますか?
             {count > 0 && ` 担当の ${count} 件のタスクも消えます`}
           </p>
           <div className="flex gap-3">
-            <button
-              type="button"
+            <IconButton
+              icon={Check}
+              label="外す(確定)"
+              variant="outline"
               disabled={remove.isPending || gone}
               onClick={() => remove.mutate()}
-              className={buttonClass}
-            >
-              外す(確定)
-            </button>
-            <button
-              type="button"
+            />
+            <IconButton
+              icon={X}
+              label="やめる"
+              variant="outline"
               disabled={remove.isPending}
               onClick={() => {
                 setConfirming(false)
                 remove.reset()
               }}
-              className={buttonClass}
-            >
-              やめる
-            </button>
+            />
           </div>
         </div>
       )}
       {remove.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-3">
+        <p role="alert" className="border-l border-line pl-3">
           ERR {remove.error.message}
         </p>
       )}
@@ -141,9 +139,12 @@ export function MemberManageDialog({
           />
         ))}
       </ul>
-      <button type="button" onClick={onClose} className={buttonClass}>
-        閉じる
-      </button>
+      <IconButton
+        icon={X}
+        label="閉じる"
+        variant="outline"
+        onClick={onClose}
+      />
     </Modal>
   )
 }

@@ -1,5 +1,7 @@
 import { formatLimit } from '#/components/member-card'
 import { Modal } from '#/components/modal'
+import { IconButton } from '#/components/icon-button'
+import { X } from 'lucide-react'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 
 // その人の全タスクの一覧(カードには 3 件までしか出ないので、その続きを見る・選ぶ画面)。並びはツリー API の順(期限が近い順)
@@ -47,12 +49,12 @@ export function TaskListDialog({
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2 text-s">
                   {t.reportedAt && (
-                    <span className="shrink-0 border border-ink px-1">
+                    <span className="shrink-0 border border-line px-1">
                       確認待ち
                     </span>
                   )}
                   {!t.isVisible && (
-                    <span className="shrink-0 border border-ink px-1">
+                    <span className="shrink-0 border border-line px-1">
                       非公開
                     </span>
                   )}
@@ -65,13 +67,7 @@ export function TaskListDialog({
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
-          >
-            閉じる
-          </button>
+          <IconButton icon={X} label="閉じる" variant="outline" onClick={onClose} />
         </>
       )}
     </Modal>

@@ -1,56 +1,24 @@
-import { Hand, MousePointer2, Search, SquareDashed, StickyNote, User } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { MousePointer2, Search, SquareDashed, StickyNote, User } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import type { CanvasTool } from '#/lib/section-interaction-types'
 
-// ツリーの画面の下の中央に置く、道具のバー(Figma の `nav`)
-// 寸法(Figma): 枠 410 × 86(枠線 2px)、ボタン 60 × 60(アイコン 24px + 文字 12px)、ボタンと区切り線の間隔 6px、区切り線 2 × 30
-//   内側の幅 406 = ボタン 6 × 60 + 区切り線 2 × 2 + 間隔 7 × 6。縦は、内側 82 の中央にボタン(上下 11px)
-// 並びは「選択・移動 | メンバー・セクション・メモ | 検索」
-// 選択・移動・セクションは、道具(モード)の切り替え(押された道具を強調する)。キャンバスのドラッグでの移動は、「セクション」以外ではこれまでどおり動く。
-//   セクションは、リーダーだけが使える(リーダーでなければ、押せない見た目)。選ぶと、キャンバスでドラッグして、セクションを置く(Esc か「選択」で戻る)
+// ツリーの画面の下の中央に置く、道具のバー(Figma の `nav` を、ユーザーの指示で小さく、アイコンだけにした)
+// 寸法: 高さ 56(枠線 1px)、ボタン 40 × 40(アイコン 24px)、ボタンと区切り線の間隔 6px、左右の余白 6px、区切り線 2 × 24
+//   幅は中身で決まる(ボタン 5 × 40 + 区切り線 2 × 2 + 間隔 6 × 6 + 余白 12 + 枠線 2 = 254)
+//   文字(ラベル)は出さない。名前は、ホバー(とキーボードのフォーカス)のツールチップと、`aria-label` で示す
+//   ツールチップが切れないよう、このバーには `overflow` を付けない
+// 並びは「選択 | メンバー・セクション・メモ | 検索」
+// 選択・セクションは、道具(モード)の切り替え(押された道具を強調する)。キャンバスのドラッグでの移動は、「セクション」以外ではいつでも動く。
+//   セクションは、リーダーだけが使える(リーダーでなければ、押せない見た目。ツールチップで理由を示す)。選ぶと、キャンバスでドラッグして、セクションを置く(Esc か「選択」で戻る)
 //   メンバーは、メンバーの管理を開く(リーダーのみ)。メモ・検索は、無効の見た目(準備中)
 
 export type TreeMode = CanvasTool
-
-const buttonClass =
-  'flex size-[60px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1 text-s hover:bg-side-item focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent'
-
-function ToolButton({
-  icon: Icon,
-  label,
-  pressed,
-  disabled,
-  title,
-  onClick,
-}: {
-  icon: LucideIcon
-  label: string
-  /** 押された見た目にする(切り替えのボタン)。省略は、切り替えではない */
-  pressed?: boolean
-  disabled?: boolean
-  title?: string
-  onClick?: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      disabled={disabled}
-      title={title}
-      onClick={onClick}
-      className={`${buttonClass} ${pressed ? 'bg-ink text-surface hover:bg-ink' : ''}`}
-    >
-      <Icon aria-hidden="true" size={24} />
-      <span>{label}</span>
-    </button>
-  )
-}
 
 function Divider() {
   return (
     <span
       aria-hidden="true"
-      className="h-[30px] w-0.5 shrink-0 bg-ink/50"
+      className="h-6 w-0.5 shrink-0 bg-ink/50"
     />
   )
 }
@@ -72,39 +40,33 @@ export function TreeToolbar({
     <div
       role="toolbar"
       aria-label="ツリーの道具"
-      className="flex h-[86px] w-[410px] max-w-[calc(100vw-1.5rem)] items-center gap-1.5 overflow-x-auto border-2 border-ink bg-surface/90"
+      className="flex h-14 max-w-[calc(100vw-1.5rem)] items-center gap-1.5 border border-line bg-surface/90 px-1.5"
     >
-      <ToolButton
+      <IconButton
         icon={MousePointer2}
         label="選択"
         pressed={mode === 'select'}
         onClick={() => onModeChange('select')}
       />
-      <ToolButton
-        icon={Hand}
-        label="移動"
-        pressed={mode === 'pan'}
-        onClick={() => onModeChange('pan')}
-      />
       <Divider />
-      <ToolButton
+      <IconButton
         icon={User}
         label="メンバー"
+        tip={onOpenMembers ? 'メンバーの管理' : 'メンバーの管理(リーダーのみ)'}
         disabled={!onOpenMembers}
-        title={onOpenMembers ? 'メンバーの管理' : 'リーダーのみ'}
         onClick={onOpenMembers}
       />
-      <ToolButton
+      <IconButton
         icon={SquareDashed}
         label="セクション"
+        tip={canEditSections ? 'セクションを置く(Esc で戻る)' : 'セクション(リーダーのみ)'}
         pressed={mode === 'section'}
         disabled={!canEditSections}
-        title={canEditSections ? 'セクションを置く(Esc で戻る)' : 'リーダーのみ'}
         onClick={() => onModeChange('section')}
       />
-      <ToolButton icon={StickyNote} label="メモ" disabled title="準備中" />
+      <IconButton icon={StickyNote} label="メモ" tip="メモ(準備中)" disabled />
       <Divider />
-      <ToolButton icon={Search} label="検索" disabled title="準備中" />
+      <IconButton icon={Search} label="検索" tip="検索(準備中)" disabled />
     </div>
   )
 }
