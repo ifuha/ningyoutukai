@@ -44,6 +44,7 @@ const EXPECTED_ROUTES = [
   "POST /api/product/:productId/task",
   "POST /api/product/:productId/task/:taskId/complete-report",
   "POST /api/product/:productId/task_kinds",
+  "POST /api/product/:productId/task/:taskId/message",
 ];
 
 const registered = app.routes.map((r) => `${r.method} ${r.path}`);
