@@ -6,8 +6,8 @@ import type { Section, SectionColor } from '#/lib/section'
 // 座標は、すべて「キャンバス座標」(拡大率・パンを含まない。セクションの `x` / `y` と同じ座標系)。
 // カードの位置(`Point`)は、**カードの左上の座標**(中心ではない)。
 
-/** 道具(モード)。ツールバーの「選択」「移動」「セクション」に対応する */
-export type CanvasTool = 'select' | 'pan' | 'section'
+/** 道具(モード)。ツールバーの「選択」「セクション」に対応する。キャンバスのドラッグでの移動は、「選択」でも動く */
+export type CanvasTool = 'select' | 'section'
 
 /**
  * A: セクションを描く層(`web/src/components/section-draw-layer.tsx`)。

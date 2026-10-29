@@ -1,7 +1,7 @@
 import type { CanvasTool } from '#/lib/section-interaction-types'
 
 // 道具(モード)の状態の遷移。画面に依存しない関数にして、テストする。
-// 「選択」「移動」「セクション」の 3 つ。「セクション」はリーダーだけが使える。
+// 「選択」「セクション」の 2 つ。「セクション」はリーダーだけが使える。
 // 「メモ」「検索」は道具ではない(押せない)。
 
 /** その道具が使えるか。「セクション」はリーダーだけ */
@@ -54,15 +54,13 @@ export function isTypingTarget(
 
 /**
  * キャンバスのカーソル(Tailwind のクラス名。完全な文字列で書く)。
- * 「選択」は通常の矢印(ドラッグ中も)、「移動」は、つかむ手(ドラッグ中はつかんだ手)、「セクション」は十字
+ * 「選択」は通常の矢印(ドラッグ中も)、「セクション」は十字
  */
-export function cursorClass(tool: CanvasTool, dragging: boolean): string {
+export function cursorClass(tool: CanvasTool): string {
   switch (tool) {
     case 'section':
       return 'cursor-crosshair'
     case 'select':
       return 'cursor-default'
-    case 'pan':
-      return dragging ? 'cursor-grabbing' : 'cursor-grab'
   }
 }

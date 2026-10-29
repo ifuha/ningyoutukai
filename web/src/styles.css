@@ -92,3 +92,39 @@ body {
     animation: none;
   }
 }
+
+/*
+ * ホームの一覧の動き。行が上から順に出て、ホバーで左から塗りが広がる。
+ * 「動きを減らす」設定のときは、止めて、最初から表示する
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.rise {
+  animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.row-fill {
+  background-image: linear-gradient(var(--color-side-item), var(--color-side-item));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  transition: background-size 0.25s ease-out;
+}
+
+.row-fill:hover,
+.row-fill:focus-visible {
+  background-size: 100% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+  .row-fill {
+    transition: none;
+  }
+}

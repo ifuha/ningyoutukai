@@ -267,9 +267,9 @@ describe('useSectionInteraction(A・B・C に渡す値)', () => {
     expect(api.cardDragOptions.enabled).toBe(false)
     expect(api.editorPropsFor(sections[0]).canEdit).toBe(false)
   })
-  test('リーダーなら、カードのドラッグと編集枠は有効。描く層は、道具が「セクション」になるまで無効(初期は「移動」)', () => {
+  test('リーダーなら、カードのドラッグと編集枠は有効。描く層は、道具が「セクション」になるまで無効(初期は「選択」)', () => {
     const { api } = probe(true)
-    expect(api.tool).toBe('pan')
+    expect(api.tool).toBe('select')
     expect(api.drawLayerProps.active).toBe(false)
     expect(api.cardDragOptions.enabled).toBe(true)
     expect(api.editorPropsFor(sections[0]).canEdit).toBe(true)
