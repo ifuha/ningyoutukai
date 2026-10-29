@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { acceptInvitation } from "./accept-invitation";
 import { createInvitation } from "./create-invitation";
+import { listInvitationCandidates } from "./list-candidates";
 import { listInvitations } from "./list-invitations";
 import { rejectInvitation } from "./reject-invitation";
 
@@ -11,5 +12,6 @@ import { rejectInvitation } from "./reject-invitation";
 export const invitationRoutes = new Elysia({ name: "invitation-routes" })
   .use(createInvitation)
   .use(listInvitations)
+  .use(listInvitationCandidates)
   .use(acceptInvitation)
   .use(rejectInvitation);

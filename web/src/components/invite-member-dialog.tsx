@@ -15,7 +15,7 @@ export function InviteMemberDialog({
   onClose: () => void
 }) {
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal open={open} onClose={onClose} overflowVisible>
       <InviteMemberForm productId={productId} />
       <IconButton
         icon={X}
