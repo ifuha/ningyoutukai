@@ -54,7 +54,7 @@ function Login() {
           <p className="text-m">? どのアカウントで続けますか?</p>
           <LoginButtons />
           {error && (
-            <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+            <p role="alert" className="border-l border-line pl-3 text-m">
               ERR {loginErrorMessage(error)}
             </p>
           )}

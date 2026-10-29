@@ -78,12 +78,6 @@ describe('resolveBackgroundClick(キャンバスのクリック)', () => {
     expect(resolveBackgroundClick({ ...base, point: { x: 900, y: 900 } })).toEqual({ type: 'clear' })
     expect(resolveBackgroundClick({ ...base, point: { x: -10, y: 10 } })).toEqual({ type: 'clear' })
   })
-  test('「移動」の道具でも、同じ(選択できる)', () => {
-    expect(resolveBackgroundClick({ ...base, tool: 'pan', point: { x: 150, y: 150 } })).toEqual({
-      type: 'select',
-      sectionId: 'small',
-    })
-  })
   test('「セクション」の道具(描くとき)は、何もしない', () => {
     expect(resolveBackgroundClick({ ...base, tool: 'section', point: { x: 150, y: 150 } })).toEqual({ type: 'none' })
     expect(resolveBackgroundClick({ ...base, tool: 'section', point: { x: 900, y: 900 } })).toEqual({ type: 'none' })

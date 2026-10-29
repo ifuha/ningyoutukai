@@ -18,6 +18,8 @@
   /* サイドバーの背景と、項目のマウスオーバー・選択中の背景(Figma `side-light` / `side-dark`) */
   --color-side: #edebe4;
   --color-side-item: #e2dfd4;
+  /* 枠線の色。文字色より落ち着かせる(文字色 40% + 紙の色 60%)。濃さは、この割合で変える */
+  --color-line: color-mix(in srgb, var(--color-ink) 40%, var(--color-surface));
   /* 文字の大きさは、小・中・大の 3 つだけ(text-s / text-m / text-l) */
   --text-s: 12px;
   --text-s--line-height: 16px;
@@ -32,8 +34,35 @@
     "Hiragino Sans", "Yu Gothic", monospace;
 }
 
+/*
+ * ダーク。`<html data-theme>` で固定した選択が、OS の設定より優先される。
+ * - data-theme="dark": いつもダーク
+ * - data-theme="light": いつもライト(上の既定のまま)
+ * - 付いていない(自動): OS の設定に従う
+ * 同じ値を 2 か所に書く(CSS は、メディアクエリと属性の条件で、値を共有できないため)
+ */
+:root {
+  color-scheme: light dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+    --color-surface: #1b1f2a;
+    --color-ink: #ebebeb;
+    --color-primary: #ebebeb;
+    --color-on-primary: #1b1f2a;
+    --color-secondary: #1b1f2a;
+    --color-outline: #ebebeb;
+    --color-side: #0e1015;
+    --color-side-item: #2a2e39;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --color-surface: #1b1f2a;
     --color-ink: #ebebeb;
     --color-primary: #ebebeb;
@@ -90,5 +119,41 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .cursor {
     animation: none;
+  }
+}
+
+/*
+ * ホームの一覧の動き。行が上から順に出て、ホバーで左から塗りが広がる。
+ * 「動きを減らす」設定のときは、止めて、最初から表示する
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.rise {
+  animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.row-fill {
+  background-image: linear-gradient(var(--color-side-item), var(--color-side-item));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  transition: background-size 0.25s ease-out;
+}
+
+.row-fill:hover,
+.row-fill:focus-visible {
+  background-size: 100% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+  .row-fill {
+    transition: none;
   }
 }

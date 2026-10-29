@@ -1,16 +1,18 @@
+import { Settings } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { useEffect, useRef, useState } from 'react'
 
 export type ManageMenuItem = { label: string; onSelect: () => void }
 
 const buttonClass =
-  'flex h-9 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none'
+  'flex h-9 shrink-0 items-center justify-center border border-line bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none'
 
 // 見出しの「管理」メニュー。項目を足すときは items に 1 行足す。項目を押すとメニューを閉じてから onSelect を呼ぶ。
 // 項目が 1 つだけ(メンバー向け)のときは、メニューにせず、その項目をボタンとして直接出す
 export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -33,28 +35,37 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
 
   if (items.length === 1) {
     return (
-      <button type="button" onClick={items[0].onSelect} className={buttonClass}>
-        {items[0].label}
-      </button>
+      <IconButton
+        icon={Settings}
+        label={items[0].label}
+        variant="outline"
+        side="bottom"
+        onClick={items[0].onSelect}
+      />
     )
   }
 
   return (
     <div ref={rootRef} className="relative">
-      <button
-        ref={buttonRef}
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className={buttonClass}
+      <span
+        ref={(el) => {
+          buttonRef.current = el?.querySelector('button') ?? null
+        }}
       >
-        管理 ▾
-      </button>
+        <IconButton
+          icon={Settings}
+          label="管理"
+          variant="outline"
+          side="bottom"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        />
+      </span>
       {open && (
         <div
           role="menu"
-          className="absolute left-0 z-10 mt-1 flex min-w-40 flex-col border-2 border-outline bg-secondary"
+          className="absolute left-0 z-10 mt-1 flex min-w-40 flex-col border border-line bg-secondary"
         >
           {items.map((item) => (
             <button

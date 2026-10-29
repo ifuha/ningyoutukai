@@ -1,18 +1,18 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { CalendarPlus, LogOut } from 'lucide-react'
+import { IconButton } from '#/components/icon-button'
 import { AppShell } from '#/components/app-shell'
+import { DotField } from '#/components/dot-field'
 import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
 
 // ホーム(`/home`)。ログイン必須。未ログインなら、ログイン画面(`/`)へ戻す(`AppShell` が行う)。
-// Figma にホーム画面のフレームを読み出せなかったため、プロダクト画面の流儀に沿った素直な作り
+// 上にユーザー名・Google カレンダーの連携・ログアウトの細いバー、その下に番号つきのプロダクトの一覧。配色と枠は、アプリ全体のもの(ライト / ダークに追従、太い枠、角丸なし)
 export const Route = createFileRoute('/home')({ component: Home })
 
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
-
-const cardBase =
-  'flex min-h-24 h-full flex-col justify-between gap-3 border-2 border-ink p-4 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
 
 function Home() {
   const navigate = useNavigate()
@@ -44,93 +44,100 @@ function Home() {
 
   return (
     <AppShell align="top">
-      {({ user, products }) => (
-        <div className="w-full max-w-4xl space-y-8">
-          <header className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-m opacity-70">ようこそ</p>
-              <h1 className="truncate text-l leading-normal font-semibold">
-                {user.name}
-              </h1>
-            </div>
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="h-10 shrink-0 border-2 border-ink px-4 text-m hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            >
-              ログアウト
-            </button>
-          </header>
+      {({ user, products }) => {
+        const list = products.data ?? []
 
-          <section
-            aria-label="Googleカレンダー連携"
-            className="flex flex-col gap-3 border-2 border-ink p-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div>
-              <h2 className="text-l font-medium">Googleカレンダー</h2>
-              <p className="mt-1 text-m opacity-70">
-                担当者が連携済みなら、その人のメインカレンダーに期限時刻の予定を追加します。
+        return (
+          <section aria-label="プロダクト" className="relative z-10 w-full max-w-2xl">
+            {/* 背景。サイドバーの右側いっぱいに敷く(アプリ共通のドットの上に重ねる) */}
+            <DotField shape="char" className="pointer-events-none fixed inset-y-0 right-0 left-0 -z-10 h-full w-full md:left-60 md:w-[calc(100%-15rem)]" />
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 font-mono text-s">
+              <span className="min-w-0 truncate opacity-70">&gt; {user.name}</span>
+              <span className="flex items-center gap-6">
+                {calendar.isPending ? (
+                  <span className="opacity-60">カレンダー確認中…</span>
+                ) : calendar.data?.connected ? (
+                  <span className="opacity-70">Googleカレンダー: 連携済み</span>
+                ) : (
+                  <IconButton
+                    icon={CalendarPlus}
+                    label="Googleカレンダーを連携"
+                    size="sm"
+                    side="bottom"
+                    onClick={() => void connectGoogleCalendar()}
+                  />
+                )}
+                <IconButton
+                  icon={LogOut}
+                  label="ログアウト"
+                  variant="outline"
+                  size="sm"
+                  side="bottom"
+                  onClick={() => void signOut()}
+                  className="h-8 border border-line bg-surface px-3 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                >
+                  ログアウト
+                </button>
+              </span>
+            </div>
+            {calendarLinkError && (
+              <p role="alert" className="-mt-6 mb-8 border-l border-line pl-3 text-m">
+                Googleカレンダーを連携できませんでした。もう一度お試しください。
               </p>
-              {calendarLinkError && (
-                <p role="alert" className="mt-2 text-m">
-                  Googleカレンダーを連携できませんでした。もう一度お試しください。
-                </p>
-              )}
-            </div>
-            {calendar.isPending ? (
-              <span className="text-m opacity-60">連携状態を確認中…</span>
-            ) : calendar.data?.connected ? (
-              <span className="shrink-0 text-m font-medium">連携済み</span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void connectGoogleCalendar()}
-                className="h-10 shrink-0 border-2 border-ink px-4 text-m hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-              >
-                Googleカレンダーを連携
-              </button>
             )}
-          </section>
-
-          <section aria-label="プロダクト" className="space-y-3">
-            <h2 className="text-l font-medium">プロダクト</h2>
+            <h1 className="font-mono text-s opacity-70">01 / プロダクト</h1>
             {products.isPending ? (
-              <p className="text-m opacity-60">読み込み中…</p>
+              <p className="mt-4 text-m opacity-60">読み込み中…</p>
             ) : products.isError ? (
-              <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+              <p role="alert" className="mt-4 border-l border-line pl-3 text-m">
                 ERR {products.error.message}
               </p>
+            ) : list.length === 0 ? (
+              <p className="mt-4 text-m opacity-70">
+                まだプロダクトがありません。
+                <Link
+                  to="/products/new"
+                  className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+                >
+                  最初のプロダクトを作る
+                </Link>
+              </p>
             ) : (
-              <ul className="grid grid-cols-1 gap-4 min-[900px]:grid-cols-2 xl:grid-cols-3">
-                {products.data.map((p) => (
-                  <li key={p.productId}>
+              <ol className="mt-4 border-t border-line bg-surface">
+                {list.map((p, i) => (
+                  <li
+                    key={p.productId}
+                    className="rise border-b border-line"
+                    style={{ animationDelay: `${i * 70}ms` }}
+                  >
                     <Link
                       to="/products/$productId"
                       params={{ productId: p.productId }}
-                      className={cardBase}
+                      className="row-fill group flex min-h-12 items-center gap-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
                     >
-                      <span className="text-l font-medium break-words">
+                      <span className="w-8 shrink-0 pl-2 font-mono text-s opacity-70 transition-transform duration-200 group-hover:translate-x-1">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-l font-medium">
                         {p.productName}
                       </span>
-                      <span className="text-m opacity-70">
+                      <span className="shrink-0 text-s opacity-70">
                         {roleLabel[p.role]}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="w-6 shrink-0 -translate-x-2 font-mono text-m opacity-0 transition-[opacity,transform] duration-200 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100"
+                      >
+                        →
                       </span>
                     </Link>
                   </li>
                 ))}
-                <li>
-                  <Link
-                    to="/products/new"
-                    className={`${cardBase} items-center justify-center border-dashed text-l font-medium`}
-                  >
-                    ＋ プロダクト作成
-                  </Link>
-                </li>
-              </ul>
+              </ol>
             )}
           </section>
-        </div>
-      )}
+        )
+      }}
     </AppShell>
   )
 }

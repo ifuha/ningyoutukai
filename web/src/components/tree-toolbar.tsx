@@ -1,12 +1,13 @@
-import { Hand, MousePointer2, Search, SquareDashed, StickyNote, User } from 'lucide-react'
+import { MousePointer2, Search, SquareDashed, StickyNote, User } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { CanvasTool } from '#/lib/section-interaction-types'
 
 // ツリーの画面の下の中央に置く、道具のバー(Figma の `nav`)
-// 寸法(Figma): 枠 410 × 86(枠線 2px)、ボタン 60 × 60(アイコン 24px + 文字 12px)、ボタンと区切り線の間隔 6px、区切り線 2 × 30
-//   内側の幅 406 = ボタン 6 × 60 + 区切り線 2 × 2 + 間隔 7 × 6。縦は、内側 82 の中央にボタン(上下 11px)
-// 並びは「選択・移動 | メンバー・セクション・メモ | 検索」
-// 選択・移動・セクションは、道具(モード)の切り替え(押された道具を強調する)。キャンバスのドラッグでの移動は、「セクション」以外ではこれまでどおり動く。
+// 寸法: 高さ 86(枠線 1px)、ボタン 60 × 60(アイコン 24px + 文字 12px)、ボタンと区切り線の間隔 6px、区切り線 2 × 30
+//   幅 342 = 内側 340(ボタン 5 × 60 + 区切り線 2 × 2 + 間隔 6 × 6)+ 枠線 2。縦は、内側 84 の中央にボタン(上下 12px)
+//   Figma の 410 × 86 から、「移動」のボタンをなくした分(60 + 6)を引いた幅
+// 並びは「選択 | メンバー・セクション・メモ | 検索」
+// 選択・セクションは、道具(モード)の切り替え(押された道具を強調する)。キャンバスのドラッグでの移動は、「セクション」以外ではいつでも動く。
 //   セクションは、リーダーだけが使える(リーダーでなければ、押せない見た目)。選ぶと、キャンバスでドラッグして、セクションを置く(Esc か「選択」で戻る)
 //   メンバーは、メンバーの管理を開く(リーダーのみ)。メモ・検索は、無効の見た目(準備中)
 
@@ -72,19 +73,13 @@ export function TreeToolbar({
     <div
       role="toolbar"
       aria-label="ツリーの道具"
-      className="flex h-[86px] w-[410px] max-w-[calc(100vw-1.5rem)] items-center gap-1.5 overflow-x-auto border-2 border-ink bg-surface/90"
+      className="flex h-[86px] w-[342px] max-w-[calc(100vw-1.5rem)] items-center gap-1.5 overflow-x-auto border border-line bg-surface/90"
     >
       <ToolButton
         icon={MousePointer2}
         label="選択"
         pressed={mode === 'select'}
         onClick={() => onModeChange('select')}
-      />
-      <ToolButton
-        icon={Hand}
-        label="移動"
-        pressed={mode === 'pan'}
-        onClick={() => onModeChange('pan')}
       />
       <Divider />
       <ToolButton

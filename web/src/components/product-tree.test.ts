@@ -160,24 +160,24 @@ describe('ProductTree(カードの位置。座標は左上)', () => {
 
 describe('TreeToolbar', () => {
   const bar = (props: Record<string, unknown>) =>
-    renderToStaticMarkup(createElement(TreeToolbar, { mode: 'pan', onModeChange: () => {}, ...props } as never))
+    renderToStaticMarkup(createElement(TreeToolbar, { mode: 'select', onModeChange: () => {}, ...props } as never))
 
-  test('Figma の並びと寸法(410×86、ボタン 60×60)で、6 つのボタンと 2 つの区切りがある', () => {
+  test('並びと寸法(342×86、ボタン 60×60)で、5 つのボタンと 2 つの区切りがある。「移動」はない', () => {
     const html = bar({ onOpenMembers: () => {} })
-    const labels = ['選択', '移動', 'メンバー', 'セクション', 'メモ', '検索']
+    const labels = ['選択', 'メンバー', 'セクション', 'メモ', '検索']
     let last = -1
     for (const l of labels) {
       const at = html.indexOf(`<span>${l}</span>`)
       expect(at).toBeGreaterThan(last)
       last = at
     }
-    expect(html).toContain('w-[410px]')
+    expect(html).not.toContain('移動')
+    expect(html).toContain('w-[342px]')
     expect(html).toContain('h-[86px]')
-    expect(html.split('size-[60px]').length - 1).toBe(6)
+    expect(html.split('size-[60px]').length - 1).toBe(5)
     expect(html.split('w-0.5').length - 1).toBe(2)
   })
   test('選択された方のモードが、押された状態になる', () => {
-    expect(bar({ mode: 'pan' })).toMatch(/aria-pressed="true"[^>]*>(?:(?!<button).)*移動/s)
     expect(bar({ mode: 'select' })).toMatch(/aria-pressed="true"[^>]*>(?:(?!<button).)*選択/s)
   })
   test('メモ・検索は、無効(準備中)。セクションは、リーダーでなければ無効', () => {
@@ -227,8 +227,10 @@ describe('ProductTree(表示の整理: 操作のヒントと、倍率の表示(%
 })
 
 describe('ProductTree(道具・カーソル・リーダー)', () => {
-  test('初期の道具は「移動」: つかむカーソル', () => {
-    expect(render({ tree: tree(L, [M1]) })).toContain('cursor-grab')
+  test('初期の道具は「選択」: 通常の矢印のカーソル(つかむ手ではない)', () => {
+    const html = render({ tree: tree(L, [M1]) })
+    expect(html).toContain('cursor-default')
+    expect(html).not.toContain('cursor-grab')
   })
   test('リーダーでなければ、「セクション」は押せない(セクションを選ぶこともできない)', () => {
     const html = render({ tree: tree(L, [M1]), sections: [section()], canEditSections: false })

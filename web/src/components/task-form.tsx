@@ -4,6 +4,8 @@ import { ApiError } from '#/lib/api'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
+import { IconButton } from '#/components/icon-button'
+import { Check, Plus, Trash2, X } from 'lucide-react'
 
 // 期限は日本時間(+09:00)として扱う。`datetime-local` の値(`2026-12-01T09:00`)と ISO を行き来する
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
@@ -22,9 +24,9 @@ function toIso(value: string): string {
 }
 
 const fieldClass =
-  'w-full border-2 border-ink bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'w-full border border-line bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 const buttonClass =
-  'flex h-10 shrink-0 items-center justify-center border-2 border-outline bg-secondary px-4 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
+  'flex h-10 shrink-0 items-center justify-center border border-line bg-secondary px-4 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
 type Props = {
   productId: string
@@ -230,7 +232,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
           ))}
         </select>
         {kinds.isError && (
-          <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+          <p role="alert" className="border-l border-line pl-3 text-m">
             ERR {kinds.error.message}
           </p>
         )}
@@ -248,32 +250,32 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
       </label>
 
       {save.isError && (
-        <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+        <p role="alert" className="border-l border-line pl-3 text-m">
           ERR {errorMessage(save.error.message)}
         </p>
       )}
 
       <div className="flex gap-3">
-        <button
+        <IconButton
           type="submit"
+          icon={initial ? Check : Plus}
+          label={save.isPending ? '送信中…' : initial ? '保存' : '追加'}
+          variant="outline"
           disabled={save.isPending || remove.isPending}
-          className={buttonClass}>
-          {save.isPending ? '送信中…' : initial ? '保存' : '追加'}
-        </button>
-        <button
-          type="button"
+        />
+        <IconButton
+          icon={X}
+          label="閉じる"
+          variant="outline"
           disabled={save.isPending || remove.isPending}
           onClick={onDone}
-          className={buttonClass}
-        >
-          閉じる
-        </button>
+        />
       </div>
 
       {initial && (
-        <div className="space-y-3 border-t-2 border-ink pt-4">
+        <div className="space-y-3 border-t border-line pt-4">
           {remove.isError && (
-            <p role="alert" className="border-l-2 border-ink pl-3 text-m">
+            <p role="alert" className="border-l border-line pl-3 text-m">
               ERR {remove.error.message}
             </p>
           )}
@@ -294,28 +296,26 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
                 >
                   {remove.isPending ? '削除中…' : '削除する'}
                 </button>
-                <button
-                  type="button"
+                <IconButton
+                  icon={X}
+                  label="やめる"
+                  variant="outline"
                   disabled={remove.isPending}
                   onClick={() => {
                     remove.reset()
                     setConfirmingRemove(false)
                   }}
-                  className={buttonClass}
-                >
-                  やめる
-                </button>
+                />
               </div>
             </>
           ) : (
-            <button
-              type="button"
+            <IconButton
+              icon={Trash2}
+              label="このタスクを削除"
+              variant="outline"
               disabled={save.isPending}
               onClick={() => setConfirmingRemove(true)}
-              className={buttonClass}
-            >
-              このタスクを削除
-            </button>
+            />
           )}
         </div>
       )}
