@@ -27,13 +27,13 @@ export function Sidebar({
   return (
     <aside className="flex h-screen w-60 shrink-0 flex-col bg-side">
       {/* ロゴ・招待・プロダクト一覧だけがスクロールし、「プロダクト作成」は下に固定する */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pt-[26px]">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pt-4">
       <p className="text-l leading-normal font-semibold">
         人形使い
       </p>
 
       {invitations.length > 0 && (
-        <section aria-label="招待" className="mt-[26px]">
+        <section aria-label="招待" className="mt-4">
           <p className="text-m font-medium">招待({invitations.length})</p>
           <ul className="mt-[7px] flex flex-col gap-4">
             {invitations.map((i) => (
@@ -43,7 +43,7 @@ export function Sidebar({
         </section>
       )}
 
-      <nav aria-label="プロダクト" className="mt-[26px]">
+      <nav aria-label="プロダクト" className="mt-4">
         <p className="text-m">プロダクト</p>
         <ul className="mt-[7px] flex flex-col gap-2">
           {isLoading ? (
@@ -57,7 +57,7 @@ export function Sidebar({
                   type="button"
                   onClick={() => onSelectProduct?.(p.id)}
                   aria-current={p.id === activeProductId ? 'page' : undefined}
-                  className="flex h-12 w-full items-center truncate px-3 text-left text-l font-medium hover:bg-side-item aria-[current=page]:bg-side-item"
+                  className="flex h-12 w-full items-center truncate px-2 text-left text-l font-medium hover:bg-side-item aria-[current=page]:bg-side-item"
                 >
                   <span className="truncate">{p.name}</span>
                 </button>
@@ -68,7 +68,7 @@ export function Sidebar({
       </nav>
       </div>
 
-      <div className="shrink-0 px-4 pt-3 pb-6">
+      <div className="shrink-0 px-2 pt-2 pb-3">
         <div className="flex justify-center">
           <IconButton
             icon={Plus}
@@ -79,7 +79,7 @@ export function Sidebar({
             onClick={() => onCreateProduct?.()}
           />
         </div>
-        <div className="mt-3">
+        <div className="mt-2">
           <ThemeToggle />
         </div>
       </div>
