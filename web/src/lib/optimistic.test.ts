@@ -176,4 +176,48 @@ describe('runOptimistic', () => {
     }).catch(() => {})
     expect(oks).toEqual([false])
   })
+
+  test('before が何も返さなければ、待たずに、その場で先に更新する(await する前に、画面の値が変わっている)', async () => {
+    const { store, get } = makeStore({ sections: ['a'], tree: 't0' })
+    // await しない。呼んだ直後(同じ tick)の値を見る
+    const pending = runOptimistic({
+      store,
+      before: () => undefined,
+      apply: (s) => ({ ...s, sections: ['先に更新'] }),
+      call: async () => 'ok',
+      onError: () => {},
+    })
+    expect(get().sections).toEqual(['先に更新'])
+    await pending
+  })
+
+  test('before を渡さなくても、その場で先に更新する', async () => {
+    const { store, get } = makeStore({ sections: ['a'], tree: 't0' })
+    const pending = runOptimistic({
+      store,
+      apply: (s) => ({ ...s, sections: ['先に更新'] }),
+      call: async () => 'ok',
+      onError: () => {},
+    })
+    expect(get().sections).toEqual(['先に更新'])
+    await pending
+  })
+
+  test('before が Promise を返したら、終わるまで待ってから、先に更新する(取り消しの巻き戻しに、上書きされない)', async () => {
+    const { store, get } = makeStore({ sections: ['a'], tree: 't0' })
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const pending = runOptimistic({
+      store,
+      before: () => gate,
+      apply: (s) => ({ ...s, sections: ['先に更新'] }),
+      call: async () => 'ok',
+      onError: () => {},
+    })
+    await Promise.resolve()
+    expect(get().sections).toEqual(['a']) // まだ待っている
+    release()
+    await pending
+    expect(get().sections).toEqual(['先に更新'])
+  })
 })
