@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '#/components/modal'
+import { IconButton } from '#/components/icon-button'
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { eden, edenData, type Json } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
@@ -80,21 +82,24 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
             onChange={(e) => setName(e.target.value)}
             className={inputClass}
           />
-          <button type="submit" disabled={busy || !name.trim()} className={buttonClass}>
-            保存
-          </button>
-          <button
-            type="button"
+          <IconButton
+            type="submit"
+            icon={Check}
+            label="保存"
+            variant="outline"
+            disabled={busy || !name.trim()}
+          />
+          <IconButton
+            icon={X}
+            label="やめる"
+            variant="outline"
             disabled={busy}
             onClick={() => {
               setMode('view')
               setName(kind.taskTypeName)
               rename.reset()
             }}
-            className={buttonClass}
-          >
-            やめる
-          </button>
+          />
         </form>
       ) : mode === 'confirm' ? (
         <div className="space-y-2">
@@ -110,43 +115,40 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
             >
               削除する
             </button>
-            <button
-              type="button"
+            <IconButton
+              icon={X}
+              label="やめる"
+              variant="outline"
               disabled={busy}
               onClick={() => {
                 setMode('view')
                 remove.reset()
               }}
-              className={buttonClass}
-            >
-              やめる
-            </button>
+            />
           </div>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <span className="min-w-0 flex-1 break-words">{kind.taskTypeName}</span>
-          <button
-            type="button"
+          <IconButton
+            icon={Pencil}
+            label="名前を変更"
+            variant="outline"
             onClick={() => {
               setName(kind.taskTypeName)
               setMode('edit')
               remove.reset()
             }}
-            className={buttonClass}
-          >
-            名前を変更
-          </button>
-          <button
-            type="button"
+          />
+          <IconButton
+            icon={Trash2}
+            label="削除"
+            variant="outline"
             onClick={() => {
               setMode('confirm')
               rename.reset()
             }}
-            className={buttonClass}
-          >
-            削除
-          </button>
+          />
         </div>
       )}
       {error && <ErrorText message={error.message} />}
@@ -187,13 +189,13 @@ function AddForm({ productId }: { productId: string }) {
           }}
           className={inputClass}
         />
-        <button
+        <IconButton
           type="submit"
+          icon={Plus}
+          label="追加"
+          variant="outline"
           disabled={add.isPending || !name.trim()}
-          className={buttonClass}
-        >
-          追加
-        </button>
+        />
       </form>
       {add.isError && <ErrorText message={add.error.message} />}
     </div>
@@ -234,9 +236,7 @@ export function TaskKindDialog({
           ))}
         </ul>
       )}
-      <button type="button" onClick={onClose} className={buttonClass}>
-        閉じる
-      </button>
+      <IconButton icon={X} label="閉じる" variant="outline" onClick={onClose} />
     </Modal>
   )
 }
