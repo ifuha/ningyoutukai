@@ -50,7 +50,7 @@ const ABOVE_TOOLBAR = 'bottom-[104px]'
 // `onEditTask` を渡すと、タスクが押せて、押した人とタスクを渡す(`canOpenTask` があれば、それが true の人のタスクだけ)
 // `onShowTasks` を渡すと、「他 N 件」が押せて、その人を渡す(全員向け)
 // 下の中央の道具のバー(`TreeToolbar`)。`onOpenMembers` を渡すと(リーダーのみ)「メンバー」が押せて、メンバーの管理を開く
-// 道具(モード)は「選択」「移動」「セクション」(`useSectionInteraction`)。初期は「移動」(これまでの、つかむカーソルと同じ見た目)。
+// 道具(モード)は「選択」「セクション」(`useSectionInteraction`)。初期は「選択」。キャンバスのドラッグでの移動は、「セクション」以外ではいつでも動く。
 //   「セクション」を選ぶと、キャンバスのカーソルが十字になり、ドラッグでの移動は止まる(描く層が受ける)。Esc か「選択」で戻る
 //   `canEditSections`(リーダー)でなければ、「セクション」は押せず、セクションを選択もできない
 // 拡大縮小は、ホイール・ピンチ・キー(+ -)、全体表示はキー(0)。右下は倍率(%)の表示だけ(+/- と「全体表示」のボタンと、操作のヒントの文字は置かない)
@@ -131,7 +131,7 @@ export function ProductTree({
     headerHeight,
     BOTTOM_INSET,
   )
-  const { view, dragging, freeze, shiftOrigin, handlers } = usePanZoom(containerRef, size)
+  const { view, freeze, shiftOrigin, handlers } = usePanZoom(containerRef, size)
   // 中身のずらし量(負の座標を表示するための、中身の最小座標から決まる値)が変わったとき、どの要素も画面上の位置が変わらないよう、
   // パンを逆向きに補正する(セクションを左・上へ動かして範囲が変わっても、見ている画面が勝手に動かない)。
   // レイアウトの直後・描画の前に行うので、ちらつかない。楽観更新の取り消しで、ずらし量が元に戻るときも、同じ計算で元の見え方に戻る
@@ -246,7 +246,7 @@ export function ProductTree({
             toCanvas({ x: e.clientX, y: e.clientY }),
           )
         }
-        className={`absolute inset-0 touch-none select-none overflow-clip overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${cursorClass(mode, dragging)}`}
+        className={`absolute inset-0 touch-none select-none overflow-clip overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${cursorClass(mode)}`}
       >
         <div
           ref={contentRef}
