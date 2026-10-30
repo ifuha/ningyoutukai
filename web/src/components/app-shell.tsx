@@ -93,13 +93,13 @@ export function AppShell({
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
         />
       )}
-      {/* PC 幅でたたんでいるとき: 開くボタンだけを、左上に出す */}
+      {/* PC 幅でたたんでいるとき: 幅の狭い帯を左に残し、一番上に「開く」ボタンを置く(メイン領域は帯の右から始まるので、重ならない) */}
       {sidebar.collapsed && (
-        <div className="fixed bottom-2 left-2 z-20 hidden md:block">
+        <div className="hidden w-14 shrink-0 flex-col items-center bg-side pt-3 md:flex">
           <IconButton
             icon={PanelLeftOpen}
             label="サイドバーを開く"
-            side="top"
+            side="right"
             variant="outline"
             onClick={() => sidebar.set(false)}
             aria-expanded={false}
