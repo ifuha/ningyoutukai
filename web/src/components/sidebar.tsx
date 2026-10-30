@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { PanelLeftClose, Plus } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { SidebarInvitation } from '#/components/sidebar-invitation'
 import { ThemeToggle } from '#/components/theme-toggle'
@@ -14,6 +14,7 @@ export function Sidebar({
   activeProductId,
   onSelectProduct,
   onCreateProduct,
+  onCollapse,
   isLoading = false,
 }: {
   products: SidebarProduct[]
@@ -22,15 +23,32 @@ export function Sidebar({
   activeProductId?: string
   onSelectProduct?: (productId: string) => void
   onCreateProduct?: () => void
+  // PC 幅でサイドバーをたたむ(渡したときだけ、ロゴの右にボタンを出す。スマホ幅では出さない)
+  onCollapse?: () => void
   isLoading?: boolean
 }) {
   return (
     <aside className="flex h-screen w-60 shrink-0 flex-col bg-side">
       {/* ロゴ・招待・プロダクト一覧だけがスクロールし、「プロダクト作成」は下に固定する */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pt-4">
-      <p className="text-l leading-normal font-semibold">
-        人形使い
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-l leading-normal font-semibold">
+          人形使い
+        </p>
+        {onCollapse && (
+          <span className="hidden md:block">
+            <IconButton
+              icon={PanelLeftClose}
+              label="サイドバーをたたむ"
+              side="left"
+              variant="outline"
+              onClick={onCollapse}
+              aria-expanded
+              aria-controls="app-sidebar"
+            />
+          </span>
+        )}
+      </div>
 
       {invitations.length > 0 && (
         <section aria-label="招待" className="mt-4">
