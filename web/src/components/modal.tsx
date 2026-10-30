@@ -40,7 +40,7 @@ export function Modal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
-      className={`m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] border border-line bg-surface text-ink backdrop:bg-black/40 ${overflowVisible ? 'overflow-visible' : ''}`}
+      className={`m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] shadow-box bg-surface text-ink backdrop:bg-black/40 ${overflowVisible ? 'overflow-visible' : ''}`}
     >
       {open && <div className="space-y-4 p-6">{children}</div>}
     </dialog>

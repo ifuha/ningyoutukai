@@ -18,8 +18,10 @@
   /* サイドバーの背景と、項目のマウスオーバー・選択中の背景(Figma `side-light` / `side-dark`) */
   --color-side: #edebe4;
   --color-side-item: #e2dfd4;
-  /* 枠線の色。Tailwind の gray-900(#101828)。ライト・ダーク共通。薄くするなら、color-mix で紙の色と混ぜる */
-  --color-line: #101828;
+  /* 線の色(区切り線・影の縁)。文字色を紙の色に混ぜる。濃さは、この割合で変える */
+  --color-line: color-mix(in srgb, var(--color-ink) 30%, var(--color-surface));
+  /* ボックスの影の落ち方 */
+  --shadow-drop: color-mix(in srgb, var(--color-ink) 12%, transparent);
   /* 文字の大きさは、小・中・大の 3 つだけ(text-s / text-m / text-l) */
   --text-s: 12px;
   --text-s--line-height: 16px;
@@ -156,4 +158,12 @@ body {
   .row-fill {
     transition: none;
   }
+}
+
+/* 枠線の代わりの影: 縁(1px の輪)+ ふわっとした落ち影。レイアウトの寸法は変えない */
+@utility shadow-box {
+  box-shadow:
+    0 0 0 1px var(--color-line),
+    0 1px 2px var(--shadow-drop),
+    0 4px 12px var(--shadow-drop);
 }

@@ -93,13 +93,13 @@ export function InviteMemberForm({ productId }: { productId: string }) {
             onFocus={() => setListOpen(true)}
             onBlur={() => setListOpen(false)}
             onKeyDown={onKeyDown}
-            className="h-10 w-full border border-line bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
+            className="h-10 w-full shadow-box bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
           />
           {showList && (
             <ul
               id="invite-member-candidates"
               role="listbox"
-              className="absolute inset-x-0 top-full z-10 mt-1 border border-line bg-surface shadow-lg"
+              className="absolute inset-x-0 top-full z-10 mt-1 shadow-box bg-surface"
             >
               {candidates.map((c, i) => (
                 <li

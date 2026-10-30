@@ -40,7 +40,7 @@ export function TreeToolbar({
     <div
       role="toolbar"
       aria-label="ツリーの道具"
-      className="flex h-14 max-w-[calc(100vw-1.5rem)] items-center gap-1.5 border border-line bg-surface/90 px-1.5"
+      className="flex h-14 max-w-[calc(100vw-1.5rem)] items-center gap-1.5 shadow-box bg-surface/90 px-1.5"
     >
       <IconButton
         icon={MousePointer2}
