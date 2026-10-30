@@ -96,7 +96,7 @@ export function AppShell({
       {/* PC 幅: たたむと、サイドバーの幅が 0 に縮み、幅の狭い帯の幅が広がる(どちらも幅のアニメーション)。帯の一番上に「開く」ボタンを置く(メイン領域は帯の右から始まるので、重ならない) */}
       <div
         aria-hidden={!sidebar.collapsed}
-        className={`hidden shrink-0 flex-col items-center bg-side pt-3 transition-[width,visibility] duration-200 ease-out motion-reduce:transition-none md:flex ${sidebar.collapsed ? 'md:visible md:w-14' : 'md:invisible md:w-0'}`}
+        className={`hidden shrink-0 flex-col items-center bg-side pt-4 transition-[width,visibility] duration-200 ease-out motion-reduce:transition-none md:flex ${sidebar.collapsed ? 'md:visible md:w-14' : 'md:invisible md:w-0'}`}
       >
         <IconButton
           icon={PanelLeftOpen}
