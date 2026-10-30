@@ -4,16 +4,16 @@ import { useEffect, useRef } from 'react'
 // 四角の大きさ、または記号(. : + # @ など)の濃さで描く。
 // canvas に描く。色は文字色(`--color-ink`)から取り、ライト / ダークの切り替えに追従する。
 // 「動きを減らす」設定のときは、1 枚だけ描いて止める。画面が見えていないあいだは、描かない
-// 絵は、2 つの幅向けに作る。1440px 向け(1 マス 16px)と、2000px 向け(1 マス 22px)。
-// 画面の幅が 1720px 以上なら 2000px 向け、それ未満なら 1440px 向けを、中央に置く。
-// 絵より画面が広ければ、余った左右は何も描かず、狭ければ、はみ出す左右は薄く消える。
-// 1000px 未満の狭い画面だけは、絵の全体が収まるよう、幅に合わせて縮める(横に 90 マス、1 マスは 9px 以上)
+// 1 マスの大きさは、画面の幅で決める。1440px 向け(1 マス 16px)と、2000px 向け(1 マス 22px)。
+// 画面の幅が 1720px 以上なら 2000px 向け、それ未満なら 1440px 向け。
+// 絵の横幅は、いつも画面の幅いっぱいに伸ばす(両側に隙間を作らない)。左右の端だけ、薄く消える。
+// 1000px 未満の狭い画面は、横に 90 マス(1 マスは 9px 以上)
 export type Layout = { step: number; designWidth: number }
-const PRESET_1440: Layout = { step: 16, designWidth: 1440 }
-const PRESET_2000: Layout = { step: 22, designWidth: 2000 }
+const PRESET_1440 = { step: 16 }
+const PRESET_2000 = { step: 22 }
 export function layoutFor(width: number): Layout {
-  if (width >= 1720) return PRESET_2000
-  if (width >= 1000) return PRESET_1440
+  if (width >= 1720) return { step: PRESET_2000.step, designWidth: width }
+  if (width >= 1000) return { step: PRESET_1440.step, designWidth: width }
   return { step: Math.max(9, width / 90), designWidth: width }
 }
 
@@ -26,11 +26,11 @@ const smooth = (a: number, b: number, v: number) => {
 }
 
 // 画面の端に向かって、絵を薄く消す倍率(0〜1)。端でぶつっと切れて見えないようにする。
-// 左右は 14%、下は 12%、上は 8% の幅で消える
+// 左右は 5%、下は 12%、上は 8% の幅で消える(左右は、画面の端まで絵が届くよう、短くしてある)
 export function edgeFade(nx: number, ny: number): number {
   return (
-    smooth(0, 0.14, nx) *
-    smooth(0, 0.14, 1 - nx) *
+    smooth(0, 0.05, nx) *
+    smooth(0, 0.05, 1 - nx) *
     smooth(0, 0.12, 1 - ny) *
     smooth(0, 0.08, ny)
   )
