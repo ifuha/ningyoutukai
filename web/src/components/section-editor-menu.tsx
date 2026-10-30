@@ -12,7 +12,7 @@ import { inverseScaleStyle, type MenuState } from '#/lib/section-editor-state'
 // 位置(`offset`)は、名前をつかむ場所のすぐ下の左端(`section-label.ts` の `confirmPanelOffset`)
 // キャンバスの拡大率を打ち消して、拡大率に関わらず読める大きさにする(左上を基準に 1 / scale)
 const buttonClass =
-  'cursor-pointer border border-line px-2 py-1 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
+  'cursor-pointer shadow-box px-2 py-1 hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
 
 export function SectionEditorMenu({
   name,
@@ -50,7 +50,7 @@ export function SectionEditorMenu({
       <div
         role={menu === 'confirm-delete' ? 'alertdialog' : 'menu'}
         aria-label={menu === 'confirm-delete' ? 'セクションの削除の確認' : 'セクションのメニュー'}
-        className="absolute top-0 left-0 w-60 space-y-2 border border-line bg-surface p-2 text-m text-ink"
+        className="absolute top-0 left-0 w-60 space-y-2 shadow-box bg-surface p-2 text-m text-ink"
       >
         {menu === 'confirm-delete' ? (
           <>

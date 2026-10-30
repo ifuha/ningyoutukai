@@ -64,7 +64,7 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
       {open && (
         <div
           role="menu"
-          className="absolute left-0 z-10 mt-1 flex min-w-40 flex-col border border-line bg-secondary"
+          className="absolute left-0 z-10 mt-1 flex min-w-40 flex-col shadow-box bg-secondary"
         >
           {items.map((item) => (
             <button

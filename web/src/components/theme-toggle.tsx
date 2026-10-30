@@ -31,7 +31,7 @@ export function ThemeToggle() {
   }
 
   return (
-    <div role="group" aria-label="表示モード" className="grid grid-cols-3 justify-items-center border border-line">
+    <div role="group" aria-label="表示モード" className="grid grid-cols-3 justify-items-center shadow-box">
       {themes.map((t) => (
         <IconButton
           key={t.value}

@@ -48,7 +48,7 @@ const providers: {
     key: '2',
     label: 'Googleではじめる',
     icon: <GoogleLogo className="h-5 w-5" />,
-    className: 'bg-secondary text-outline border border-line',
+    className: 'bg-secondary text-outline shadow-box',
   },
 ]
 
