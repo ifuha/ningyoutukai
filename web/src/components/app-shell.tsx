@@ -68,7 +68,11 @@ export function AppShell({
   if (isPending || !session?.user) return <main className="dot-grid h-screen" />
 
   return (
-    <div className="flex h-screen flex-col md:flex-row">
+    <div
+      // 左に出ているもの(サイドバー 15rem / たたんだ帯 3.5rem)の幅。`fixed` の背景(ホームの絵)が、これに合わせて左端と幅を決める
+      style={{ '--sidebar-w': sidebar.collapsed ? '3.5rem' : '15rem' } as React.CSSProperties}
+      className="flex h-screen flex-col transition-[--sidebar-w] duration-200 ease-out motion-reduce:transition-none md:flex-row"
+    >
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line px-2 md:hidden">
         <span
           ref={(el) => {

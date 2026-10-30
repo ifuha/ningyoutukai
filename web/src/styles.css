@@ -162,3 +162,10 @@ body {
 @utility shadow-box {
   box-shadow: inset 0 0 0 1px var(--color-line);
 }
+
+/* サイドバーの幅(開閉で動く)。長さとして登録すると、変数の値の変化にアニメーションが効く */
+@property --sidebar-w {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 15rem;
+}
