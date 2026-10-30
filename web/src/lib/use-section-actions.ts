@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '#/lib/api'
 import { runOptimistic } from '#/lib/optimistic'
+import { beginCommit, endCommit } from '#/lib/pending-commits'
 import type { Store } from '#/lib/optimistic'
 import {
   applyMemberMove,
@@ -118,16 +119,24 @@ export function useSectionActions(productId: string): SectionActions {
       if (s.tree) queryClient.setQueryData(treeKey, s.tree)
     },
   }
+  const resync = resyncOnFailure(queryClient, [sectionsKey, treeKey])
   const shared = {
     store,
     // 進行中の取得が、先に更新した値を古い値で上書きしないよう、取り消す
     // 取り消すものがなければ、待たない(その場で先に更新する)
-    before: () => cancelIfFetching(queryClient, [sectionsKey, treeKey]),
+    // 確定の最中は、ほかの取得の応答(確定の前の状態)で、先に更新した値を上書きさせない(`pending-commits.ts`)
+    before: () => {
+      beginCommit()
+      return cancelIfFetching(queryClient, [sectionsKey, treeKey])
+    },
     onError: (error: unknown) => {
       handleApiError(error) // 401(セッション切れ)の共通処理
       notify(sectionErrorMessage(error))
     },
-    settle: resyncOnFailure(queryClient, [sectionsKey, treeKey]),
+    settle: (ok: boolean) => {
+      endCommit()
+      resync(ok)
+    },
   }
 
   const updateSection: SectionActions['updateSection'] = async (sectionId, patch) => {

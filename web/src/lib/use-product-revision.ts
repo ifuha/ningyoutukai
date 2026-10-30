@@ -2,13 +2,14 @@ import { useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { eden, edenData } from '#/lib/eden'
 import { isDragEngaged } from '#/lib/drag-session'
+import { hasPendingCommit } from '#/lib/pending-commits'
 import { revisionAction } from '#/lib/revision-sync'
 
 // 他の人の変更を、画面に反映する(プロダクトの画面で使う)。
 // 10 秒ごとに、プロダクトの版(api の `GET /api/product/:productId/revision`)を見て、変わったときだけ、
 // そのプロダクトのデータ(ツリー・セクション・メンバー・タスクなど。`['products', productId]` 以下)を取り直す。
 // - タブが見えていないあいだは、見に行かない。見えるようになったら、すぐ見る(react-query の標準の動き)
-// - ドラッグの最中は、取り直しを待つ(終わったあとに反映する。30 秒を超えたら、待たずに反映する)
+// - ドラッグの最中と、確定(マウスを離したあとの api の呼び出し)の最中は、取り直しを待つ(終わったあとに反映する。30 秒を超えたら、待たずに反映する)
 // - 自分の操作でも版は変わるので、自分の操作のあとに、もう一度、取り直すことがある(同じ内容が返るだけ)
 // - 版が取れなかったとき(通信の失敗など)は、何もしない。次の呼び出しで、また試す
 
@@ -44,7 +45,8 @@ export function useProductRevision(productId: string, enabled = true) {
       const current = applied.current
       const base = current && current.productId === productId ? current.revision : null
       const waitedTooLong = Date.now() - since > MAX_DEFER_MS
-      const action = revisionAction(base, latest, isDragEngaged() && !waitedTooLong)
+      // ドラッグの最中と、確定の最中は待つ(確定の前の状態を取り直して、先に更新した値を上書きしないように)
+      const action = revisionAction(base, latest, (isDragEngaged() || hasPendingCommit()) && !waitedTooLong)
       if (action === 'baseline' || action === 'refresh') {
         applied.current = { productId, revision: latest }
       }

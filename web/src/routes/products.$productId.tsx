@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Plus } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
@@ -23,11 +23,12 @@ import {
   type TaskFormTarget,
 } from '#/components/task-form-dialog'
 import { ApiError } from '#/lib/api'
-import type { TreeMember, TreeTask } from '#/lib/tree'
+import type { ProductTree as TreeData, TreeMember, TreeTask } from '#/lib/tree'
+import { fetchUnlessCommitted } from '#/lib/pending-commits'
 import { eden, edenData } from '#/lib/eden'
 import { canEditSections } from '#/lib/section-permissions'
 import { useSectionActions } from '#/lib/use-section-actions'
-import { useSections } from '#/lib/use-sections'
+import { treeQueryKey, useSections } from '#/lib/use-sections'
 
 // プロダクトの画面(`/products/$productId`)。ログイン必須。見出しと、ツリー(リーダーとメンバー、タスク)
 // 見た目は暫定(ターミナル風)。Figma の `tree` の設計ができたら入れ替える
@@ -52,6 +53,7 @@ function Product() {
   const [productManageOpen, setProductManageOpen] = useState(false)
   // 他の人の変更を、数秒ごとに見に行って、変わったときだけ取り直す(ドラッグの最中は待つ)
   useProductRevision(productId)
+  const queryClient = useQueryClient()
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => edenData(eden().api.product({ productId }).get()),
@@ -60,13 +62,18 @@ function Product() {
   })
   const tree = useQuery({
     queryKey: ['products', productId, 'tree'],
-    queryFn: async () => {
-      const t = await edenData(eden().api.product({ productId }).tree.get())
-      // api の型では `leader` は null になりうる(手書きの型は null を考えていなかった)。
-      // 画面はリーダーがいる前提なので、いない場合は、描画で落ちる前にエラーにする
-      if (!t.leader) throw new ApiError(500, 'エラーが発生しました')
-      return { ...t, leader: t.leader }
-    },
+    // 確定と重なった取得の応答(確定の前の状態)は捨てて、画面の値を保つ(`pending-commits.ts`)
+    queryFn: () =>
+      fetchUnlessCommitted(
+        async () => {
+          const t = await edenData(eden().api.product({ productId }).tree.get())
+          // api の型では `leader` は null になりうる(手書きの型は null を考えていなかった)。
+          // 画面はリーダーがいる前提なので、いない場合は、描画で落ちる前にエラーにする
+          if (!t.leader) throw new ApiError(500, 'エラーが発生しました')
+          return { ...t, leader: t.leader }
+        },
+        () => queryClient.getQueryData<TreeData>(treeQueryKey(productId)),
+      ),
     retry: retryTransient,
     retryDelay,
   })
