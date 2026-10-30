@@ -51,7 +51,7 @@ export function InviteMemberForm({ productId }: { productId: string }) {
           value={value}
           readOnly={invite.isPending}
           onChange={(e) => setValue(e.target.value)}
-          className="h-10 min-w-0 flex-1 border border-line bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
+          className="h-10 min-w-0 flex-1 shadow-box bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
         />
         <IconButton
           type="submit"

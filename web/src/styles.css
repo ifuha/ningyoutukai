@@ -18,8 +18,8 @@
   /* サイドバーの背景と、項目のマウスオーバー・選択中の背景(Figma `side-light` / `side-dark`) */
   --color-side: #edebe4;
   --color-side-item: #e2dfd4;
-  /* 枠線の色。文字色より落ち着かせる(文字色 65% + 紙の色 35%)。濃さは、この割合で変える */
-  --color-line: color-mix(in srgb, var(--color-ink) 65%, var(--color-surface));
+  /* 線の色(区切り線・内側の輪)。文字色を紙の色に混ぜる。濃さは、この割合で変える */
+  --color-line: color-mix(in srgb, var(--color-ink) 30%, var(--color-surface));
   /* 文字の大きさは、小・中・大の 3 つだけ(text-s / text-m / text-l) */
   --text-s: 12px;
   --text-s--line-height: 16px;
@@ -156,4 +156,9 @@ body {
   .row-fill {
     transition: none;
   }
+}
+
+/* 枠線の代わりの内側の輪(inset ring): 1px の輪を、ボックスの内側に描く。レイアウトの寸法は変えない */
+@utility shadow-box {
+  box-shadow: inset 0 0 0 1px var(--color-line);
 }

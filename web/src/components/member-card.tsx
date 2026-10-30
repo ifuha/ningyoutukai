@@ -51,7 +51,7 @@ export function MemberCard({
   return (
     <article
       data-card-id={cardId}
-      className="w-[240px] shrink-0 border border-line bg-surface text-left"
+      className="w-[240px] shrink-0 shadow-box bg-surface text-left"
     >
       <header
         className={`flex items-center gap-2 border-b border-line p-2 ${isLeader ? 'bg-ink text-surface' : ''}`}
@@ -103,7 +103,7 @@ export function MemberCard({
                 {(t.reportedAt || t.taskType) && (
                   <div className="mt-0.5 flex items-center gap-2 text-s">
                     {t.reportedAt && (
-                      <span className="shrink-0 border border-line px-1">
+                      <span className="shrink-0 shadow-box px-1">
                         確認待ち
                       </span>
                     )}

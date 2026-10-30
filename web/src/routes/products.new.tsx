@@ -73,7 +73,7 @@ function NewProduct() {
                 value={name}
                 readOnly={pending}
                 onChange={(e) => setName(e.target.value)}
-                className="h-12 w-full border border-line bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
+                className="h-12 w-full shadow-box bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
               />
             </div>
             <div className="flex gap-3">

@@ -51,7 +51,7 @@ describe('IconButton', () => {
     expect(render({ size: 'lg' })).toContain('size-12')
     expect(render({ size: 'sm' })).toContain('size-8')
     expect(render()).toContain('size-10')
-    expect(render({ variant: 'outline' })).toContain('border border-line')
+    expect(render({ variant: 'outline' })).toContain('shadow-box')
   })
 
   test('onClick や data- などの属性を、ボタンに渡す', () => {
