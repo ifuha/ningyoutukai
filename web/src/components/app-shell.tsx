@@ -95,11 +95,11 @@ export function AppShell({
       )}
       {/* PC 幅でたたんでいるとき: 開くボタンだけを、左上に出す */}
       {sidebar.collapsed && (
-        <div className="fixed top-2 left-2 z-20 hidden md:block">
+        <div className="fixed bottom-2 left-2 z-20 hidden md:block">
           <IconButton
             icon={PanelLeftOpen}
             label="サイドバーを開く"
-            side="right"
+            side="top"
             variant="outline"
             onClick={() => sidebar.set(false)}
             aria-expanded={false}

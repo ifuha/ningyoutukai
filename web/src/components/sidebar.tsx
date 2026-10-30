@@ -31,24 +31,9 @@ export function Sidebar({
     <aside className="flex h-screen w-60 shrink-0 flex-col bg-side">
       {/* ロゴ・招待・プロダクト一覧だけがスクロールし、「プロダクト作成」は下に固定する */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pt-4">
-      <div className="flex items-center justify-between">
-        <p className="text-l leading-normal font-semibold">
-          人形使い
-        </p>
-        {onCollapse && (
-          <span className="hidden md:block">
-            <IconButton
-              icon={PanelLeftClose}
-              label="サイドバーをたたむ"
-              side="right"
-              size="sm"
-              onClick={onCollapse}
-              aria-expanded
-              aria-controls="app-sidebar"
-            />
-          </span>
-        )}
-      </div>
+      <p className="text-l leading-normal font-semibold">
+        人形使い
+      </p>
 
       {invitations.length > 0 && (
         <section aria-label="招待" className="mt-4">
@@ -100,6 +85,18 @@ export function Sidebar({
         <div className="mt-2">
           <ThemeToggle />
         </div>
+        {onCollapse && (
+          <div className="mt-2 hidden justify-start md:flex">
+            <IconButton
+              icon={PanelLeftClose}
+              label="サイドバーをたたむ"
+              side="top"
+              onClick={onCollapse}
+              aria-expanded
+              aria-controls="app-sidebar"
+            />
+          </div>
+        )}
       </div>
     </aside>
   )
