@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, integer } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -71,4 +71,22 @@ export const verification = pgTable(
       .notNull(),
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
+);
+
+// CLI のログイン(デバイスコード)。better-auth の device-authorization プラグインの表
+export const deviceCode = pgTable(
+  "device_code",
+  {
+    id: text("id").primaryKey(),
+    deviceCode: text("device_code").notNull().unique(),
+    userCode: text("user_code").notNull().unique(),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    status: text("status").notNull(),
+    lastPolledAt: timestamp("last_polled_at"),
+    pollingInterval: integer("polling_interval"),
+    clientId: text("client_id"),
+    scope: text("scope"),
+  },
+  (table) => [index("device_code_userId_idx").on(table.userId)],
 );
