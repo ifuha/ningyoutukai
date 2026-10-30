@@ -26,11 +26,9 @@ const smooth = (a: number, b: number, v: number) => {
 }
 
 // 画面の端に向かって、絵を薄く消す倍率(0〜1)。端でぶつっと切れて見えないようにする。
-// 左右は 5%、下は 12%、上は 8% の幅で消える(左右は、画面の端まで絵が届くよう、短くしてある)
-export function edgeFade(nx: number, ny: number): number {
+// ny は 0〜1 の縦の位置。下は 12%、上は 8% の幅で消える。左右は消さない(絵は画面の幅いっぱいなので、端まで山が届く)
+export function edgeFade(ny: number): number {
   return (
-    smooth(0, 0.05, nx) *
-    smooth(0, 0.05, 1 - nx) *
     smooth(0, 0.12, 1 - ny) *
     smooth(0, 0.08, ny)
   )
@@ -105,10 +103,10 @@ export function DotField({
       const rows = Math.ceil(height / STEP)
       for (let gy = 0; gy < rows; gy++) {
         for (let gx = 0; gx < cols; gx++) {
-          // 絵の中の位置(0〜1)。絵の外は edgeFade が 0 にする
+          // 絵の中の位置(0〜1)。上下の端は edgeFade が薄くする
           const nx = (gx * STEP + STEP / 2 - left) / designWidth
           const ny = gy / rows
-          const fade = edgeFade(nx, ny)
+          const fade = edgeFade(ny)
           if (fade <= 0) continue
           const size = dotSize(nx, ny, t) * fade
           if (shape === 'char') {
