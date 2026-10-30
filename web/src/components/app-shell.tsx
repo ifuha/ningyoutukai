@@ -93,24 +93,26 @@ export function AppShell({
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
         />
       )}
-      {/* PC 幅でたたんでいるとき: 幅の狭い帯を左に残し、一番上に「開く」ボタンを置く(メイン領域は帯の右から始まるので、重ならない) */}
-      {sidebar.collapsed && (
-        <div className="hidden w-14 shrink-0 flex-col items-center bg-side pt-3 md:flex">
-          <IconButton
-            icon={PanelLeftOpen}
-            label="サイドバーを開く"
-            side="right"
-            variant="outline"
-            onClick={() => sidebar.set(false)}
-            aria-expanded={false}
-            aria-controls="app-sidebar"
-          />
-        </div>
-      )}
+      {/* PC 幅: たたむと、サイドバーの幅が 0 に縮み、幅の狭い帯の幅が広がる(どちらも幅のアニメーション)。帯の一番上に「開く」ボタンを置く(メイン領域は帯の右から始まるので、重ならない) */}
+      <div
+        aria-hidden={!sidebar.collapsed}
+        className={`hidden shrink-0 flex-col items-center bg-side pt-3 transition-[width,visibility] duration-200 ease-out motion-reduce:transition-none md:flex ${sidebar.collapsed ? 'md:visible md:w-14' : 'md:invisible md:w-0'}`}
+      >
+        <IconButton
+          icon={PanelLeftOpen}
+          label="サイドバーを開く"
+          side="right"
+          variant="outline"
+          onClick={() => sidebar.set(false)}
+          tabIndex={sidebar.collapsed ? 0 : -1}
+          aria-expanded={false}
+          aria-controls="app-sidebar"
+        />
+      </div>
       {/* スマホ幅: 画面の外に隠し、開くと左から重ねる。md 以上: 左に表示(たたむと消える) */}
       <div
         id="app-sidebar"
-        className={`fixed inset-y-0 left-0 z-40 max-w-[80vw] transition-transform md:static md:max-w-none md:translate-x-0 ${sidebar.collapsed ? 'md:hidden' : 'md:visible'} ${drawer.open ? 'translate-x-0' : 'invisible -translate-x-full'}`}
+        className={`fixed inset-y-0 left-0 z-40 max-w-[80vw] transition-[transform,width,visibility] duration-200 ease-out motion-reduce:transition-none md:static md:max-w-none md:translate-x-0 md:overflow-hidden ${sidebar.collapsed ? 'md:invisible md:w-0' : 'md:visible md:w-60'} ${drawer.open ? 'translate-x-0' : 'invisible -translate-x-full'}`}
       >
         <Sidebar
           products={(products.data ?? []).map((p) => ({

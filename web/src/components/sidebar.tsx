@@ -40,7 +40,7 @@ export function Sidebar({
             <IconButton
               icon={PanelLeftClose}
               label="サイドバーをたたむ"
-              side="bottom"
+              side="left"
               size="sm"
               onClick={onCollapse}
               aria-expanded
