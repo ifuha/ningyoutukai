@@ -144,7 +144,7 @@ export function AppShell({
       ) : (
       <main className="dot-grid flex min-h-0 min-w-0 flex-1 overflow-y-auto">
         <div
-          className={`${align === 'top' ? 'mx-auto' : 'm-auto'} flex w-full justify-center`}
+          className={`${align === 'top' ? 'mx-auto' : 'm-auto'} flex w-full justify-center px-4 py-6`}
         >
           {children({ user: session.user, products })}
         </div>
