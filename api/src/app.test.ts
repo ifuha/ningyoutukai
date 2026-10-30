@@ -11,6 +11,7 @@ const EXPECTED_ROUTES = [
   "DELETE /api/product/:productId/section/:sectionId",
   "DELETE /api/product/:productId/task/:taskId",
   "DELETE /api/product/:productId/task_kinds/:kindId",
+  "DELETE /api/product/:productId/task/:taskId/message/:messageId",
   "GET /",
   "GET /api/calendar/status",
   "GET /api/invitation",
