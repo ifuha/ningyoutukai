@@ -1,13 +1,14 @@
 import { useEffect } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { Menu } from 'lucide-react'
+import { Menu, PanelLeftOpen } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { Sidebar } from '#/components/sidebar'
 import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
 import { resetSessionExpired } from '#/lib/session-expired'
 import { useDrawer } from '#/lib/use-drawer'
+import { useSidebarCollapsed } from '#/lib/use-sidebar-collapsed'
 
 /** `GET /api/product` の応答(api の型から取る) */
 type ProductList = Awaited<ReturnType<typeof listProducts>>
@@ -36,6 +37,7 @@ export function AppShell({
   const { data: session, isPending } = authClient.useSession()
   const navigate = useNavigate()
   const drawer = useDrawer()
+  const sidebar = useSidebarCollapsed()
 
   useEffect(() => {
     if (!isPending && !session?.user) void navigate({ to: '/', replace: true })
@@ -91,10 +93,24 @@ export function AppShell({
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
         />
       )}
-      {/* スマホ幅: 画面の外に隠し、開くと左から重ねる。md 以上: 今までどおり左に常時表示 */}
+      {/* PC 幅でたたんでいるとき: 開くボタンだけを、左上に出す */}
+      {sidebar.collapsed && (
+        <div className="fixed top-2 left-2 z-20 hidden md:block">
+          <IconButton
+            icon={PanelLeftOpen}
+            label="サイドバーを開く"
+            side="right"
+            variant="outline"
+            onClick={() => sidebar.set(false)}
+            aria-expanded={false}
+            aria-controls="app-sidebar"
+          />
+        </div>
+      )}
+      {/* スマホ幅: 画面の外に隠し、開くと左から重ねる。md 以上: 左に表示(たたむと消える) */}
       <div
         id="app-sidebar"
-        className={`fixed inset-y-0 left-0 z-40 max-w-[80vw] transition-transform md:visible md:static md:max-w-none md:translate-x-0 ${drawer.open ? 'translate-x-0' : 'invisible -translate-x-full'}`}
+        className={`fixed inset-y-0 left-0 z-40 max-w-[80vw] transition-transform md:static md:max-w-none md:translate-x-0 ${sidebar.collapsed ? 'md:hidden' : 'md:visible'} ${drawer.open ? 'translate-x-0' : 'invisible -translate-x-full'}`}
       >
         <Sidebar
           products={(products.data ?? []).map((p) => ({
@@ -102,6 +118,7 @@ export function AppShell({
             name: p.productName,
           }))}
           invitations={invitations.data}
+          onCollapse={() => sidebar.set(true)}
           isLoading={products.isPending}
           activeProductId={activeProductId}
           onSelectProduct={(productId) => {
