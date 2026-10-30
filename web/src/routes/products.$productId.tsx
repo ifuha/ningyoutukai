@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Plus } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
@@ -17,16 +17,18 @@ import {
 } from '#/components/task-detail-dialog'
 import { TaskListDialog } from '#/components/task-list-dialog'
 import { useProductRevision } from '#/lib/use-product-revision'
+import { retryDelay, retryTransient } from '#/lib/query-retry'
 import {
   TaskFormDialog,
   type TaskFormTarget,
 } from '#/components/task-form-dialog'
 import { ApiError } from '#/lib/api'
-import type { TreeMember, TreeTask } from '#/lib/tree'
+import type { ProductTree as TreeData, TreeMember, TreeTask } from '#/lib/tree'
+import { fetchUnlessCommitted } from '#/lib/pending-commits'
 import { eden, edenData } from '#/lib/eden'
 import { canEditSections } from '#/lib/section-permissions'
 import { useSectionActions } from '#/lib/use-section-actions'
-import { useSections } from '#/lib/use-sections'
+import { treeQueryKey, useSections } from '#/lib/use-sections'
 
 // プロダクトの画面(`/products/$productId`)。ログイン必須。見出しと、ツリー(リーダーとメンバー、タスク)
 // 見た目は暫定(ターミナル風)。Figma の `tree` の設計ができたら入れ替える
@@ -51,21 +53,29 @@ function Product() {
   const [productManageOpen, setProductManageOpen] = useState(false)
   // 他の人の変更を、数秒ごとに見に行って、変わったときだけ取り直す(ドラッグの最中は待つ)
   useProductRevision(productId)
+  const queryClient = useQueryClient()
   const product = useQuery({
     queryKey: ['products', productId],
     queryFn: () => edenData(eden().api.product({ productId }).get()),
-    retry: false,
+    retry: retryTransient,
+    retryDelay,
   })
   const tree = useQuery({
     queryKey: ['products', productId, 'tree'],
-    queryFn: async () => {
-      const t = await edenData(eden().api.product({ productId }).tree.get())
-      // api の型では `leader` は null になりうる(手書きの型は null を考えていなかった)。
-      // 画面はリーダーがいる前提なので、いない場合は、描画で落ちる前にエラーにする
-      if (!t.leader) throw new ApiError(500, 'エラーが発生しました')
-      return { ...t, leader: t.leader }
-    },
-    retry: false,
+    // 確定と重なった取得の応答(確定の前の状態)は捨てて、画面の値を保つ(`pending-commits.ts`)
+    queryFn: () =>
+      fetchUnlessCommitted(
+        async () => {
+          const t = await edenData(eden().api.product({ productId }).tree.get())
+          // api の型では `leader` は null になりうる(手書きの型は null を考えていなかった)。
+          // 画面はリーダーがいる前提なので、いない場合は、描画で落ちる前にエラーにする
+          if (!t.leader) throw new ApiError(500, 'エラーが発生しました')
+          return { ...t, leader: t.leader }
+        },
+        () => queryClient.getQueryData<TreeData>(treeQueryKey(productId)),
+      ),
+    retry: retryTransient,
+    retryDelay,
   })
 
   // セクションの四角(F1)。補助の表示なので、取得に失敗しても、ツリーは出す(セクションだけ出ない)
@@ -107,12 +117,12 @@ function Product() {
   const header = (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-48 flex-1">
-        {product.isPending ? (
-          <p className="text-m opacity-60">読み込み中…</p>
-        ) : product.isError ? (
+        {product.isError && product.data === undefined ? (
           <p role="alert" className="border-l border-line pl-3 text-m">
             ERR {product.error.message}
           </p>
+        ) : product.data === undefined ? (
+          <p className="text-m opacity-60">読み込み中…</p>
         ) : (
           <>
             <h1 className="text-l font-bold break-words">
@@ -162,16 +172,17 @@ function Product() {
     <AppShell activeProductId={productId} align="full">
       {() => (
         <div className="relative h-full min-w-0">
-          {product.isError || product.isPending || tree.isPending || tree.isError ? (
+          {/* 今あるデータは、取り直しに失敗しても出しつづける(一時的な失敗で、ツリーが消えて ERR に置き換わらない) */}
+          {product.data === undefined || tree.data === undefined ? (
             <div className="space-y-6 p-4">
               {header}
-              {product.isError ? null : product.isPending || tree.isPending ? (
-                <p className="text-m opacity-60">読み込み中…</p>
-              ) : tree.isError ? (
+              {product.isError && product.data === undefined ? null : tree.isError && tree.data === undefined ? (
                 <p role="alert" className="border-l border-line pl-3 text-m">
                   ERR {tree.error.message}
                 </p>
-              ) : null}
+              ) : (
+                <p className="text-m opacity-60">読み込み中…</p>
+              )}
             </div>
           ) : (
             <>

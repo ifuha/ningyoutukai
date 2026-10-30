@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '#/lib/api'
 import { runOptimistic } from '#/lib/optimistic'
+import { beginCommit, endCommit } from '#/lib/pending-commits'
 import type { Store } from '#/lib/optimistic'
 import {
   applyMemberMove,
@@ -63,6 +64,38 @@ export const NO_SECTION_ACTIONS: SectionActions = {
 
 type Snapshot = { sections: Section[] | undefined; tree: ProductTree | undefined }
 
+/**
+ * 進行中の取得があるものだけ、取り消す。**なければ、何も返さない**(呼び出し側は、待たずに先へ進む)。
+ * 取り消す取得があるときは、取り消しが終わるまで待つ(取り消しのあとの巻き戻しが、先に更新した値を上書きしないように)
+ */
+export function cancelIfFetching(
+  client: {
+    isFetching(filters: { queryKey: readonly unknown[] }): number
+    cancelQueries(filters: { queryKey: readonly unknown[] }): Promise<void>
+  },
+  keys: readonly (readonly unknown[])[],
+): Promise<void> | undefined {
+  const busy = keys.filter((queryKey) => client.isFetching({ queryKey }) > 0)
+  if (busy.length === 0) return undefined
+  return Promise.all(busy.map((queryKey) => client.cancelQueries({ queryKey }))).then(() => {})
+}
+
+/**
+ * 確定(api の呼び出し)が終わったあとの取り直し。**成功したら、取り直さない。**
+ * 位置などの計算は画面で済ませてあり(楽観更新)、api は、マウスを離したときの確定だけを受ける。
+ * 画面の予測とサーバーの結果が食い違っても、数秒ごとの版の確認(`useProductRevision`)が、あとから合わせる。
+ * 失敗したときだけ、すぐ取り直す(ロールバックした値を、サーバーの値に合わせる)。
+ */
+export function resyncOnFailure(
+  client: { invalidateQueries(filters: { queryKey: readonly unknown[] }): unknown },
+  keys: readonly (readonly unknown[])[],
+): (ok: boolean) => void {
+  return (ok) => {
+    if (ok) return
+    for (const queryKey of keys) void client.invalidateQueries({ queryKey })
+  }
+}
+
 export function useSectionActions(productId: string): SectionActions {
   const queryClient = useQueryClient()
   const [notice, setNotice] = useState<SectionNotice | null>(null)
@@ -86,22 +119,23 @@ export function useSectionActions(productId: string): SectionActions {
       if (s.tree) queryClient.setQueryData(treeKey, s.tree)
     },
   }
+  const resync = resyncOnFailure(queryClient, [sectionsKey, treeKey])
   const shared = {
     store,
     // 進行中の取得が、先に更新した値を古い値で上書きしないよう、取り消す
-    before: async () => {
-      await Promise.all([
-        queryClient.cancelQueries({ queryKey: sectionsKey }),
-        queryClient.cancelQueries({ queryKey: treeKey }),
-      ])
+    // 取り消すものがなければ、待たない(その場で先に更新する)
+    // 確定の最中は、ほかの取得の応答(確定の前の状態)で、先に更新した値を上書きさせない(`pending-commits.ts`)
+    before: () => {
+      beginCommit()
+      return cancelIfFetching(queryClient, [sectionsKey, treeKey])
     },
     onError: (error: unknown) => {
       handleApiError(error) // 401(セッション切れ)の共通処理
       notify(sectionErrorMessage(error))
     },
-    settle: () => {
-      void queryClient.invalidateQueries({ queryKey: sectionsKey })
-      void queryClient.invalidateQueries({ queryKey: treeKey })
+    settle: (ok: boolean) => {
+      endCommit()
+      resync(ok)
     },
   }
 

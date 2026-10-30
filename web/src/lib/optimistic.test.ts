@@ -22,17 +22,22 @@ describe('runOptimistic', () => {
     const { store, get } = makeStore({ sections: ['a'], tree: 't0' })
     let settled = 0
     let errors = 0
+    const oks: boolean[] = []
     const r = await runOptimistic({
       store,
       apply: (s) => ({ ...s, sections: [...s.sections, 'b'] }),
       call: async () => 'ok',
       onError: () => (errors += 1),
-      settle: () => (settled += 1),
+      settle: (ok) => {
+        settled += 1
+        oks.push(ok)
+      },
     })
     expect(r).toEqual({ ok: true, value: 'ok' })
     expect(get().sections).toEqual(['a', 'b'])
     expect(errors).toBe(0)
     expect(settled).toBe(1)
+    expect(oks).toEqual([true]) // 成功を知らせる(呼び出し側は、取り直さない)
   })
 
   test('api を呼ぶ前に、画面の値が先に更新されている(楽観更新)', async () => {
@@ -56,6 +61,7 @@ describe('runOptimistic', () => {
     const boom = new Error('boom')
     const seen: unknown[] = []
     let settled = 0
+    const oks: boolean[] = []
     const r = await runOptimistic({
       store,
       apply: (s) => ({ ...s, sections: ['壊れた値'], tree: 't1' }),
@@ -63,13 +69,17 @@ describe('runOptimistic', () => {
         throw boom
       },
       onError: (e) => seen.push(e),
-      settle: () => (settled += 1),
+      settle: (ok) => {
+        settled += 1
+        oks.push(ok)
+      },
     })
     expect(r).toEqual({ ok: false, error: boom })
     expect(get()).toEqual(initial) // 元に戻っている
     expect(writes.length).toBe(2) // 先に更新、元に戻す
     expect(seen).toEqual([boom])
     expect(settled).toBe(1)
+    expect(oks).toEqual([false]) // 失敗を知らせる(呼び出し側は、すぐ取り直す)
   })
 
   test('apply が null(先に更新しない)のときは、書き込まない', async () => {
@@ -149,5 +159,65 @@ describe('runOptimistic', () => {
       onError: () => {},
     })
     expect(get()).toBe(initial)
+  })
+
+  test('事前の確認(before)で例外が出ても、settle(false) が呼ばれる(取り直しに進める)', async () => {
+    const { store } = makeStore({ sections: ['a'], tree: 't0' })
+    const oks: boolean[] = []
+    await runOptimistic({
+      store,
+      before: async () => {
+        throw new Error('cancel failed')
+      },
+      apply: () => null,
+      call: async () => 'ok',
+      onError: () => {},
+      settle: (ok) => oks.push(ok),
+    }).catch(() => {})
+    expect(oks).toEqual([false])
+  })
+
+  test('before が何も返さなければ、待たずに、その場で先に更新する(await する前に、画面の値が変わっている)', async () => {
+    const { store, get } = makeStore({ sections: ['a'], tree: 't0' })
+    // await しない。呼んだ直後(同じ tick)の値を見る
+    const pending = runOptimistic({
+      store,
+      before: () => undefined,
+      apply: (s) => ({ ...s, sections: ['先に更新'] }),
+      call: async () => 'ok',
+      onError: () => {},
+    })
+    expect(get().sections).toEqual(['先に更新'])
+    await pending
+  })
+
+  test('before を渡さなくても、その場で先に更新する', async () => {
+    const { store, get } = makeStore({ sections: ['a'], tree: 't0' })
+    const pending = runOptimistic({
+      store,
+      apply: (s) => ({ ...s, sections: ['先に更新'] }),
+      call: async () => 'ok',
+      onError: () => {},
+    })
+    expect(get().sections).toEqual(['先に更新'])
+    await pending
+  })
+
+  test('before が Promise を返したら、終わるまで待ってから、先に更新する(取り消しの巻き戻しに、上書きされない)', async () => {
+    const { store, get } = makeStore({ sections: ['a'], tree: 't0' })
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const pending = runOptimistic({
+      store,
+      before: () => gate,
+      apply: (s) => ({ ...s, sections: ['先に更新'] }),
+      call: async () => 'ok',
+      onError: () => {},
+    })
+    await Promise.resolve()
+    expect(get().sections).toEqual(['a']) // まだ待っている
+    release()
+    await pending
+    expect(get().sections).toEqual(['先に更新'])
   })
 })
