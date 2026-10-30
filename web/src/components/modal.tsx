@@ -6,10 +6,13 @@ export function Modal({
   open,
   onClose,
   children,
+  overflowVisible = false,
 }: {
   open: boolean
   onClose: () => void
   children: React.ReactNode
+  /** 中身が外へはみ出す部品(候補のリストなど)を置くとき。スクロールさせず、はみ出させる */
+  overflowVisible?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   // 開く直前にフォーカスされていた要素。閉じたら戻す(消えていたら何もしない)
@@ -37,7 +40,7 @@ export function Modal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] shadow-box bg-surface text-ink backdrop:bg-black/40"
+      className={`m-auto max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] shadow-box bg-surface text-ink backdrop:bg-black/40 ${overflowVisible ? 'overflow-visible' : ''}`}
     >
       {open && <div className="space-y-4 p-6">{children}</div>}
     </dialog>

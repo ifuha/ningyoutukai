@@ -16,6 +16,7 @@ const EXPECTED_ROUTES = [
   "GET /api/invitation",
   "GET /api/product/",
   "GET /api/product/:productId",
+  "GET /api/product/:productId/invitation/candidate",
   "GET /api/product/:productId/member",
   "GET /api/product/:productId/member/:memberId",
   "GET /api/product/:productId/member/:memberId/task",
