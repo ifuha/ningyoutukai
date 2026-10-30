@@ -18,7 +18,7 @@
   /* サイドバーの背景と、項目のマウスオーバー・選択中の背景(Figma `side-light` / `side-dark`) */
   --color-side: #edebe4;
   --color-side-item: #e2dfd4;
-  /* 枠線の色。文字色より落ち着かせる(文字色 100% = ライトでは黒、ダークでは文字色と同じ)。薄くするなら、color-mix で紙の色と混ぜる */
+  /* 枠線の色。ライトは文字色(黒)、ダークは真っ黒(#000。下のダークの指定で上書き)。薄くするなら、color-mix で紙の色と混ぜる */
   --color-line: var(--color-ink);
   /* 文字の大きさは、小・中・大の 3 つだけ(text-s / text-m / text-l) */
   --text-s: 12px;
@@ -51,6 +51,7 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
+    --color-line: #000;
     --color-surface: #1b1f2a;
     --color-ink: #ebebeb;
     --color-primary: #ebebeb;
@@ -63,6 +64,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    --color-line: #000;
     --color-surface: #1b1f2a;
     --color-ink: #ebebeb;
     --color-primary: #ebebeb;
