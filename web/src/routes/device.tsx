@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Check, X } from 'lucide-react'
+// ドット絵風のフォント(DotGothic16)。このページだけで読み込む。文字の範囲ごとに分かれていて、使う文字の分だけ読み込まれる
+import '@fontsource/dotgothic16/latin-400.css'
+import '@fontsource/dotgothic16/japanese-400.css'
 import { DotField } from '#/components/dot-field'
 import { IconButton } from '#/components/icon-button'
 import { LoginButtons } from '#/components/login-buttons'
@@ -43,7 +46,8 @@ function DevicePage() {
   if (isPending) return <main className="dot-grid h-screen" />
 
   return (
-    <main className="dot-grid flex min-h-screen justify-center px-4 py-6">
+    // `font-dot`: このページの文字をドット絵風にする。`--font-mono` も同じフォントにして、`font-mono` の部分(見出し・番号・ログインボタン)も揃える
+    <main className="dot-grid flex min-h-screen justify-center px-4 py-6 font-dot [--font-mono:var(--font-dot)]">
       <section aria-label="コマンドラインのログイン" className="relative z-10 w-full max-w-2xl">
         {/* 背景。ホームと同じ山の絵(アプリ共通のドットの上に重ねる) */}
         <DotField shape="char" className="pointer-events-none fixed inset-0 -z-10 h-full w-full" />

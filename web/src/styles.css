@@ -32,6 +32,8 @@
   /* 開発者向けの画面(ターミナル風)用の等幅フォント */
   --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas,
     "Hiragino Sans", "Yu Gothic", monospace;
+  /* ドット絵風の日本語フォント(DotGothic16)。使うページ(/device)が読み込む。読み込めなければ等幅フォント */
+  --font-dot: "DotGothic16", var(--font-mono);
 }
 
 /*
