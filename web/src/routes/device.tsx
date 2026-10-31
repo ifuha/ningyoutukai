@@ -18,7 +18,7 @@ import {
 //
 // 見た目は LazyVim(Neovim のターミナル UI)。ここでの人の仕事は 1 つ: **ターミナルに出ているコードと、ここのコードが同じか見比べて、
 // 許可するか決める**。だから主役はコードで、LazyVim のダッシュボードのように、キー付きのメニュー(`a` 許可 / `d` 拒否)で選ぶ。
-// - 配色は Tokyo Night(ライトは Tokyo Night Day)。アプリの明暗に従う(`styles.css` の `.tui`)
+// - 配色は、ホームと同じ(紙と墨。ダークは夜と月)。`styles.css` の `.tui` が、アプリ共通のトークンに結びつける
 // - 枠線つきのウィンドウ(角に札)
 // - 文字は DotGothic16 だけ(太字がないので、太字は使わない。大きさは 16px の倍数)
 export const Route = createFileRoute('/device')({
@@ -69,7 +69,7 @@ const LOGO = [
 
 /**
  * ロゴ。LazyVim のダッシュボードと同じ、ブロック文字の ASCII アート(figlet の `ANSI Shadow`。製品名 NINGYOUTUKAI)。
- * 行ごとに、青から紫へ色が変わる(LazyVim の縦のグラデーション)。ブロック文字を揃えるため、ここだけ等幅フォント(ドット絵風のフォントには、
+ * 行ごとに、墨から薄い墨へ変わる(LazyVim の縦のグラデーション。ホームに合わせて、色味は持たない)。ブロック文字を揃えるため、ここだけ等幅フォント(ドット絵風のフォントには、
  * 罫線の文字がない)。文字の大きさは、列の幅(34rem)に収まるよう、狭い画面では縮める(95 桁 × 0.6em)。
  * 読み上げには、まとめた 1 つのラベルを使う(文字の絵は隠す)
  */
@@ -86,7 +86,7 @@ function Logo() {
           key={i}
           aria-hidden="true"
           className="block whitespace-pre"
-          style={{ color: `color-mix(in srgb, var(--tui-blue) ${100 - i * 20}%, var(--tui-purple))` }}
+          style={{ color: `color-mix(in srgb, var(--tui-blue) ${100 - i * 12}%, var(--tui-purple))` }}
         >
           {line}
         </span>
@@ -150,7 +150,7 @@ function Notice({
 }
 
 /**
- * 確認コード。カーソル行の背景(`cursorline`)に、青い文字。1 文字ずつ現れ、最後にカーソルが点滅する。
+ * 確認コード。カーソル行の背景(`cursorline`)に、墨の文字。1 文字ずつ現れ、最後にカーソルが点滅する。
  * 読み上げには、まとめた 1 つのラベルを使う(1 文字ずつの `span` は隠す)
  */
 function Code({ code, settled = false }: { code: string; settled?: boolean }) {

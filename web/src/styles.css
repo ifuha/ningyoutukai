@@ -183,51 +183,23 @@ body {
 }
 
 /*
- * /device の配色(LazyVim の既定、Tokyo Night)。ライトは同じ系統の Tokyo Night Day。
- * アプリの明暗(`data-theme` / OS の設定)に従う。`.tui` の中だけで使う
+ * /device の配色。ホームと同じ、アプリ共通のトークン(紙 `--color-surface` と墨 `--color-ink`)に結びつける。
+ * ライト / ダークの切り替えも、アプリのトークンが担うので、ここには明暗の別の指定はない。
+ * ホームは色味を持たない(紙と墨だけ)ので、強調は、色ではなく、濃さ(墨の濃淡)と反転で行う。`.tui` の中だけで使う
  */
 .tui {
-  --tui-bg: #e1e2e7;
-  --tui-bg-dark: #d0d5e3;
-  --tui-fg: #3760bf;
-  --tui-comment: #848cb5;
-  --tui-blue: #2e7de9;
-  --tui-purple: #9854f1;
-  --tui-green: #587539;
-  --tui-red: #f52a65;
-  --tui-yellow: #8c6c3e;
-  --tui-cursorline: #c4c8da;
-  --tui-border: #a8aecb;
-}
-
-:root[data-theme='dark'] .tui {
-  --tui-bg: #1a1b26;
-  --tui-bg-dark: #16161e;
-  --tui-fg: #c0caf5;
-  --tui-comment: #565f89;
-  --tui-blue: #7aa2f7;
-  --tui-purple: #bb9af7;
-  --tui-green: #9ece6a;
-  --tui-red: #f7768e;
-  --tui-yellow: #e0af68;
-  --tui-cursorline: #292e42;
-  --tui-border: #3b4261;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .tui {
-    --tui-bg: #1a1b26;
-    --tui-bg-dark: #16161e;
-    --tui-fg: #c0caf5;
-    --tui-comment: #565f89;
-    --tui-blue: #7aa2f7;
-    --tui-purple: #bb9af7;
-    --tui-green: #9ece6a;
-    --tui-red: #f7768e;
-    --tui-yellow: #e0af68;
-    --tui-cursorline: #292e42;
-    --tui-border: #3b4261;
-  }
+  --tui-bg: var(--color-surface);
+  --tui-bg-dark: var(--color-side);
+  --tui-fg: var(--color-ink);
+  --tui-comment: color-mix(in srgb, var(--color-ink) 60%, var(--color-surface));
+  /* 強調(ロゴ・コード・札)は墨そのもの。ロゴの下の方だけ、薄い墨に向かって変わる */
+  --tui-blue: var(--color-ink);
+  --tui-purple: color-mix(in srgb, var(--color-ink) 40%, var(--color-surface));
+  --tui-green: var(--color-ink);
+  --tui-red: var(--color-ink);
+  --tui-yellow: color-mix(in srgb, var(--color-ink) 60%, var(--color-surface));
+  --tui-cursorline: var(--color-side-item);
+  --tui-border: var(--color-line);
 }
 
 /* 枠線の代わりの内側の輪(inset ring): 1px の輪を、ボックスの内側に描く。レイアウトの寸法は変えない */
