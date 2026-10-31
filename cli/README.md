@@ -11,6 +11,10 @@
 | `ningyoutukai login` | ブラウザで承認して、ログインする(トークンは OS のキーチェーンに保存) |
 | `ningyoutukai logout` | この端末のログインを取り消す |
 | `ningyoutukai whoami` | ログイン中のユーザーを出す(`--json` あり) |
+| `ningyoutukai tasks` | 自分に割り振られたタスクの一覧(全プロダクト)。既定は完了以外。`--all` で完了済みも、`--status <状態>` でその状態だけ、`--product <名前 or ID>` でプロダクトを絞る。`--json` あり |
+| `ningyoutukai task <ID>` | タスクの詳細とメッセージ履歴。ID は `tasks` の ID 列(先頭の一部でもよい)。`--json` あり |
+
+状態は `in_progress`(作業中)/ `reported`(確認待ち)/ `rejected`(差し戻し中)/ `completed`(完了)。
 
 オプション: `--api <URL>`(環境変数 `NINGYOUTUKAI_API_URL`)、`--no-browser`(login)、`-h`、`-v`。
 環境変数 `NINGYOUTUKAI_TOKEN` にトークンを入れると、キーチェーンより優先して使う(CI やコンテナ向け)。
