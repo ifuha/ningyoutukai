@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { dotSize, edgeFade } from './dot-field'
-import { FLOOR_TOP, LIP_Z, STRING_BOTTOM, STRING_X, curtainEdge, stageSize, valanceBottom } from './stage-field'
+import { STRING_BOTTOM, STRING_X, curtainEdge, stageSize, valanceBottom } from './stage-field'
 
 describe('stageSize', () => {
   test('どこでも 0〜1 に収まる(時刻が変わっても)', () => {
@@ -44,13 +44,12 @@ describe('stageSize', () => {
     expect(stageSize(0.35, valanceBottom(0.35) + 0.04, 0)).toBe(0)
   })
 
-  test('下には、手前の縁の帯(濃い)と、板の継ぎ目のある床がある', () => {
-    // 画面の下の端(手前)に、フットライトの帯
-    const lipY = FLOOR_TOP + (1 - FLOOR_TOP) * (LIP_Z + 0.03)
-    expect(stageSize(0.5, lipY, 0)).toBeGreaterThanOrEqual(0.5)
-    let floor = 0
-    for (let i = 0; i <= 40; i++) floor = Math.max(floor, stageSize(i / 40, 0.92, 0))
-    expect(floor).toBeGreaterThan(0.08)
+  test('床は描かない(幕だけ)。下でも、幕の間は何も描かず、端の幕だけがある', () => {
+    for (const ny of [0.82, 0.9, 0.99]) {
+      expect(stageSize(0.5, ny, 0)).toBe(0)
+      expect(stageSize(0.3, ny, 0)).toBe(0)
+      expect(stageSize(0.03, ny, 0)).toBeGreaterThan(0.1)
+    }
   })
 
   test('中央の上に、糸が 3 本あり、ロゴの手前(糸の下の端)で止まる', () => {

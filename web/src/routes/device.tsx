@@ -104,7 +104,7 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
   return (
     // `font-dot`: このページの文字をドット絵風にする。`[font-synthesis:none]`: 太字のない書体を、ブラウザが無理に太くして滲ませない
     <main className="tui isolate flex min-h-screen flex-col bg-(--tui-bg) font-dot text-(--tui-fg) [font-synthesis:none]">
-      {/* 背景。人形劇の舞台(左右の幕・上の飾り幕・床)。ページの窓が中央を隠すので、見えるのは、左右と上下の縁 */}
+      {/* 背景。人形劇の舞台の幕(左右の幕・上の飾り幕)。ページの窓が中央を隠すので、見えるのは、左右と上の縁 */}
       <StageField className="pointer-events-none fixed inset-0 -z-10 h-full w-full" />
       <div className="flex flex-1 flex-col items-center px-4 pt-[12vh] pb-10">
         <Logo />
