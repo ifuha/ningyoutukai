@@ -19,7 +19,7 @@ import {
 // 見た目は LazyVim(Neovim のターミナル UI)。ここでの人の仕事は 1 つ: **ターミナルに出ているコードと、ここのコードが同じか見比べて、
 // 許可するか決める**。だから主役はコードで、LazyVim のダッシュボードのように、キー付きのメニュー(`a` 許可 / `d` 拒否)で選ぶ。
 // - 配色は Tokyo Night(ライトは Tokyo Night Day)。アプリの明暗に従う(`styles.css` の `.tui`)
-// - 枠線つきのウィンドウ(角に札)と、画面の下のステータスライン(モードの札 + パス + アカウント名)
+// - 枠線つきのウィンドウ(角に札)
 // - 文字は DotGothic16 だけ(太字がないので、太字は使わない。大きさは 16px の倍数)
 export const Route = createFileRoute('/device')({
   validateSearch: (search: Record<string, unknown>): { user_code?: string } => {
@@ -41,7 +41,6 @@ function DevicePage() {
       // コードが変わったら、最初から(確認・結果の状態を持ち越さない)
       key={userCode ?? ''}
       userCode={userCode}
-      userName={session.user.name}
     />
   ) : (
     <SignIn userCode={userCode} />
@@ -51,23 +50,6 @@ function DevicePage() {
 // ---------------------------------------------------------------- 枠(ロゴ・ウィンドウ・ステータスライン)
 
 type Tone = 'blue' | 'green' | 'red' | 'purple'
-type Mode = { label: string; tone: Tone }
-
-const modeOf: Record<DevicePhase, Mode> = {
-  'enter-code': { label: 'INSERT', tone: 'green' },
-  checking: { label: 'DEVICE', tone: 'purple' },
-  confirm: { label: 'DEVICE', tone: 'blue' },
-  approved: { label: 'APPROVED', tone: 'green' },
-  denied: { label: 'DENIED', tone: 'red' },
-  error: { label: 'ERROR', tone: 'red' },
-}
-
-const toneBg: Record<Tone, string> = {
-  blue: 'bg-(--tui-blue)',
-  green: 'bg-(--tui-green)',
-  red: 'bg-(--tui-red)',
-  purple: 'bg-(--tui-purple)',
-}
 
 const toneText: Record<Tone, string> = {
   blue: 'text-(--tui-blue)',
@@ -77,24 +59,16 @@ const toneText: Record<Tone, string> = {
 }
 
 /**
- * ページの枠。LazyVim のダッシュボードのように、ロゴ → 枠線つきのウィンドウ → 画面の下のステータスライン。
+ * ページの枠。LazyVim のダッシュボードのように、ロゴ → 枠線つきのウィンドウ。
  * 確認用の画面からも使えるよう、切り出してある
  */
-export function DeviceFrame({
-  mode,
-  user,
-  children,
-}: {
-  mode: Mode
-  user?: string
-  children: React.ReactNode
-}) {
+export function DeviceFrame({ children }: { children: React.ReactNode }) {
   return (
     // `font-dot`: このページの文字をドット絵風にする。`[font-synthesis:none]`: 太字のない書体を、ブラウザが無理に太くして滲ませない
     <main className="tui flex min-h-screen flex-col bg-(--tui-bg) font-dot text-(--tui-fg) [font-synthesis:none]">
-      <div className="flex flex-1 flex-col items-center px-4 pt-[12vh] pb-16">
+      <div className="flex flex-1 flex-col items-center px-4 pt-[12vh] pb-10">
         <header className="text-center">
-          <p className="bg-linear-to-r from-(--tui-blue) to-(--tui-purple) bg-clip-text text-[48px] leading-[56px] text-transparent">
+          <p className="bg-linear-to-r from-(--tui-blue) to-(--tui-purple) bg-clip-text text-[64px] leading-[72px] text-transparent">
             人形使い
           </p>
         </header>
@@ -108,13 +82,6 @@ export function DeviceFrame({
           {children}
         </section>
       </div>
-      <footer className="fixed inset-x-0 bottom-0 flex h-8 items-stretch bg-(--tui-bg-dark) text-[16px] leading-8">
-        <span className={`${toneBg[mode.tone]} px-3 text-(--tui-bg-dark)`}>{mode.label}</span>
-        <span className="truncate px-3">~/ningyoutukai/device</span>
-        {user && (
-          <span className="ml-auto max-w-[40%] shrink-0 truncate bg-(--tui-purple) px-3 text-(--tui-bg-dark)">{user}</span>
-        )}
-      </footer>
     </main>
   )
 }
@@ -257,7 +224,7 @@ function SignIn({ userCode }: { userCode: string | undefined }) {
   useKeys({ g: () => void signIn('github'), o: () => void signIn('google') }, pending === null)
 
   return (
-    <DeviceFrame mode={{ label: 'LOGIN', tone: 'purple' }}>
+    <DeviceFrame>
       <Title>先にログインしてください</Title>
       <Body dim>ターミナルのログインを許可するには、ここでログインが必要です。</Body>
       <div className="-mx-3 mt-5">
@@ -285,13 +252,13 @@ function SignIn({ userCode }: { userCode: string | undefined }) {
   )
 }
 
-function Approve({ userCode, userName }: { userCode: string | undefined; userName: string }) {
-  if (!userCode) return <EnterCode userName={userName} />
-  return <Confirm userCode={userCode} userName={userName} />
+function Approve({ userCode }: { userCode: string | undefined }) {
+  if (!userCode) return <EnterCode />
+  return <Confirm userCode={userCode} />
 }
 
 // コードが付いていない URL で開いたとき: ターミナルに出たコードを入力する
-function EnterCode({ userName }: { userName: string }) {
+function EnterCode() {
   const navigate = useNavigate()
   const [value, setValue] = useState('')
 
@@ -302,7 +269,7 @@ function EnterCode({ userName }: { userName: string }) {
   }
 
   return (
-    <DeviceFrame mode={modeOf['enter-code']} user={userName}>
+    <DeviceFrame>
       <form onSubmit={submit}>
         <Title>ターミナルのコードを入力</Title>
         <Body dim>`login` を実行すると、ターミナルに 8 文字のコードが出ます。</Body>
@@ -334,7 +301,7 @@ function EnterCode({ userName }: { userName: string }) {
 }
 
 // コードが付いているとき: 開いた時点で確認(claim)し、許可・拒否を選ばせる
-function Confirm({ userCode, userName }: { userCode: string; userName: string }) {
+function Confirm({ userCode }: { userCode: string }) {
   const [phase, setPhase] = useState<DevicePhase>('checking')
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -390,7 +357,6 @@ function Confirm({ userCode, userName }: { userCode: string; userName: string })
     <ConfirmView
       phase={phase}
       userCode={userCode}
-      userName={userName}
       message={message}
       busy={busy}
       onDecide={(kind) => void decide(kind)}
@@ -402,14 +368,12 @@ function Confirm({ userCode, userName }: { userCode: string; userName: string })
 export function ConfirmView({
   phase,
   userCode,
-  userName,
   message,
   busy,
   onDecide,
 }: {
   phase: DevicePhase
   userCode: string
-  userName: string
   message: string | null
   busy: boolean
   onDecide: (kind: 'approve' | 'deny') => void
@@ -418,7 +382,7 @@ export function ConfirmView({
   useKeys({ a: () => onDecide('approve'), d: () => onDecide('deny') }, phase === 'confirm' && !busy)
 
   const frame = (children: React.ReactNode) => (
-    <DeviceFrame mode={modeOf[phase]} user={userName}>
+    <DeviceFrame>
       {children}
     </DeviceFrame>
   )
