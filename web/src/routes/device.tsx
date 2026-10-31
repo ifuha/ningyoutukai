@@ -162,7 +162,7 @@ function Code({ code, settled = false }: { code: string; settled?: boolean }) {
     <p
       role="img"
       aria-label={`確認コード ${chars.filter((c) => c !== '-').join(' ')}`}
-      className={`mt-5 w-fit max-w-full bg-(--tui-cursorline) px-4 py-3 text-[32px] leading-none tracking-[0.06em] text-(--tui-blue) min-[400px]:text-[48px] sm:px-6 sm:py-4 ${settled ? 'opacity-60' : ''}`}
+      className={`mt-5 w-fit max-w-full bg-(--tui-cursorline) px-3 py-2 text-[32px] leading-none tracking-[0.06em] text-(--tui-blue) sm:px-4 sm:py-3 ${settled ? 'opacity-60' : ''}`}
     >
       {chars.map((c, i) => (
         <span key={i} aria-hidden="true" className="code-char" style={{ '--i': i } as React.CSSProperties}>
@@ -320,7 +320,7 @@ function EnterCode() {
           placeholder="ABCD-EFGH"
           value={value}
           onChange={(e) => setValue(formatUserCode(e.target.value).slice(0, 9))}
-          className="mt-5 w-full max-w-[22rem] bg-(--tui-cursorline) px-4 py-3 text-[32px] leading-none tracking-[0.06em] text-(--tui-blue) placeholder:text-(--tui-comment) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--tui-blue) min-[400px]:text-[48px] sm:px-6 sm:py-4"
+          className="mt-5 w-full max-w-[15rem] bg-(--tui-cursorline) px-3 py-2 text-[32px] leading-none tracking-[0.06em] text-(--tui-blue) placeholder:text-(--tui-comment) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--tui-blue) sm:px-4 sm:py-3"
         />
         <div className="-mx-3 mt-5">
           <MenuRow
