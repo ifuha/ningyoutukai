@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 // ドット絵風のフォント(DotGothic16)。このページだけで読み込む。文字の範囲ごとに分かれていて、使う文字の分だけ読み込まれる
 import '@fontsource/dotgothic16/latin-400.css'
 import '@fontsource/dotgothic16/japanese-400.css'
+import { StageField } from '#/components/stage-field'
 import { authClient } from '#/lib/auth-client'
 import {
   deviceErrorMessage,
@@ -102,12 +103,14 @@ function Logo() {
 export function DeviceFrame({ children }: { children: React.ReactNode }) {
   return (
     // `font-dot`: このページの文字をドット絵風にする。`[font-synthesis:none]`: 太字のない書体を、ブラウザが無理に太くして滲ませない
-    <main className="tui flex min-h-screen flex-col bg-(--tui-bg) font-dot text-(--tui-fg) [font-synthesis:none]">
+    <main className="tui isolate flex min-h-screen flex-col bg-(--tui-bg) font-dot text-(--tui-fg) [font-synthesis:none]">
+      {/* 背景。人形劇の舞台(左右の幕・上の飾り幕・床)。ページの窓が中央を隠すので、見えるのは、左右と上下の縁 */}
+      <StageField className="pointer-events-none fixed inset-0 -z-10 h-full w-full" />
       <div className="flex flex-1 flex-col items-center px-4 pt-[12vh] pb-10">
         <Logo />
         <section
           aria-label="ターミナルのログイン"
-          className="relative mt-10 w-full max-w-[34rem] border border-(--tui-border) px-5 pt-8 pb-6"
+          className="relative mt-10 w-full max-w-[34rem] border border-(--tui-border) bg-(--tui-bg) px-5 pt-8 pb-6"
         >
           <span className="absolute -top-3 left-4 bg-(--tui-blue) px-3 text-[16px] leading-6 text-(--tui-bg-dark)">
             Device
