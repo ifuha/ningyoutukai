@@ -32,6 +32,8 @@
   /* 開発者向けの画面(ターミナル風)用の等幅フォント */
   --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas,
     "Hiragino Sans", "Yu Gothic", monospace;
+  /* ドット絵風の日本語フォント(DotGothic16)。使うページ(/device)が読み込む。読み込めなければ等幅フォント */
+  --font-dot: "DotGothic16", var(--font-mono);
 }
 
 /*
@@ -156,6 +158,64 @@ body {
   .row-fill {
     transition: none;
   }
+}
+
+/*
+ * /device の確認コードを、1 文字ずつ出す(ページを開いたときの 1 回だけ。ターミナルに打たれていくように)。
+ * 文字ごとに `--i`(何番目か)を渡す。待っている間は隠れていて(backwards)、時間になると現れる。
+ * 「動きを減らす」設定のときは、止めて、最初から全部表示する
+ */
+@keyframes code-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.code-char {
+  animation: code-in 1ms linear backwards;
+  /* 幕が開く間(約 0.5 秒)のあとから、1 文字ずつ打たれていく */
+  animation-delay: calc(var(--i, 0) * 55ms + 500ms);
+}
+
+/*
+ * /device の窓(ロゴと内容)を、幕が開き始めてから、ふわっと現す(ページを開いたときの 1 回だけ)。
+ * 幕が閉じているあいだは隠れていて(backwards)、時間になると現れる。動きを減らす設定のときは、最初から表示
+ */
+@keyframes stage-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.stage-in {
+  animation: stage-in 0.25s ease-out 0.2s backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .code-char,
+  .stage-in {
+    animation: none;
+  }
+}
+
+/*
+ * /device の配色。ホームと同じ、アプリ共通のトークン(紙 `--color-surface` と墨 `--color-ink`)に結びつける。
+ * ライト / ダークの切り替えも、アプリのトークンが担うので、ここには明暗の別の指定はない。
+ * ホームは色味を持たない(紙と墨だけ)ので、強調は、色ではなく、濃さ(墨の濃淡)と反転で行う。`.tui` の中だけで使う
+ */
+.tui {
+  --tui-bg: var(--color-surface);
+  --tui-bg-dark: var(--color-side);
+  --tui-fg: var(--color-ink);
+  --tui-comment: color-mix(in srgb, var(--color-ink) 60%, var(--color-surface));
+  /* 強調(ロゴ・コード・札)は墨そのもの。ロゴの下の方だけ、薄い墨に向かって変わる */
+  --tui-blue: var(--color-ink);
+  --tui-purple: color-mix(in srgb, var(--color-ink) 40%, var(--color-surface));
+  --tui-green: var(--color-ink);
+  --tui-red: var(--color-ink);
+  --tui-yellow: color-mix(in srgb, var(--color-ink) 60%, var(--color-surface));
+  --tui-cursorline: var(--color-side-item);
+  --tui-border: var(--color-line);
 }
 
 /* 枠線の代わりの内側の輪(inset ring): 1px の輪を、ボックスの内側に描く。レイアウトの寸法は変えない */
