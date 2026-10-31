@@ -173,11 +173,27 @@ body {
 
 .code-char {
   animation: code-in 1ms linear backwards;
-  animation-delay: calc(var(--i, 0) * 110ms + 250ms);
+  /* 幕が開く間(約 0.8 秒)のあとから、1 文字ずつ打たれていく */
+  animation-delay: calc(var(--i, 0) * 90ms + 800ms);
+}
+
+/*
+ * /device の窓(ロゴと内容)を、幕が開き始めてから、ふわっと現す(ページを開いたときの 1 回だけ)。
+ * 幕が閉じているあいだは隠れていて(backwards)、時間になると現れる。動きを減らす設定のときは、最初から表示
+ */
+@keyframes stage-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.stage-in {
+  animation: stage-in 0.35s ease-out 0.35s backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .code-char {
+  .code-char,
+  .stage-in {
     animation: none;
   }
 }
