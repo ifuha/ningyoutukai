@@ -58,6 +58,43 @@ const toneText: Record<Tone, string> = {
   purple: 'text-(--tui-purple)',
 }
 
+const LOGO = [
+  '███╗   ██╗██╗███╗   ██╗ ██████╗██╗   ██╗ ██████╗ ██╗   ██╗████████╗██╗   ██╗██╗  ██╗ █████╗ ██╗',
+  '████╗  ██║██║████╗  ██║██╔════╝╚██╗ ██╔╝██╔═══██╗██║   ██║╚══██╔══╝██║   ██║██║ ██╔╝██╔══██╗██║',
+  '██╔██╗ ██║██║██╔██╗ ██║██║  ███╗╚████╔╝ ██║   ██║██║   ██║   ██║   ██║   ██║█████╔╝ ███████║██║',
+  '██║╚██╗██║██║██║╚██╗██║██║   ██║ ╚██╔╝  ██║   ██║██║   ██║   ██║   ██║   ██║██╔═██╗ ██╔══██║██║',
+  '██║ ╚████║██║██║ ╚████║╚██████╔╝  ██║   ╚██████╔╝╚██████╔╝   ██║   ╚██████╔╝██║  ██╗██║  ██║██║',
+  '╚═╝  ╚═══╝╚═╝╚═╝  ╚═══╝ ╚═════╝   ╚═╝    ╚═════╝  ╚═════╝    ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝',
+]
+
+/**
+ * ロゴ。LazyVim のダッシュボードと同じ、ブロック文字の ASCII アート(figlet の `ANSI Shadow`。製品名 NINGYOUTUKAI)。
+ * 行ごとに、青から紫へ色が変わる(LazyVim の縦のグラデーション)。ブロック文字を揃えるため、ここだけ等幅フォント(ドット絵風のフォントには、
+ * 罫線の文字がない)。文字の大きさは、列の幅(34rem)に収まるよう、狭い画面では縮める(95 桁 × 0.6em)。
+ * 読み上げには、まとめた 1 つのラベルを使う(文字の絵は隠す)
+ */
+function Logo() {
+  return (
+    <div
+      role="img"
+      aria-label="人形使い"
+      className="text-[min(9px,calc((100vw-2rem)/60))] leading-none"
+      style={{ fontFamily: 'ui-monospace, Menlo, Consolas, "DejaVu Sans Mono", monospace' }}
+    >
+      {LOGO.map((line, i) => (
+        <span
+          key={i}
+          aria-hidden="true"
+          className="block whitespace-pre"
+          style={{ color: `color-mix(in srgb, var(--tui-blue) ${100 - i * 20}%, var(--tui-purple))` }}
+        >
+          {line}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 /**
  * ページの枠。LazyVim のダッシュボードのように、ロゴ → 枠線つきのウィンドウ。
  * 確認用の画面からも使えるよう、切り出してある
@@ -67,11 +104,7 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
     // `font-dot`: このページの文字をドット絵風にする。`[font-synthesis:none]`: 太字のない書体を、ブラウザが無理に太くして滲ませない
     <main className="tui flex min-h-screen flex-col bg-(--tui-bg) font-dot text-(--tui-fg) [font-synthesis:none]">
       <div className="flex flex-1 flex-col items-center px-4 pt-[12vh] pb-10">
-        <header className="text-center">
-          <p className="bg-linear-to-r from-(--tui-blue) to-(--tui-purple) bg-clip-text text-[64px] leading-[72px] text-transparent">
-            人形使い
-          </p>
-        </header>
+        <Logo />
         <section
           aria-label="ターミナルのログイン"
           className="relative mt-10 w-full max-w-[34rem] border border-(--tui-border) px-5 pt-8 pb-6"
