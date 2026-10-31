@@ -160,6 +160,28 @@ body {
   }
 }
 
+/*
+ * /device の確認コードを、1 文字ずつ出す(ページを開いたときの 1 回だけ。ターミナルに打たれていくように)。
+ * 文字ごとに `--i`(何番目か)を渡す。待っている間は隠れていて(backwards)、時間になると現れる。
+ * 「動きを減らす」設定のときは、止めて、最初から全部表示する
+ */
+@keyframes code-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.code-char {
+  animation: code-in 1ms linear backwards;
+  animation-delay: calc(var(--i, 0) * 110ms + 250ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .code-char {
+    animation: none;
+  }
+}
+
 /* 枠線の代わりの内側の輪(inset ring): 1px の輪を、ボックスの内側に描く。レイアウトの寸法は変えない */
 @utility shadow-box {
   box-shadow: inset 0 0 0 1px var(--color-line);

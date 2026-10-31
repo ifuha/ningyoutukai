@@ -19,7 +19,13 @@ import {
 // CLI のログインの承認ページ(`/device`)。コマンドラインツールの `login` が出したコードを、ログイン中の人が許可・拒否する
 // (docs/v3.0/cli.md の「3.2 ログインの流れ」)。ログイン必須。URL の `user_code` にコードが付いていれば、入力を省ける。
 // コードを開いた時点で、api に「このコードを、この人が確認した」と伝える(別の人が横から承認できないようにする仕組み)。
-// 見た目はホーム(`/home`)に合わせる: 背景の山(DotField)の上に、細い等幅の見出し(`01 / …`)と、番号つきの罫線の行を並べる
+//
+// 見た目(frontend-design の手順で設計):
+// - ここでの人の仕事は 1 つ: **ターミナルに出ているコードと、ここのコードが同じか見比べて、許可するか決める**。
+//   だから主役は、そのコード。墨の地に紙の文字で大きく出し(64px。9 文字が 34rem の列に収まる大きさ。狭い画面は 36px まで縮む)、開いたときに 1 文字ずつ打たれていく(動きはこの 1 回だけ)。
+// - 文字は DotGothic16 だけ(太字がないので、太字は使わない。大きさは 16px の倍数で、ドットをくっきり出す: コード 64、見出し 32、本文 16)。
+// - 番号・ラベル・罫線の行は使わない(手順の連なりではないので、番号は意味を持たない)。区切りは余白で行う。
+// - 背景は、ホームと同じ山の絵。
 export const Route = createFileRoute('/device')({
   validateSearch: (search: Record<string, unknown>): { user_code?: string } => {
     const code = typeof search.user_code === 'string' ? normalizeUserCode(search.user_code) : ''
@@ -27,16 +33,6 @@ export const Route = createFileRoute('/device')({
   },
   component: DevicePage,
 })
-
-/** 見出しの文言(ページの進み具合ごと) */
-const headings: Record<DevicePhase, string> = {
-  'enter-code': 'コードの入力',
-  checking: 'コードの確認',
-  confirm: 'コマンドラインのログイン',
-  approved: '許可しました',
-  denied: '拒否しました',
-  error: '失敗しました',
-}
 
 function DevicePage() {
   const { data: session, isPending } = authClient.useSession()
@@ -46,23 +42,18 @@ function DevicePage() {
   if (isPending) return <main className="dot-grid h-screen" />
 
   return (
-    // `font-dot`: このページの文字をドット絵風にする。`--font-mono` も同じフォントにして、`font-mono` の部分(見出し・番号・ログインボタン)も揃える
-    <main className="dot-grid flex min-h-screen justify-center px-4 py-6 font-dot [--font-mono:var(--font-dot)]">
-      <section aria-label="コマンドラインのログイン" className="relative z-10 w-full max-w-2xl">
+    // `font-dot`: このページの文字をドット絵風にする。`--font-mono` も同じフォントにして、`font-mono` の部分(ログインボタン)も揃える。
+    // `[font-synthesis:none]`: 太字のない書体を、ブラウザが無理に太くして滲ませない
+    <main className="dot-grid flex min-h-screen justify-center px-4 py-10 font-dot [--font-mono:var(--font-dot)] [font-synthesis:none] sm:py-16">
+      <section aria-label="ターミナルのログイン" className="relative z-10 w-full max-w-[34rem]">
         {/* 背景。ホームと同じ山の絵(アプリ共通のドットの上に重ねる) */}
         <DotField shape="char" className="pointer-events-none fixed inset-0 -z-10 h-full w-full" />
-        <div className="mb-6 flex items-center justify-between gap-x-6 font-mono text-s">
-          <span className="min-w-0 truncate opacity-70">
-            &gt; {session?.user ? session.user.name : 'ningyoutukai login'}
-          </span>
-        </div>
         {session?.user ? (
           <Approve
             // コードが変わったら、最初から(確認・結果の状態を持ち越さない)
             key={userCode ?? ''}
             userCode={userCode}
             userName={session.user.name}
-            userEmail={session.user.email}
           />
         ) : (
           <SignIn userCode={userCode} />
@@ -72,46 +63,50 @@ function DevicePage() {
   )
 }
 
-/** ホームの見出し(`01 / プロダクト`)と同じ形 */
-function Heading({ children }: { children: React.ReactNode }) {
-  return <h1 className="font-mono text-s opacity-70">01 / {children}</h1>
+/** ページの問い・見出し(32px) */
+function Title({ children }: { children: React.ReactNode }) {
+  return <h1 className="text-[32px] leading-10">{children}</h1>
 }
 
-/** 番号つきの罫線の行(ホームのプロダクト一覧の行と同じ形。リンクではなく、項目と値) */
-function Row({
-  index,
-  label,
-  children,
-  note,
-}: {
-  index: number
-  label: string
-  children: React.ReactNode
-  note?: string
-}) {
+/** 本文(16px) */
+function Body({ children, dim = false }: { children: React.ReactNode; dim?: boolean }) {
+  return <p className={`mt-4 text-[16px] leading-7 ${dim ? 'opacity-70' : ''}`}>{children}</p>
+}
+
+/** エラー・結果の通知(左に線の 1 行) */
+function Notice({ role, children }: { role: 'alert' | 'status'; children: React.ReactNode }) {
   return (
-    <li className="rise border-b border-line" style={{ animationDelay: `${(index - 1) * 70}ms` }}>
-      <div className="flex min-h-12 items-center gap-5 py-2">
-        <span className="w-8 shrink-0 pl-2 font-mono text-s opacity-70">{String(index).padStart(2, '0')}</span>
-        <span className="w-24 shrink-0 text-s opacity-70">{label}</span>
-        <span className="min-w-0 flex-1 break-words text-l font-medium">
-          {children}
-          {note && <span className="block text-s font-normal opacity-60">{note}</span>}
-        </span>
-      </div>
-    </li>
+    <p role={role} className="mt-4 border-l-2 border-ink pl-3 text-[16px] leading-7">
+      {children}
+    </p>
   )
 }
 
-function Rows({ children }: { children: React.ReactNode }) {
-  return <ol className="mt-4 border-t border-line bg-surface">{children}</ol>
-}
-
-/** エラー・通知(ホームと同じ、左に線の 1 行) */
-function Notice({ role, children }: { role: 'alert' | 'status'; children: React.ReactNode }) {
+/**
+ * 確認コード。墨の地に紙の文字(このページで唯一の重い面)。1 文字ずつ現れ、最後にカーソルが点滅する。
+ * 読み上げには、まとめた 1 つのラベルを使う(1 文字ずつの `span` は隠す)
+ */
+function Code({ code, settled = false }: { code: string; settled?: boolean }) {
+  const formatted = formatUserCode(code)
+  const chars = [...formatted]
   return (
-    <p role={role} className="mt-4 border-l border-line pl-3 text-m">
-      {children}
+    <p
+      role="img"
+      aria-label={`確認コード ${chars.filter((c) => c !== '-').join(' ')}`}
+      className={`mt-6 bg-ink px-5 py-6 text-[clamp(36px,12vw,64px)] leading-none tracking-[0.06em] text-surface sm:px-8 sm:py-8 ${settled ? 'opacity-60' : ''}`}
+    >
+      {chars.map((c, i) => (
+        <span key={i} aria-hidden="true" className="code-char" style={{ '--i': i } as React.CSSProperties}>
+          {c}
+        </span>
+      ))}
+      {!settled && (
+        <span
+          aria-hidden="true"
+          className="code-char cursor ml-[0.12em] inline-block h-[0.8em] w-[0.5em] translate-y-[0.06em] bg-surface"
+          style={{ '--i': chars.length } as React.CSSProperties}
+        />
+      )}
     </p>
   )
 }
@@ -120,31 +115,21 @@ function Notice({ role, children }: { role: 'alert' | 'status'; children: React.
 function SignIn({ userCode }: { userCode: string | undefined }) {
   return (
     <>
-      <Heading>ログイン</Heading>
-      <p className="mt-4 text-m">
-        コマンドラインツールのログインを許可するには、まず、ここでログインしてください。
-      </p>
-      <div className="mt-4 max-w-md">
+      <Title>先にログインしてください</Title>
+      <Body>ターミナルのログインを許可するには、ここでログインが必要です。</Body>
+      <div className="mt-6 max-w-md">
         <LoginButtons callbackPath={userCode ? `/device?user_code=${encodeURIComponent(userCode)}` : '/device'} />
       </div>
     </>
   )
 }
 
-function Approve({
-  userCode,
-  userName,
-  userEmail,
-}: {
-  userCode: string | undefined
-  userName: string
-  userEmail: string
-}) {
+function Approve({ userCode, userName }: { userCode: string | undefined; userName: string }) {
   if (!userCode) return <EnterCode />
-  return <Confirm userCode={userCode} userName={userName} userEmail={userEmail} />
+  return <Confirm userCode={userCode} userName={userName} />
 }
 
-// コードが付いていない URL で開いたとき: コマンドラインに出たコードを入力する
+// コードが付いていない URL で開いたとき: ターミナルに出たコードを入力する
 function EnterCode() {
   const navigate = useNavigate()
   const [value, setValue] = useState('')
@@ -157,29 +142,25 @@ function EnterCode() {
 
   return (
     <form onSubmit={submit}>
-      <Heading>{headings['enter-code']}</Heading>
-      <p className="mt-4 text-m">コマンドラインに表示されたコードを入力してください。</p>
-      <Rows>
-        <Row index={1} label="コード">
-          <input
-            id="device-code"
-            type="text"
-            aria-label="コード"
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            placeholder="ABCD-EFGH"
-            value={value}
-            onChange={(e) => setValue(formatUserCode(e.target.value).slice(0, 9))}
-            className="h-10 w-full bg-transparent font-mono text-l tracking-widest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          />
-        </Row>
-      </Rows>
-      <div className="mt-4">
+      <Title>ターミナルのコードを入力</Title>
+      <Body>`login` を実行すると、ターミナルに 8 文字のコードが出ます。</Body>
+      <input
+        id="device-code"
+        type="text"
+        aria-label="ターミナルに出たコード"
+        autoComplete="off"
+        autoCapitalize="characters"
+        spellCheck={false}
+        placeholder="ABCD-EFGH"
+        value={value}
+        onChange={(e) => setValue(formatUserCode(e.target.value).slice(0, 9))}
+        className="mt-6 w-full bg-ink px-5 py-6 text-[clamp(36px,12vw,64px)] leading-none tracking-[0.06em] text-surface placeholder:text-surface/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink sm:px-8 sm:py-8"
+      />
+      <div className="mt-6">
         <IconButton
           type="submit"
           icon={Check}
-          label="確認"
+          label="コードを確認"
           showLabel
           variant="outline"
           side="bottom"
@@ -191,15 +172,7 @@ function EnterCode() {
 }
 
 // コードが付いているとき: 開いた時点で確認(claim)し、許可・拒否を選ばせる
-function Confirm({
-  userCode,
-  userName,
-  userEmail,
-}: {
-  userCode: string
-  userName: string
-  userEmail: string
-}) {
+function Confirm({ userCode, userName }: { userCode: string; userName: string }) {
   const [phase, setPhase] = useState<DevicePhase>('checking')
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -254,8 +227,8 @@ function Confirm({
   if (phase === 'checking') {
     return (
       <>
-        <Heading>{headings.checking}</Heading>
-        <p className="mt-4 text-m opacity-60">コードを確認しています…</p>
+        <Title>コードを確認しています</Title>
+        <Body dim>少しお待ちください。</Body>
       </>
     )
   }
@@ -263,16 +236,16 @@ function Confirm({
   if (phase === 'error') {
     return (
       <>
-        <Heading>{headings.error}</Heading>
-        <Notice role="alert">ERR {message}</Notice>
-        <p className="mt-4 text-m">
+        <Title>コードを確認できませんでした</Title>
+        <Notice role="alert">{message}</Notice>
+        <Body>
           <a
             href="/device"
             className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
           >
             コードを入力し直す
           </a>
-        </p>
+        </Body>
       </>
     )
   }
@@ -280,9 +253,10 @@ function Confirm({
   if (phase === 'approved') {
     return (
       <>
-        <Heading>{headings.approved}</Heading>
-        <Notice role="status">コマンドラインに戻ってください。そのまま、ログインが完了します。</Notice>
-        <p className="mt-4 text-s opacity-60">このページは、閉じて構いません。</p>
+        <Title>許可しました</Title>
+        <Code code={userCode} settled />
+        <Notice role="status">ターミナルに戻ってください。ログインは、そのまま完了します。</Notice>
+        <Body dim>このページは、閉じて構いません。</Body>
       </>
     )
   }
@@ -290,32 +264,24 @@ function Confirm({
   if (phase === 'denied') {
     return (
       <>
-        <Heading>{headings.denied}</Heading>
-        <Notice role="status">コマンドラインのログインは、行われません。</Notice>
+        <Title>許可しませんでした</Title>
+        <Code code={userCode} settled />
+        <Notice role="status">ターミナルのログインは、行われません。</Notice>
       </>
     )
   }
 
   return (
     <>
-      <Heading>{headings.confirm}</Heading>
-      <p className="mt-4 text-m">コマンドラインツールが、あなたのアカウントでのログインを求めています。</p>
-      <Rows>
-        <Row index={1} label="コード">
-          <span className="font-mono font-bold tracking-widest">{formatUserCode(userCode)}</span>
-        </Row>
-        <Row index={2} label="アカウント" note={userEmail}>
-          {userName}
-        </Row>
-      </Rows>
-      <p className="mt-4 text-m">
-        コマンドラインに表示されているコードと、同じですか? 違うときや、心当たりがないときは、許可しないでください。
-      </p>
-      {message && <Notice role="alert">ERR {message}</Notice>}
-      <div className="mt-4 flex flex-wrap gap-3">
+      <Title>ターミナルのコードと同じですか?</Title>
+      <Code code={userCode} />
+      <Body>{userName} のアカウントで、ターミナルのログインを許可します。</Body>
+      <Body dim>違う、または心当たりがないときは、許可しないでください。</Body>
+      {message && <Notice role="alert">{message}</Notice>}
+      <div className="mt-8 flex flex-wrap gap-3">
         <IconButton
           icon={Check}
-          label="許可"
+          label="ログインを許可"
           showLabel
           variant="solid"
           side="bottom"
@@ -324,7 +290,7 @@ function Confirm({
         />
         <IconButton
           icon={X}
-          label="拒否"
+          label="許可しない"
           showLabel
           variant="outline"
           side="bottom"
