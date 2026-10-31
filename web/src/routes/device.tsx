@@ -22,8 +22,8 @@ import {
 //
 // 見た目(frontend-design の手順で設計):
 // - ここでの人の仕事は 1 つ: **ターミナルに出ているコードと、ここのコードが同じか見比べて、許可するか決める**。
-//   だから主役は、そのコード。墨の地に紙の文字で大きく出し(64px。9 文字が 34rem の列に収まる大きさ。狭い画面は 36px まで縮む)、開いたときに 1 文字ずつ打たれていく(動きはこの 1 回だけ)。
-// - 文字は DotGothic16 だけ(太字がないので、太字は使わない。大きさは 16px の倍数で、ドットをくっきり出す: コード 64、見出し 32、本文 16)。
+//   だから主役は、そのコード。墨の地に紙の文字で出し(48px。帯は文字の幅に合わせる。狭い画面は 32px)、開いたときに 1 文字ずつ打たれていく(動きはこの 1 回だけ)。
+// - 文字は DotGothic16 だけ(太字がないので、太字は使わない。大きさは 16px の倍数で、ドットをくっきり出す: コード 48、見出し 32、本文 16)。
 // - 番号・ラベル・罫線の行は使わない(手順の連なりではないので、番号は意味を持たない)。区切りは余白で行う。
 // - 背景は、ホームと同じ山の絵。
 export const Route = createFileRoute('/device')({
@@ -42,22 +42,31 @@ function DevicePage() {
   if (isPending) return <main className="dot-grid h-screen" />
 
   return (
+    <DeviceFrame>
+      {session?.user ? (
+        <Approve
+          // コードが変わったら、最初から(確認・結果の状態を持ち越さない)
+          key={userCode ?? ''}
+          userCode={userCode}
+          userName={session.user.name}
+        />
+      ) : (
+        <SignIn userCode={userCode} />
+      )}
+    </DeviceFrame>
+  )
+}
+
+/** ページの枠(背景の山・列・フォント)。確認用の画面からも使えるよう、切り出してある */
+export function DeviceFrame({ children }: { children: React.ReactNode }) {
+  return (
     // `font-dot`: このページの文字をドット絵風にする。`--font-mono` も同じフォントにして、`font-mono` の部分(ログインボタン)も揃える。
     // `[font-synthesis:none]`: 太字のない書体を、ブラウザが無理に太くして滲ませない
-    <main className="dot-grid flex min-h-screen justify-center px-4 py-10 font-dot [--font-mono:var(--font-dot)] [font-synthesis:none] sm:py-16">
+    <main className="dot-grid flex min-h-screen items-start justify-center px-4 pt-[18vh] pb-10 font-dot [--font-mono:var(--font-dot)] [font-synthesis:none]">
       <section aria-label="ターミナルのログイン" className="relative z-10 w-full max-w-[34rem]">
         {/* 背景。ホームと同じ山の絵(アプリ共通のドットの上に重ねる) */}
         <DotField shape="char" className="pointer-events-none fixed inset-0 -z-10 h-full w-full" />
-        {session?.user ? (
-          <Approve
-            // コードが変わったら、最初から(確認・結果の状態を持ち越さない)
-            key={userCode ?? ''}
-            userCode={userCode}
-            userName={session.user.name}
-          />
-        ) : (
-          <SignIn userCode={userCode} />
-        )}
+        {children}
       </section>
     </main>
   )
@@ -65,7 +74,7 @@ function DevicePage() {
 
 /** ページの問い・見出し(32px) */
 function Title({ children }: { children: React.ReactNode }) {
-  return <h1 className="text-[32px] leading-10">{children}</h1>
+  return <h1 className="text-[24px] leading-8 sm:text-[32px] sm:leading-10">{children}</h1>
 }
 
 /** 本文(16px) */
@@ -93,7 +102,7 @@ function Code({ code, settled = false }: { code: string; settled?: boolean }) {
     <p
       role="img"
       aria-label={`確認コード ${chars.filter((c) => c !== '-').join(' ')}`}
-      className={`mt-6 bg-ink px-5 py-6 text-[clamp(36px,12vw,64px)] leading-none tracking-[0.06em] text-surface sm:px-8 sm:py-8 ${settled ? 'opacity-60' : ''}`}
+      className={`mt-6 w-fit max-w-full bg-ink px-4 py-3 text-[32px] leading-none tracking-[0.06em] text-surface min-[400px]:text-[48px] sm:px-6 sm:py-4 ${settled ? 'opacity-60' : ''}`}
     >
       {chars.map((c, i) => (
         <span key={i} aria-hidden="true" className="code-char" style={{ '--i': i } as React.CSSProperties}>
@@ -154,7 +163,7 @@ function EnterCode() {
         placeholder="ABCD-EFGH"
         value={value}
         onChange={(e) => setValue(formatUserCode(e.target.value).slice(0, 9))}
-        className="mt-6 w-full bg-ink px-5 py-6 text-[clamp(36px,12vw,64px)] leading-none tracking-[0.06em] text-surface placeholder:text-surface/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink sm:px-8 sm:py-8"
+        className="mt-6 w-full max-w-[22rem] bg-ink px-4 py-3 text-[32px] leading-none tracking-[0.06em] text-surface placeholder:text-surface/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink min-[400px]:text-[48px] sm:px-6 sm:py-4"
       />
       <div className="mt-6">
         <IconButton
@@ -224,6 +233,34 @@ function Confirm({ userCode, userName }: { userCode: string; userName: string })
     }
   }
 
+  return (
+    <ConfirmView
+      phase={phase}
+      userCode={userCode}
+      userName={userName}
+      message={message}
+      busy={busy}
+      onDecide={(kind) => void decide(kind)}
+    />
+  )
+}
+
+/** 確認ページの見た目だけ(通信を持たない)。進み具合ごとの画面を、そのまま描ける */
+export function ConfirmView({
+  phase,
+  userCode,
+  userName,
+  message,
+  busy,
+  onDecide,
+}: {
+  phase: DevicePhase
+  userCode: string
+  userName: string
+  message: string | null
+  busy: boolean
+  onDecide: (kind: 'approve' | 'deny') => void
+}) {
   if (phase === 'checking') {
     return (
       <>
@@ -286,7 +323,7 @@ function Confirm({ userCode, userName }: { userCode: string; userName: string })
           variant="solid"
           side="bottom"
           disabled={busy}
-          onClick={() => void decide('approve')}
+          onClick={() => onDecide('approve')}
         />
         <IconButton
           icon={X}
@@ -295,7 +332,7 @@ function Confirm({ userCode, userName }: { userCode: string; userName: string })
           variant="outline"
           side="bottom"
           disabled={busy}
-          onClick={() => void decide('deny')}
+          onClick={() => onDecide('deny')}
         />
       </div>
     </>
