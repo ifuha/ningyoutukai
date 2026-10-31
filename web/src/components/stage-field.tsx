@@ -25,8 +25,8 @@ export function curtainEdge(ny: number, t: number): number {
 /** 幕が閉じているあいだの、内側の縁(画面の端からの距離)。端から 0.5 は、中央で合わさる位置 */
 const CLOSED_EDGE = 0.52
 /** 幕が開き始めるまでの待ち(秒)と、開ききるまでの時間(秒) */
-export const OPEN_DELAY_SEC = 0.1
-export const OPEN_SEC = 0.7
+export const OPEN_DELAY_SEC = 0.05
+export const OPEN_SEC = 0.45
 
 /**
  * 幕の開き具合(0 = 閉じている 〜 1 = 開ききった)。ページを開いてからの経過時間(秒)から決める。

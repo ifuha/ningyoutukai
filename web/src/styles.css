@@ -173,8 +173,8 @@ body {
 
 .code-char {
   animation: code-in 1ms linear backwards;
-  /* 幕が開く間(約 0.8 秒)のあとから、1 文字ずつ打たれていく */
-  animation-delay: calc(var(--i, 0) * 90ms + 800ms);
+  /* 幕が開く間(約 0.5 秒)のあとから、1 文字ずつ打たれていく */
+  animation-delay: calc(var(--i, 0) * 55ms + 500ms);
 }
 
 /*
@@ -188,7 +188,7 @@ body {
 }
 
 .stage-in {
-  animation: stage-in 0.35s ease-out 0.35s backwards;
+  animation: stage-in 0.25s ease-out 0.2s backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
