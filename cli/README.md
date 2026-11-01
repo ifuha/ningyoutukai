@@ -21,9 +21,28 @@
 
 ## インストール
 
-`pm` は、PATH に入れないと「command not found」になる。次のどちらかで入れる。
+`pm` は、PATH に入れないと「command not found」になる。使うだけなら **A**(Bun も、このリポジトリも要らない)。開発しているなら B か C。
 
-### A. 単一バイナリをビルドして、PATH のあるディレクトリに置く
+### A. GitHub Releases からダウンロードする
+
+[Releases](https://github.com/ifuha/ningyoutukai/releases) の `cli-v*` に、環境ごとのバイナリ(`pm-darwin-arm64` / `pm-darwin-x64` / `pm-linux-x64`)と `SHA256SUMS` がある。
+
+```sh
+VERSION=0.1.0                                   # Releases の cli-vX.Y.Z の X.Y.Z
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')     # darwin / linux
+ARCH=$(uname -m); [ "$ARCH" = x86_64 ] && ARCH=x64; [ "$ARCH" = aarch64 ] && ARCH=arm64
+mkdir -p ~/.local/bin
+curl -fL -o ~/.local/bin/pm "https://github.com/ifuha/ningyoutukai/releases/download/cli-v$VERSION/pm-$OS-$ARCH"
+chmod +x ~/.local/bin/pm                        # ~/.local/bin が PATH に入っていること
+pm -v
+```
+
+- Linux の x64 と、macOS(Apple Silicon・Intel)に対応。Windows は、まだ
+- ブラウザでダウンロードした macOS のファイルは、「開発元を確認できない」と止められることがある。`xattr -d com.apple.quarantine pm` で外せる(`curl` でダウンロードしたものは、止められない)
+- 壊れていないかは、`SHA256SUMS` と照らす: `shasum -a 256 pm`(Linux は `sha256sum pm`)の値が、`SHA256SUMS` の該当行と同じ
+- 接続先は、何も指定しなければ本番。`pm login` だけでよい
+
+### B. 単一バイナリをビルドして、PATH のあるディレクトリに置く
 
 ```sh
 cd cli
@@ -36,7 +55,7 @@ install -m 755 dist/pm ~/.local/bin/pm   # ~/.local/bin が PATH に入ってい
 
 以前の名前(`ningyoutukai`)で入れていたら、古いものを消す: `rm ~/.local/bin/ningyoutukai`。ログインは、そのまま引き継がれる。
 
-### B. Bun のグローバルにインストールする(開発向け)
+### C. Bun のグローバルにインストールする(開発向け)
 
 ```sh
 bun install -g /path/to/ningyoutukai/cli    # このリポジトリの cli/ へのパス
