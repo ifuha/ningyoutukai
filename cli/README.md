@@ -2,17 +2,17 @@
 
 人形使いを、ターミナルから使う CLI。仕様は [docs/v3.0/cli.md](../docs/v3.0/cli.md)。
 
-コマンド名は未定(仮に `ningyoutukai`)。
+コマンド名は `pm`(puppet master = 人形使い)。パッケージ名・キーチェーンの項目・設定ディレクトリ・環境変数は、今までどおり `ningyoutukai` のまま(変えると、今のログインが切れるため)。
 
 ## 使えるコマンド
 
 | コマンド | 内容 |
 | --- | --- |
-| `ningyoutukai login` | ブラウザで承認して、ログインする(トークンは OS のキーチェーンに保存) |
-| `ningyoutukai logout` | この端末のログインを取り消す |
-| `ningyoutukai whoami` | ログイン中のユーザーを出す(`--json` あり) |
-| `ningyoutukai tasks` | 自分に割り振られたタスクの一覧(全プロダクト)。既定は完了以外。`--all` で完了済みも、`--status <状態>` でその状態だけ、`--product <名前 or ID>` でプロダクトを絞る。`--json` あり |
-| `ningyoutukai task <ID>` | タスクの詳細とメッセージ履歴。ID は `tasks` の ID 列(先頭の一部でもよい)。`--json` あり |
+| `pm login` | ブラウザで承認して、ログインする(トークンは OS のキーチェーンに保存) |
+| `pm logout` | この端末のログインを取り消す |
+| `pm whoami` | ログイン中のユーザーを出す(`--json` あり) |
+| `pm tasks` | 自分に割り振られたタスクの一覧(全プロダクト)。既定は完了以外。`--all` で完了済みも、`--status <状態>` でその状態だけ、`--product <名前 or ID>` でプロダクトを絞る。`--json` あり |
+| `pm task <ID>` | タスクの詳細とメッセージ履歴。ID は `tasks` の ID 列(先頭の一部でもよい)。`--json` あり |
 
 状態は `in_progress`(作業中)/ `reported`(確認待ち)/ `rejected`(差し戻し中)/ `completed`(完了)。
 
@@ -21,18 +21,20 @@
 
 ## インストール
 
-`ningyoutukai` は、PATH に入れないと「command not found」になる。次のどちらかで入れる。
+`pm` は、PATH に入れないと「command not found」になる。次のどちらかで入れる。
 
 ### A. 単一バイナリをビルドして、PATH のあるディレクトリに置く
 
 ```sh
 cd cli
 bun install
-bun run build                # dist/ningyoutukai ができる
-install -m 755 dist/ningyoutukai ~/.local/bin/ningyoutukai   # ~/.local/bin が PATH に入っていること
+bun run build                # dist/pm ができる
+install -m 755 dist/pm ~/.local/bin/pm   # ~/.local/bin が PATH に入っていること
 ```
 
 ソースを変えたら、`bun run build` と `install` をやり直す。Bun が入っていない環境でも動く。
+
+以前の名前(`ningyoutukai`)で入れていたら、古いものを消す: `rm ~/.local/bin/ningyoutukai`。ログインは、そのまま引き継がれる。
 
 ### B. Bun のグローバルにインストールする(開発向け)
 
@@ -40,7 +42,7 @@ install -m 755 dist/ningyoutukai ~/.local/bin/ningyoutukai   # ~/.local/bin が 
 bun install -g /path/to/ningyoutukai/cli    # このリポジトリの cli/ へのパス
 ```
 
-- コマンドは `~/.bun/bin/ningyoutukai` にできる。`~/.bun/bin` が PATH に入っていること(Bun のインストーラが、普通は入れてくれる。入っていなければ `export PATH="$HOME/.bun/bin:$PATH"`)
+- コマンドは `~/.bun/bin/pm` にできる。`~/.bun/bin` が PATH に入っていること(Bun のインストーラが、普通は入れてくれる。入っていなければ `export PATH="$HOME/.bun/bin:$PATH"`)
 - ソースへのリンクなので、**リポジトリの場所を動かす・消すと動かなくなる**。ソースの変更は、すぐ反映される
 - 消すとき: `bun remove -g ningyoutukai-cli`
 
@@ -64,6 +66,7 @@ NINGYOUTUKAI_API_URL=http://localhost:3001 bun run start -- login
 
 ## よくある詰まりどころ
 
-- **`command not found: ningyoutukai`** — まだインストールしていないか、PATH に入っていない。上のインストールを行う
-- **`login` とだけ打つと `login:` と出る** — OS 標準の `login` コマンドが動いている。`ningyoutukai login` と打つ(`Ctrl+C` で抜ける)
+- **`command not found: pm`** — まだインストールしていないか、PATH に入っていない。上のインストールを行う
+- **`pm` が別のコマンドを起動する** — Android の端末では、OS 標準の `pm`(パッケージマネージャ)がある。PATH の順番で、このコマンドが先になるようにするか、別名にして使う
+- **`login` とだけ打つと `login:` と出る** — OS 標準の `login` コマンドが動いている。`pm login` と打つ(`Ctrl+C` で抜ける)
 - **「キーチェーンを使えませんでした」** — Linux で libsecret(Secret Service)が無い、など。環境変数 `NINGYOUTUKAI_TOKEN` を使う(トークンは、平文のファイルには保存しない)

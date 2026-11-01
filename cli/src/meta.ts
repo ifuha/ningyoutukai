@@ -1,7 +1,11 @@
-// CLI の定数。コマンド名は未定(docs/v3.0/cli.md の「7. 決めたこと・後で決めること」)なので、ここ 1 か所に置く
+// CLI の定数。コマンド名は、ここ 1 か所に置く(docs/v3.0/cli.md の「7. 決めたこと・後で決めること」)
 
-/** コマンド名(メッセージの案内に使う) */
-export const CLI_NAME = 'ningyoutukai'
+/**
+ * コマンド名(メッセージの案内に使う)。`pm` = puppet master(人形使い)。
+ * 内部の名前(下の `CLIENT_ID`・`SECRET_SERVICE`・環境変数・設定ディレクトリ `~/.config/ningyoutukai`)は、
+ * 変えると今のログインが切れるので、`ningyoutukai` のまま
+ */
+export const CLI_NAME = 'pm'
 
 /** デバイスコードのログインで api に名乗る client_id(api の `CLI_CLIENT_ID` と同じ) */
 export const CLIENT_ID = 'ningyoutukai-cli'

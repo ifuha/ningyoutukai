@@ -8,13 +8,13 @@
     "start": "bun run src/index.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build --compile src/index.ts --outfile dist/ningyoutukai"
+    "build": "bun build --compile src/index.ts --outfile dist/pm"
   },
   "devDependencies": {
     "bun-types": "^1.4.3",
     "typescript": "^6.0.2"
   },
   "bin": {
-    "ningyoutukai": "src/index.ts"
+    "pm": "src/index.ts"
   }
 }
