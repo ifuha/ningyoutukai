@@ -49,10 +49,16 @@ export function dotSize(nx: number, ny: number, t: number): number {
 export function DotField({
   className,
   shape = 'square',
+  scene = dotSize,
+  fade = edgeFade,
 }: {
   className?: string
   // 'square': 四角の大きさで描く / 'char': 記号の濃さで描く
   shape?: 'square' | 'char'
+  // 描く絵。時刻 t(秒)の、点 (nx, ny) の大きさ(0〜1)を返す。既定は、山(`dotSize`)
+  scene?: (nx: number, ny: number, t: number) => number
+  // 画面の端で絵を薄くする倍率(0〜1)。縦の位置 ny から決める。既定は、上下の端で薄くする(`edgeFade`)
+  fade?: (ny: number) => number
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
 
@@ -106,9 +112,9 @@ export function DotField({
           // 絵の中の位置(0〜1)。上下の端は edgeFade が薄くする
           const nx = (gx * STEP + STEP / 2 - left) / designWidth
           const ny = gy / rows
-          const fade = edgeFade(ny)
-          if (fade <= 0) continue
-          const size = dotSize(nx, ny, t) * fade
+          const edge = fade(ny)
+          if (edge <= 0) continue
+          const size = scene(nx, ny, t) * edge
           if (shape === 'char') {
             if (size < 0.08) continue
             const glyph = RAMP[Math.min(RAMP.length - 1, Math.floor(size * RAMP.length))]
@@ -170,7 +176,7 @@ export function DotField({
       mo.disconnect()
       reduce.removeEventListener('change', start)
     }
-  }, [shape])
+  }, [shape, scene, fade])
 
   return <canvas ref={ref} aria-hidden="true" className={className} />
 }
