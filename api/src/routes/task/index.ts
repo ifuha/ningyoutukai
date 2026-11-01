@@ -7,7 +7,9 @@ import { listTasks } from "./list-tasks";
 import { reportComplete } from "./report-complete";
 import { updateTask } from "./update-task";
 import { listMessages } from "./list-messages";
+import { createMessage } from "./create-message";
 import { updateMessage } from "./update-message";
+import { deleteMessage } from "./delete-message";
 import { assignAssignee } from "./assign-assignee";
 import { suggestAssignee } from "./suggest-assignee";
 
@@ -26,4 +28,6 @@ export const taskRoutes = new Elysia({ name: "task-routes" })
   .use(reportComplete)
   .use(confirmComplete)
   .use(listMessages)
-  .use(updateMessage);
+  .use(createMessage)
+  .use(updateMessage)
+  .use(deleteMessage);
