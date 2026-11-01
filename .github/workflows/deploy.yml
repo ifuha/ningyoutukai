@@ -1,0 +1,146 @@
+# 本番へのデプロイ(api → web)。main に push(= PR のマージ)されると動く。手動実行もできる。
+# 順序: 検査(型 + マイグレーションの適用済み確認)→ api → web → 動作確認。
+# - マイグレーションは自動では流さない(取り消せないため)。未適用のものがあれば、ここで止める。
+#   先に Actions の `migrate` を実行してから、このワークフローを手動で実行し直す。
+# - Environment「production」は最初の検査(verify)だけに付けている。レビュー必須の保護ルールを付けると、承認は 1 回で済む(承認されるまで、何も本番に出ない)。
+# - 必要なシークレット(Settings → Secrets and variables → Actions): CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、NEON_DATABASE_URL
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    # 文書・設定だけの変更では、本番に出さない
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/backup.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 本番への出し方が重ならないよう、直列にする。実行中のものは止めない(途中で止めると、api だけ新しい状態になる)
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  # 本番の URL(動作確認に使う)。docs/deploy.md の案 S: web のオリジンだけが外に見える
+  PRODUCTION_URL: https://ningyoutukai-web.kosame-project.workers.dev
+
+jobs:
+  verify:
+    name: 検査(型・マイグレーション)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v7 # v7.0.1。要ピン留め(docs/deploy.md の「GitHub Actions のワークフロー」)
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - name: api の依存と型
+        working-directory: api
+        run: |
+          bun install --frozen-lockfile
+          npx tsc --noEmit
+      - uses: actions/setup-node@v7 # v7.1.0。要ピン留め
+        with:
+          node-version-file: .nvmrc
+          check-latest: true
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: web の依存と型
+        working-directory: web
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: マイグレーションが、すべて本番に適用済みか確認する
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "エラー: NEON_DATABASE_URL が設定されていません" >&2
+            exit 1
+          fi
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client; }
+          # drizzle v1 は api/drizzle/<日時_名前>/ のディレクトリ 1 つが 1 マイグレーション
+          total="$(find api/drizzle -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
+          exists="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -c "select to_regclass('drizzle.__drizzle_migrations') is not null")"
+          applied=0
+          if [ "$exists" = "t" ]; then
+            applied="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -c "select count(*) from drizzle.__drizzle_migrations")"
+          fi
+          echo "リポジトリのマイグレーション: ${total} 件 / 適用済み: ${applied} 件"
+          if [ "$applied" -lt "$total" ]; then
+            echo "エラー: 未適用のマイグレーションが $((total - applied)) 件あります。先に Actions の migrate を実行してから、このワークフローを実行し直してください" >&2
+            exit 1
+          fi
+
+  deploy-api:
+    name: api をデプロイ
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: api
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7 # v7.0.1。要ピン留め(docs/deploy.md の「GitHub Actions のワークフロー」)
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - run: bun install --frozen-lockfile
+      - name: デプロイ
+        run: bun run deploy
+
+  deploy-web:
+    name: web をデプロイ
+    needs: deploy-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7 # v7.0.1。要ピン留め(docs/deploy.md の「GitHub Actions のワークフロー」)
+      - uses: actions/setup-node@v7 # v7.1.0。要ピン留め
+        with:
+          node-version-file: .nvmrc
+          check-latest: true
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # web は api の型(`elysia` を含む)を読むため、api の依存も入れる(型の解決だけ)
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - run: bun install --frozen-lockfile
+        working-directory: api
+      - name: ビルドとデプロイ
+        run: npm run deploy
+
+  smoke:
+    name: 動作確認
+    needs: deploy-web
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # 反映に少し時間がかかることがあるので、数回試す。ログインしていない状態の確認だけ(データには触れない)
+      - name: web と api(web 経由)が応答するか
+        run: |
+          for path in / /api/auth/get-session; do
+            ok=0
+            for i in 1 2 3 4 5; do
+              code="$(curl -s -o /dev/null -w '%{http_code}' "$PRODUCTION_URL$path" || true)"
+              echo "$path -> $code (試行 $i)"
+              if [ "$code" = "200" ]; then ok=1; break; fi
+              sleep 5
+            done
+            if [ "$ok" != "1" ]; then
+              echo "エラー: $path が 200 を返しません" >&2
+              exit 1
+            fi
+          done

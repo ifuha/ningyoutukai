@@ -5,6 +5,7 @@ import { auth, webOrigin } from "./auth";
 import { errorHandler } from "./lib/error-handler";
 import { calendarRoutes } from "./routes/calendar";
 import { invitationRoutes } from "./routes/invitation";
+import { meRoutes } from "./routes/me";
 import { memberRoutes } from "./routes/member";
 import { productRoutes } from "./routes/product";
 import { productRevisionRoutes } from "./routes/product-revision";
@@ -34,6 +35,7 @@ export const app = new Elysia()
   .use(productRevisionRoutes)
   .use(sectionRoutes)
   .use(taskRoutes)
+  .use(meRoutes)
   .use(productManageRoutes)
   .use(invitationRoutes)
   .use(memberRoutes)

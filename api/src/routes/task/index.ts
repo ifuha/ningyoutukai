@@ -10,6 +10,8 @@ import { listMessages } from "./list-messages";
 import { createMessage } from "./create-message";
 import { updateMessage } from "./update-message";
 import { deleteMessage } from "./delete-message";
+import { assignAssignee } from "./assign-assignee";
+import { suggestAssignee } from "./suggest-assignee";
 
 /**
  * タスク機能の API(docs/api.md「タスク機能」)。
@@ -20,6 +22,8 @@ export const taskRoutes = new Elysia({ name: "task-routes" })
   .use(listTasks)
   .use(getTask)
   .use(listMemberTasks)
+  .use(suggestAssignee)
+  .use(assignAssignee) // PATCH .../task/assignee は、PATCH .../task/:taskId より先に登録する
   .use(updateTask)
   .use(reportComplete)
   .use(confirmComplete)

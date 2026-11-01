@@ -240,12 +240,13 @@ Cloudflare の Cron Trigger は Worker を起動するだけで、Worker の中�
 
 ### GitHub Actions のワークフロー
 
-3 つのワークフローが `.github/workflows/` にある。
+4 つのワークフローが `.github/workflows/` にある。
 
 | ファイル | きっかけ | 内容 | 使うシークレット |
 | --- | --- | --- | --- |
 | `ci.yml` | PR(base: dev / main)、dev への push | api: 型検査、マイグレーション、`bun test`(Postgres 18 のサービスコンテナ)。web: 型検査、ビルド | なし(フォークの PR でも安全) |
 | `migrate.yml` | 手動のみ | 本番(Neon)へ `bun run db:migrate` | `NEON_DATABASE_URL` |
+| `deploy.yml` | main への push(= PR のマージ)と手動 | 検査(型、マイグレーションが適用済みか)→ api → web → 動作確認。マイグレーションは流さない | `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`、`NEON_DATABASE_URL` |
 | `backup.yml` | 毎日(UTC 18:17)と手動 | `infra/scripts/backup.sh`(ダンプ → R2) | `NEON_DATABASE_URL`、`R2_*` |
 
 全て `permissions: contents: read`。
@@ -257,6 +258,8 @@ Cloudflare の Cron Trigger は Worker を起動するだけで、Worker の中�
 | 名前 | 内容 |
 | --- | --- |
 | `NEON_DATABASE_URL` | Neon の **direct** 接続文字列(ホスト名に `-pooler` が入らない。[1.](#1-neon-のプロジェクトを作る)) |
+| `CLOUDFLARE_API_TOKEN` | デプロイ用の Cloudflare API トークン(`deploy.yml`)。テンプレート「Edit Cloudflare Workers」で作る。権限は Workers Scripts の編集、アカウントの読み取り、など(Hyperdrive の設定はデプロイで変えないので不要) |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare のアカウント ID(`deploy.yml`) |
 | `R2_ACCOUNT_ID` | Cloudflare のアカウント ID |
 | `R2_BUCKET` | バックアップ用のバケット名(例: `ningyoutukai-backup`) |
 | `R2_ACCESS_KEY_ID` | R2 API トークンの Access Key ID |
@@ -265,6 +268,8 @@ Cloudflare の Cron Trigger は Worker を起動するだけで、Worker の中�
 ```sh
 # gh のコマンドで登録する例(値は標準入力から。コマンドラインに書かない)
 gh secret set NEON_DATABASE_URL --repo ifuha/ningyoutukai
+gh secret set CLOUDFLARE_API_TOKEN --repo ifuha/ningyoutukai
+gh secret set CLOUDFLARE_ACCOUNT_ID --repo ifuha/ningyoutukai
 gh secret set R2_ACCOUNT_ID --repo ifuha/ningyoutukai
 gh secret set R2_BUCKET --repo ifuha/ningyoutukai
 gh secret set R2_ACCESS_KEY_ID --repo ifuha/ningyoutukai
@@ -277,6 +282,7 @@ gh secret set R2_SECRET_ACCESS_KEY --repo ifuha/ningyoutukai
 
 - **CI**: PR を作る / dev に push すると自動で動く。結果は PR の Checks、またはリポジトリの Actions タブで見る。
 - **マイグレーション**: スキーマを変えたとき、デプロイの前に実行する。Actions タブ → `migrate` → Run workflow → `confirm` に `migrate` と入力して実行する(違う文字列だと何もしない)。Environment に保護ルールがあれば、承認後に始まる。ログには、direct 接続の検査結果、リポジトリのマイグレーション数と適用済みの数(実行前)、適用後の数が出る。接続文字列は出ない。pooled(`-pooler`)の文字列が登録されていると、検査で失敗する。
+- **デプロイ(自動)**: PR を `main` にマージすると、`deploy.yml` が動く。①検査(api・web の型、マイグレーションがすべて本番に適用済みか)→ ② api のデプロイ → ③ web のデプロイ → ④ 本番の URL の動作確認(`/` と `/api/auth/get-session` が 200)。**マイグレーションは自動では流さない。** 未適用のものがあると、①で止まる。スキーマを変えた PR では、マージの**前**に `migrate` を実行しておく(旧 api と共存できる変更にする)か、マージ後に止まったら `migrate` を実行してから、Actions タブ → `deploy` → Run workflow で出し直す。Environment `production` にレビュー必須を付けると、①の前に承認が 1 回入る。手元から `bun run deploy` / `npm run deploy` で出す手順(6.)も、そのまま使える。
 - **バックアップの手動実行**: Actions タブ → `backup` → Run workflow。古いダンプも削除したいときだけ `prune` にチェックを入れる。成功すると、ログの最後に保存先のキー(`ningyoutukai/YYYY/MM/...dump`)が出る。R2 のバケットにファイルがあることも確認する。
 - 初回のバックアップのあとは、[リストアの確認](#リストアの確認)を 1 回行う。
 

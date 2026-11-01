@@ -1,0 +1,20 @@
+{
+  "name": "ningyoutukai-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "人形使いの CLI(ターミナルから API を使う)。docs/v3.0/cli.md",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build --compile src/index.ts --outfile dist/ningyoutukai"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.3",
+    "typescript": "^6.0.2"
+  },
+  "bin": {
+    "ningyoutukai": "src/index.ts"
+  }
+}

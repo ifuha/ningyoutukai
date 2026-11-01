@@ -31,16 +31,16 @@ describe('dotSize', () => {
 })
 
 describe('layoutFor', () => {
-  test('1440px 付近は 1440px 向け(1 マス 16px)', () => {
+  test('1000〜1719px は 1 マス 16px で、絵の横幅は画面の幅いっぱい', () => {
     expect(layoutFor(1440)).toEqual({ step: 16, designWidth: 1440 })
-    expect(layoutFor(1000)).toEqual({ step: 16, designWidth: 1440 })
-    expect(layoutFor(1719)).toEqual({ step: 16, designWidth: 1440 })
+    expect(layoutFor(1000)).toEqual({ step: 16, designWidth: 1000 })
+    expect(layoutFor(1719)).toEqual({ step: 16, designWidth: 1719 })
   })
 
-  test('2000px 付近は 2000px 向け(1 マス 22px)', () => {
-    expect(layoutFor(1720)).toEqual({ step: 22, designWidth: 2000 })
-    expect(layoutFor(2000)).toEqual({ step: 22, designWidth: 2000 })
-    expect(layoutFor(3840)).toEqual({ step: 22, designWidth: 2000 })
+  test('1720px 以上は 1 マス 22px で、絵の横幅は画面の幅いっぱい(広い画面でも両側に隙間を作らない)', () => {
+    expect(layoutFor(1720)).toEqual({ step: 22, designWidth: 1720 })
+    expect(layoutFor(2560)).toEqual({ step: 22, designWidth: 2560 })
+    expect(layoutFor(3840)).toEqual({ step: 22, designWidth: 3840 })
   })
 
   test('1000px 未満は、絵の全体が収まるよう、幅に合わせて縮める', () => {
@@ -50,22 +50,20 @@ describe('layoutFor', () => {
 })
 
 describe('edgeFade', () => {
-  test('中央では消えず、端では 0 になる', () => {
-    expect(edgeFade(0.5, 0.5)).toBe(1)
-    expect(edgeFade(0, 0.5)).toBe(0)
-    expect(edgeFade(1, 0.5)).toBe(0)
-    expect(edgeFade(0.5, 1)).toBe(0)
+  test('中央では消えず、上下の端では 0 になる', () => {
+    expect(edgeFade(0.5)).toBe(1)
+    expect(edgeFade(0)).toBe(0)
+    expect(edgeFade(1)).toBe(0)
   })
 
-  test('端に近いほど薄い', () => {
-    expect(edgeFade(0.05, 0.5)).toBeLessThan(edgeFade(0.1, 0.5))
-    expect(edgeFade(0.5, 0.95)).toBeLessThan(edgeFade(0.5, 0.85))
+  test('上下の端に近いほど薄い', () => {
+    expect(edgeFade(0.95)).toBeLessThan(edgeFade(0.85))
   })
 
   test('いつも 0〜1 に収まる', () => {
     for (let i = 0; i <= 20; i++) {
       for (let j = 0; j <= 20; j++) {
-        const v = edgeFade(i / 20, j / 20)
+        const v = edgeFade(j / 20)
         expect(v).toBeGreaterThanOrEqual(0)
         expect(v).toBeLessThanOrEqual(1)
       }

@@ -18,7 +18,7 @@ const variantClass: Record<IconButtonVariant, string> = {
   // 枠なし。ホバーで背景が付く
   plain: 'hover:bg-side-item',
   // 細い枠(落ち着いた色。アプリのボタンの流儀)
-  outline: 'border border-line hover:bg-side-item',
+  outline: 'shadow-box hover:bg-side-item',
   // 主役。文字色の塗り
   solid: 'border border-ink bg-ink text-surface hover:opacity-80',
 }

@@ -1,11 +1,15 @@
 import "./lib/load-env";
 import { betterAuth } from "better-auth";
+import { bearer, deviceAuthorization } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import * as schema from "./db/auth-schema";
 
 export const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
+
+/** CLI のログイン(デバイスコード)で許す client_id。これ以外は断る */
+export const CLI_CLIENT_ID = "ningyoutukai-cli";
 
 type GithubProfileLite = {
   id: number | string;
@@ -95,6 +99,17 @@ export const auth = betterAuth({
     },
   },
   socialProviders,
+  plugins: [
+    // `Authorization: Bearer <セッショントークン>` でも、cookie と同じログインとして受ける(CLI 用)
+    bearer(),
+    // CLI のログイン(デバイスコード)。承認は Web の /device ページで行う(docs/v3.0/cli.md)
+    deviceAuthorization({
+      verificationUri: `${webOrigin}/device`,
+      validateClient: (clientId) => clientId === CLI_CLIENT_ID,
+      expiresIn: "15m",
+      interval: "5s",
+    }),
+  ],
   // 案 D(web と api が同じ親ドメインの別サブドメイン)のときだけ、cookie を親ドメインに付ける。
   // COOKIE_DOMAIN(例: `.example.com`)が未設定なら何も足さない(従来どおり。案 S の同一オリジンもこちら)
   ...(process.env.COOKIE_DOMAIN
