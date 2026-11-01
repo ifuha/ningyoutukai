@@ -480,7 +480,7 @@ export function ConfirmView({
     <>
       <Title>ターミナルのコードと同じですか?</Title>
       <Code code={userCode} />
-      <Body dim>違う、または心当たりがないときは、許可しないでください。</Body>
+      <Body dim>心当たりがないときは、許可しないでください。</Body>
       {message && (
         <Notice tone="red" role="alert">
           {message}
