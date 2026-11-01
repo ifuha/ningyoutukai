@@ -1,0 +1,122 @@
+# CLI(pm)の単一バイナリを、タグ `cli-vX.Y.Z` を打つと GitHub Releases に載せる(docs/v3.0/cli.md の「配布」)。
+# - macOS 向けは macOS のランナーで、Linux 向けは Linux のランナーでビルドする(Apple Silicon は署名のないバイナリを動かさないため)
+# - 流れ: 下書きのリリースを作る → 3 環境でビルドして載せる → SHA256SUMS を載せて公開する。途中で失敗しても、下書きのまま残るだけで、公開はされない
+# - プルリクエストでは、ビルドと起動の確認だけ(リリースは作らない)
+# - アプリ本体のリリース(v2.6 など)とは別のタグ(cli-v*)。「Latest」の印は、アプリ側に残す(`--latest=false`)
+#
+# リリースの手順: cli/package.json の version と cli/src/cli.ts の VERSION を上げる(同じ値。テストが確かめる)
+#   → dev → main へ → `git tag cli-v0.2.0 && git push origin cli-v0.2.0`
+name: cli-release
+
+on:
+  push:
+    tags: ["cli-v*"]
+  pull_request:
+    branches: [dev, main]
+    paths: ["cli/**", ".github/workflows/cli-release.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  create:
+    # タグのときだけ。下書きのリリースを作る
+    if: startsWith(github.ref, 'refs/tags/cli-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7 # v7.0.1。要ピン留め(docs/deploy.md の「GitHub Actions のワークフロー」)
+      - name: タグと、package.json・VERSION が同じか確かめる
+        run: |
+          tag_version="${GITHUB_REF_NAME#cli-v}"
+          pkg_version="$(grep -m1 '"version"' cli/package.json | sed -E 's/.*"version": *"([^"]+)".*/\1/')"
+          code_version="$(grep -m1 'export const VERSION' cli/src/cli.ts | sed -E "s/.*'([^']+)'.*/\1/")"
+          echo "tag=$tag_version package.json=$pkg_version cli.ts=$code_version"
+          if [ "$tag_version" != "$pkg_version" ] || [ "$tag_version" != "$code_version" ]; then
+            echo "::error::タグ($tag_version)・cli/package.json($pkg_version)・cli/src/cli.ts($code_version)のバージョンが違います"
+            exit 1
+          fi
+          echo "VERSION=$tag_version" >> "$GITHUB_ENV"
+      - name: 下書きのリリースを作る
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<EOF
+          人形使いの CLI \`pm\` の単一バイナリです(Bun は要りません)。使い方は [cli/README.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/cli/README.md)。
+
+          | ファイル | 環境 |
+          | --- | --- |
+          | \`pm-darwin-arm64\` | macOS(Apple Silicon) |
+          | \`pm-darwin-x64\` | macOS(Intel) |
+          | \`pm-linux-x64\` | Linux(x64) |
+
+          ダウンロードしたら、実行権限を付けて PATH のあるディレクトリに置きます。\`SHA256SUMS\` で、ファイルが壊れていないか確かめられます。
+          EOF
+          gh release create "$GITHUB_REF_NAME" --draft --latest=false \
+            --title "pm ${VERSION}(CLI)" --notes-file notes.md
+
+  build:
+    needs: [create]
+    # create はタグのときだけ動く。プルリクエストでは skipped になるので、それでもビルドは動かす
+    if: ${{ !cancelled() && (needs.create.result == 'success' || needs.create.result == 'skipped') }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    # タグのときだけ、リリースにファイルを載せる(下の `if`)。プルリクエストでは、書き込みは使わない
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, target: bun-darwin-arm64, asset: pm-darwin-arm64, smoke: true }
+          - { os: macos-latest, target: bun-darwin-x64, asset: pm-darwin-x64, smoke: false }
+          - { os: ubuntu-latest, target: bun-linux-x64, asset: pm-linux-x64, smoke: true }
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - uses: actions/checkout@v7 # v7.0.1。要ピン留め(docs/deploy.md の「GitHub Actions のワークフロー」)
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - run: bun install --frozen-lockfile
+      - name: ビルドする(${{ matrix.target }})
+        run: bun build --compile --target=${{ matrix.target }} src/index.ts --outfile dist/${{ matrix.asset }}
+      - name: 起動を確かめる
+        # そのランナーで動く環境だけ(Intel 向けは、Apple Silicon のランナーでは試さない)
+        if: matrix.smoke
+        run: |
+          out="$(./dist/${{ matrix.asset }} -v)"
+          echo "$out"
+          case "$out" in "pm "*) ;; *) echo "::error::-v の出力が想定と違います: $out"; exit 1 ;; esac
+          ./dist/${{ matrix.asset }} --help > /dev/null
+      - name: リリースに載せる
+        if: startsWith(github.ref, 'refs/tags/cli-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" "dist/${{ matrix.asset }}"
+
+  publish:
+    # タグのときだけ。3 環境が載ったら、SHA256SUMS を載せて、下書きを公開する
+    if: startsWith(github.ref, 'refs/tags/cli-v')
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: 載ったファイルを確かめて、SHA256SUMS を作る
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir assets
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --dir assets
+          for f in pm-darwin-arm64 pm-darwin-x64 pm-linux-x64; do
+            [ -s "assets/$f" ] || { echo "::error::$f がリリースにありません"; exit 1; }
+          done
+          (cd assets && sha256sum pm-darwin-arm64 pm-darwin-x64 pm-linux-x64 > SHA256SUMS && cat SHA256SUMS)
+          gh release upload "$GITHUB_REF_NAME" assets/SHA256SUMS --repo "$GITHUB_REPOSITORY"
+      - name: 下書きを公開する
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest=false
