@@ -56,8 +56,9 @@ const providers: {
  * GitHub / Google のログインボタン。
  * ログイン画面はトップページ(`/`)。ログインしたあとも、失敗したときも、`/` に戻る
  * (失敗したときは、`/?error=…` の形で、理由が付く)。
+ * `callbackPath`: ログインしたあとに戻る先(既定はホーム)。CLI の承認ページ(`/device?user_code=…`)が、ここに戻す
  */
-export function LoginButtons() {
+export function LoginButtons({ callbackPath = '/home' }: { callbackPath?: string }) {
   const [pending, setPending] = useState<Provider | null>(null)
   const [failed, setFailed] = useState<string | null>(null)
 
@@ -69,7 +70,7 @@ export function LoginButtons() {
       const { error } = await authClient.signIn.social({
         provider,
         // ログインに成功したら、ホームへ。失敗したら、ログイン画面(`/`)に戻って、理由を出す
-        callbackURL: `${origin}/home`,
+        callbackURL: `${origin}${callbackPath}`,
         errorCallbackURL: origin,
       })
       // 成功すると、ブラウザが認可画面に移動する。ここに来るのは、開始に失敗したとき
