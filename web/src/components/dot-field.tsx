@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { RAMP } from '#/lib/glyph-ramp'
 
 // 格子の大きさで絵を描く背景(ドットマトリクス)。山の稜線 2 枚だけ(空は何も描かない)。
 // 四角の大きさ、または記号(. : + # @ など)の濃さで描く。
@@ -17,8 +18,7 @@ export function layoutFor(width: number): Layout {
   return { step: Math.max(9, width / 90), designWidth: width }
 }
 
-// 文字で描くときの、薄い順の記号(大きさ 0〜1 を、この並びの添字に割り当てる)
-const RAMP = ['.', ':', '-', '=', '+', '*', '#', '%', '@'] as const
+// 文字で描くときの、薄い順の記号は `RAMP`(大きさ 0〜1 を、この並びの添字に割り当てる。読み込み中の表示と共有)
 
 const smooth = (a: number, b: number, v: number) => {
   const t = Math.min(1, Math.max(0, (v - a) / (b - a)))
