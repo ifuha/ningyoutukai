@@ -124,39 +124,44 @@ body {
   }
 }
 
-/* 読み込み中の点(components/loading.tsx)。3 つの点が、時間をずらして跳ねる。動きを減らす設定のときは、止める */
-@keyframes loading-bob {
-  0%,
-  60%,
-  100% {
-    opacity: 0.35;
-    transform: translateY(0);
-  }
-  30% {
+/*
+ * 読み込み中の記号(components/loading.tsx)。9 つの記号を、同じ 1 マスに重ねて、順に 1 つだけ見せる
+ * (背景のドットと同じ記号。薄い → 濃いの順に、0.15 秒ずつ。1 周 1.35 秒)。
+ * 動きを減らす設定のときは、止めて、中くらいの記号(5 番目)を 1 つだけ出す
+ */
+@keyframes loading-glyph {
+  0% {
     opacity: 1;
-    transform: translateY(-7px);
+  }
+  11.11%,
+  100% {
+    opacity: 0;
   }
 }
 
-.loading-dots {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 14px;
+.loading-glyph {
+  display: inline-grid;
+  width: 1ch;
+  font-family: var(--font-mono);
+  line-height: 1;
 }
 
-.loading-dots > i {
-  width: 6px;
-  height: 6px;
-  background: currentColor;
-  animation: loading-bob 1s ease-in-out infinite;
-  animation-delay: calc(var(--n, 0) * 140ms);
+.loading-glyph > i {
+  grid-area: 1 / 1;
+  font-style: normal;
+  text-align: center;
+  opacity: 0;
+  animation: loading-glyph 1.35s steps(1) infinite;
+  animation-delay: calc(var(--n, 0) * 150ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .loading-dots > i {
+  .loading-glyph > i {
     animation: none;
-    opacity: 0.6;
+  }
+
+  .loading-glyph > i:nth-child(5) {
+    opacity: 1;
   }
 }
 
