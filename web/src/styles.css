@@ -138,6 +138,26 @@ body {
   }
 }
 
+/* 画面の上から出る「いま読み込んでいるもの」(components/loading-status.tsx)。閉じているときは、上に隠れて、見えない */
+.loading-status {
+  transform: translateY(calc(-100% - 8px));
+  opacity: 0;
+  transition:
+    transform 0.25s ease-out,
+    opacity 0.25s ease-out;
+}
+
+.loading-status[data-open='true'] {
+  transform: translateY(8px);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-status {
+    transition: none;
+  }
+}
+
 .loading-dots {
   display: inline-flex;
   align-items: flex-end;

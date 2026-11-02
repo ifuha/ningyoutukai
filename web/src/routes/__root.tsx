@@ -12,6 +12,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 import { themeInitScript } from '#/lib/theme'
 import { useClearCacheOnUserChange } from '#/lib/cache-owner'
+import { LoadingStatus } from '#/components/loading-status'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -49,7 +50,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 // 全画面(ログイン画面を含む)で動く場所。ユーザーが変わったら、取得したデータのキャッシュを消す
 function RootComponent() {
   useClearCacheOnUserChange()
-  return <Outlet />
+  return (
+    <>
+      <Outlet />
+      <LoadingStatus />
+    </>
+  )
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
