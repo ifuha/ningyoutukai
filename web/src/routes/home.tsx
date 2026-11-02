@@ -5,6 +5,7 @@ import { CalendarPlus, LogOut } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { AppShell } from '#/components/app-shell'
 import { DotField } from '#/components/dot-field'
+import { Loading } from '#/components/loading'
 import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
 
@@ -85,7 +86,7 @@ function Home() {
             )}
             <h1 className="font-mono text-s opacity-70">01 / プロダクト</h1>
             {products.isPending ? (
-              <p className="mt-4 text-m opacity-60">読み込み中…</p>
+              <Loading className="mt-4" />
             ) : products.isError ? (
               <p role="alert" className="mt-4 border-l border-line pl-3 text-m">
                 ERR {products.error.message}

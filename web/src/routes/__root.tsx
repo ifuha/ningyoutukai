@@ -1,5 +1,6 @@
 import {
   HeadContent,
+  Outlet,
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router'
@@ -10,6 +11,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 
 import appCss from '../styles.css?url'
 import { themeInitScript } from '#/lib/theme'
+import { useClearCacheOnUserChange } from '#/lib/cache-owner'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -40,8 +42,15 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     // 最初の描画の前に、保存された表示モード(ライト / ダーク)を反映する(ちらつき防止)
     scripts: [{ children: themeInitScript }],
   }),
+  component: RootComponent,
   shellComponent: RootDocument,
 })
+
+// 全画面(ログイン画面を含む)で動く場所。ユーザーが変わったら、取得したデータのキャッシュを消す
+function RootComponent() {
+  useClearCacheOnUserChange()
+  return <Outlet />
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (

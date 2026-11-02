@@ -124,6 +124,42 @@ body {
   }
 }
 
+/* 読み込み中の点(components/loading.tsx)。3 つの点が、時間をずらして跳ねる。動きを減らす設定のときは、止める */
+@keyframes loading-bob {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-7px);
+  }
+}
+
+.loading-dots {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 14px;
+}
+
+.loading-dots > i {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  animation: loading-bob 1s ease-in-out infinite;
+  animation-delay: calc(var(--n, 0) * 140ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-dots > i {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
 /*
  * ホームの一覧の動き。行が上から順に出て、ホバーで左から塗りが広がる。
  * 「動きを減らす」設定のときは、止めて、最初から表示する

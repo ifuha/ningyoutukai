@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Plus } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { AppShell } from '#/components/app-shell'
+import { Loading } from '#/components/loading'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
 import { ManageMenu, type ManageMenuItem } from '#/components/manage-menu'
 import { MemberManageDialog } from '#/components/member-manage-dialog'
@@ -122,7 +123,7 @@ function Product() {
             ERR {product.error.message}
           </p>
         ) : product.data === undefined ? (
-          <p className="text-m opacity-60">読み込み中…</p>
+          <Loading />
         ) : (
           <>
             <h1 className="text-l font-bold break-words">
@@ -181,7 +182,7 @@ function Product() {
                   ERR {tree.error.message}
                 </p>
               ) : (
-                <p className="text-m opacity-60">読み込み中…</p>
+                <Loading />
               )}
             </div>
           ) : (

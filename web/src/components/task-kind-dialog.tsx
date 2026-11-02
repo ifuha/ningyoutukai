@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '#/components/modal'
 import { IconButton } from '#/components/icon-button'
+import { Loading } from '#/components/loading'
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { eden, edenData, type Json } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
@@ -226,7 +227,7 @@ export function TaskKindDialog({
       <h2 className="text-l font-bold">種類の管理</h2>
       <AddForm productId={productId} />
       {kinds.isPending ? (
-        <p className="text-m opacity-60">読み込み中…</p>
+        <Loading />
       ) : kinds.isError ? (
         <ErrorText message={kinds.error.message} />
       ) : kinds.data.length === 0 ? (
