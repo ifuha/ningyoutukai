@@ -1,5 +1,6 @@
 import { PanelLeftClose, Plus } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
+import { Loading } from '#/components/loading'
 import { SidebarInvitation } from '#/components/sidebar-invitation'
 import { ThemeToggle } from '#/components/theme-toggle'
 import type { Invitation } from '#/lib/invitation'
@@ -65,8 +66,8 @@ export function Sidebar({
         <p className="text-m">プロダクト</p>
         <ul className="mt-[7px] flex flex-col gap-2">
           {isLoading ? (
-            <li className="h-12 text-m leading-[48px] opacity-60">
-              読み込み中…
+            <li className="flex h-12 items-center">
+              <Loading />
             </li>
           ) : (
             products.map((p) => (
