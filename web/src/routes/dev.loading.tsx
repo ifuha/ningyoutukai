@@ -27,7 +27,7 @@ function DevLoading() {
   return (
     <main className="min-h-screen bg-surface p-6 text-ink sm:p-10">
       {/* 止めると、動きの途中の形をじっくり見られる */}
-      {paused && <style>{'.loading-dots > i { animation-play-state: paused !important; }'}</style>}
+      {paused && <style>{'.loading-glyph > i { animation-play-state: paused !important; }'}</style>}
       <div className="mx-auto max-w-2xl space-y-10">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
