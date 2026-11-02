@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DeviceRouteImport } from './routes/device'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as DevLoadingRouteImport } from './routes/dev.loading'
+import { Route as DevLoadingStatusRouteImport } from './routes/dev.loading-status'
 import { Route as ProductsProductIdRouteImport } from './routes/products.$productId'
 import { Route as ProductsNewRouteImport } from './routes/products.new'
 
@@ -36,6 +37,11 @@ const DevLoadingRoute = DevLoadingRouteImport.update({
   path: '/dev/loading',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevLoadingStatusRoute = DevLoadingStatusRouteImport.update({
+  id: '/dev/loading-status',
+  path: '/dev/loading-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
   id: '/products/$productId',
   path: '/products/$productId',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/device': typeof DeviceRoute
   '/home': typeof HomeRoute
   '/dev/loading': typeof DevLoadingRoute
+  '/dev/loading-status': typeof DevLoadingStatusRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/products/new': typeof ProductsNewRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/device': typeof DeviceRoute
   '/home': typeof HomeRoute
   '/dev/loading': typeof DevLoadingRoute
+  '/dev/loading-status': typeof DevLoadingStatusRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/products/new': typeof ProductsNewRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/device': typeof DeviceRoute
   '/home': typeof HomeRoute
   '/dev/loading': typeof DevLoadingRoute
+  '/dev/loading-status': typeof DevLoadingStatusRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/products/new': typeof ProductsNewRoute
 }
@@ -79,6 +88,7 @@ export interface FileRouteTypes {
     | '/device'
     | '/home'
     | '/dev/loading'
+    | '/dev/loading-status'
     | '/products/$productId'
     | '/products/new'
   fileRoutesByTo: FileRoutesByTo
@@ -87,6 +97,7 @@ export interface FileRouteTypes {
     | '/device'
     | '/home'
     | '/dev/loading'
+    | '/dev/loading-status'
     | '/products/$productId'
     | '/products/new'
   id:
@@ -95,6 +106,7 @@ export interface FileRouteTypes {
     | '/device'
     | '/home'
     | '/dev/loading'
+    | '/dev/loading-status'
     | '/products/$productId'
     | '/products/new'
   fileRoutesById: FileRoutesById
@@ -104,6 +116,7 @@ export interface RootRouteChildren {
   DeviceRoute: typeof DeviceRoute
   HomeRoute: typeof HomeRoute
   DevLoadingRoute: typeof DevLoadingRoute
+  DevLoadingStatusRoute: typeof DevLoadingStatusRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
   ProductsNewRoute: typeof ProductsNewRoute
 }
@@ -138,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevLoadingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/loading-status': {
+      id: '/dev/loading-status'
+      path: '/dev/loading-status'
+      fullPath: '/dev/loading-status'
+      preLoaderRoute: typeof DevLoadingStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/products/$productId': {
       id: '/products/$productId'
       path: '/products/$productId'
@@ -160,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeviceRoute: DeviceRoute,
   HomeRoute: HomeRoute,
   DevLoadingRoute: DevLoadingRoute,
+  DevLoadingStatusRoute: DevLoadingStatusRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,
   ProductsNewRoute: ProductsNewRoute,
 }
