@@ -232,6 +232,42 @@ body {
   animation: stage-in 0.25s ease-out 0.2s backwards;
 }
 
+/*
+ * 404 ページの、切れた糸(components/not-found.tsx)。「0」の上端を支点に、大きく振れて、だんだん小さくなって止まる(1 回だけ)。
+ * 動きを減らす設定のときは、少し斜めのまま止める
+ */
+@keyframes string-settle {
+  0% {
+    transform: rotate(38deg);
+  }
+  22% {
+    transform: rotate(-26deg);
+  }
+  44% {
+    transform: rotate(15deg);
+  }
+  64% {
+    transform: rotate(-8deg);
+  }
+  82% {
+    transform: rotate(3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.not-found-string {
+  animation: string-settle 2.4s ease-in-out 0.35s 1 backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .not-found-string {
+    animation: none;
+    transform: rotate(8deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .code-char,
   .stage-in {
