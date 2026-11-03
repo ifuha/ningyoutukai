@@ -53,10 +53,20 @@ function Art() {
       shapeRendering="crispEdges"
     >
       <Patterns />
-      <path d={ART_D25} fill="url(#nf-d25)" />
-      <path d={ART_D50} fill="url(#nf-d50)" />
-      <path d={ART_D75} fill="url(#nf-d75)" />
-      <path d={ART_SOLID} fill="currentColor" />
+      {/* 上から下へ、薄い → 濃い(上端 40%、下端 100%)。絵全体に、縦のグラデーションをかける */}
+      <linearGradient id="nf-fade" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#fff" stopOpacity="0.4" />
+        <stop offset="1" stopColor="#fff" stopOpacity="1" />
+      </linearGradient>
+      <mask id="nf-fade-mask" maskContentUnits="objectBoundingBox">
+        <rect width="1" height="1" fill="url(#nf-fade)" />
+      </mask>
+      <g mask="url(#nf-fade-mask)">
+        <path d={ART_D25} fill="url(#nf-d25)" />
+        <path d={ART_D50} fill="url(#nf-d50)" />
+        <path d={ART_D75} fill="url(#nf-d75)" />
+        <path d={ART_SOLID} fill="currentColor" />
+      </g>
     </svg>
   )
 }
