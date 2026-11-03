@@ -22,7 +22,6 @@ export function NotFound() {
           <p role="alert" className="border-l border-line pl-3 text-m">
             ERR ページが見つかりません
           </p>
-          <p className="text-m opacity-60"># URL が違うか、ページが無くなったかもしれません。</p>
         </div>
         <Link
           to="/home"
