@@ -212,6 +212,7 @@ function Product() {
               productId={productId}
               target={detail}
               canReport={detail?.member.productMemberId === myId}
+              canComment={isLeader || detail?.member.productMemberId === myId} 
               onEdit={
                 isLeader
                   ? ({ task, member }) => {

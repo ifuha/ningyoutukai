@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
+import { TaskMessageForm } from '#/components/task-message-form'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
@@ -42,14 +43,17 @@ function MessageRow({ message }: { message: TaskMessage }) {
   )
 }
 
-// タスクの詳細の「やりとり」の欄。報告・再提出・差し戻し・承認・コメントを、古い順に出す(読むだけ)。
-// タスクを見られる人なら、誰でも読める(api が判定する)
+// タスクの詳細の「やりとり」の欄。報告・再提出・差し戻し・承認・コメントを、古い順に出す。
+// タスクを見られる人なら、誰でも読める(api が判定する)。
+// `canComment`(リーダーと担当者)のときだけ、コメントの入力欄を出す
 export function TaskMessages({
   productId,
   taskId,
+  canComment = false,
 }: {
   productId: string
   taskId: string
+  canComment?: boolean
 }) {
   const messages = useQuery({
     queryKey: ['products', productId, 'task', taskId, 'messages'],
@@ -75,6 +79,7 @@ export function TaskMessages({
           ))}
         </ul>
       )}
+      {canComment && <TaskMessageForm productId={productId} taskId={taskId} />}
     </section>
   )
 }
