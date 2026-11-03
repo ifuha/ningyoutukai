@@ -59,10 +59,16 @@ export function stageSize(nx: number, ny: number, t: number, open = 1): number {
   // 閉じているときの縁から、開ききったときの縁へ、動く(縁より外側が幕。縁が動くと、ひだが現れ・隠れる)
   const edge = CLOSED_EDGE + (curtainEdge(ny, t) - CLOSED_EDGE) * open
   if (d < edge) {
-    // ひだ(縦縞)。ゆっくり揺れる
-    const fold = 0.5 + 0.5 * Math.sin(d * 140 + Math.sin(ny * 6) * 1.2 + Math.sin(t * 0.35) * 0.6)
+    // ひだ(縦縞)。ゆっくり揺れる。
+    // 幕が閉じているほど(画面の全体を幕が覆うので)、ひだを太く、濃淡の幅を広げる。細かい縞のままだと、幕ではなく、ざらざらした模様に見える。
+    // `open = 1`(開ききった絵)では、これまでどおり(周期 140、幅 0.32)
+    const closed = 1 - open
+    const fold = 0.5 + 0.5 * Math.sin(d * (140 - 100 * closed) + Math.sin(ny * 6) * 1.2 + Math.sin(t * 0.35) * 0.6)
     const rim = smooth(edge - 0.03, edge, d) * 0.1 // 縁に近いほど濃い(影)
-    return Math.min(0.6, 0.14 + 0.32 * fold + rim)
+    // 閉じているときは、中央の合わせ目(d が 0.5 に近い)に、縦の影を入れる(左右の幕が、ここで合わさる)
+    const seam = closed * smooth(0.46, 0.5, d) * 0.22
+    // 下限(0.14 → 0.1)と上限(0.6 → 0.62)も、閉じているほど広げる(`open = 1` では、これまでと同じ値)
+    return Math.min(0.6 + 0.02 * closed, 0.14 - 0.04 * closed + (0.32 + 0.2 * closed) * fold + rim + seam)
   }
 
   // 幕の間(舞台の奥)と、その下: 何も描かない
@@ -74,16 +80,18 @@ const noFade = () => 1
 
 /**
  * 舞台の絵の背景(canvas)。マウントしたときから、幕が開いていく。
- * 動きを減らす設定のときは、最初から開ききった絵(止まった絵は、時刻 0 で 1 枚だけ描かれるので、閉じたまま残らないようにする)
+ * 動きを減らす設定のときは、最初から開ききった絵(止まった絵は、時刻 0 で 1 枚だけ描かれるので、閉じたまま残らないようにする)。
+ * `closed`: 幕を閉じたままにする(開かない。見つからないページ(404)で、舞台に出せるものがないことを表す)。
  */
-export function StageField({ className }: { className?: string }) {
+export function StageField({ className, closed = false }: { className?: string; closed?: boolean }) {
   // 描く絵は、毎回同じ関数を渡す(`DotField` が、描き直しの条件に使うため)。マウントした時刻を、ここで控える
   const scene = useMemo(() => {
+    if (closed) return (nx: number, ny: number, t: number) => stageSize(nx, ny, t, 0)
     const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     // `DotField` が渡す時刻は、`requestAnimationFrame` のもの(`performance.now()` と同じ時計)
     const startedAt = typeof performance !== 'undefined' ? performance.now() / 1000 : 0
     return (nx: number, ny: number, t: number) =>
       stageSize(nx, ny, t, reduce ? 1 : openProgress(t - startedAt))
-  }, [])
+  }, [closed])
   return <DotField shape="char" scene={scene} fade={noFade} className={className} />
 }
