@@ -82,9 +82,9 @@ describe('drawReducer: 通常のドラッグ', () => {
     expect(effects).toEqual([{ type: 'create', rect: { x: 10, y: 10, width: 300, height: 400 } }])
   })
 
-  test('最小を狙って小さくドラッグしたときは、既定の大きさではなく最小の 80×80', () => {
+  test('小さくドラッグしたときは、既定の大きさではなく、ドラッグした大きさ', () => {
     const { effects } = run([down(10, 10), move(50, 40), up(50, 40)])
-    expect(effects).toEqual([{ type: 'create', rect: { x: 10, y: 10, width: 80, height: 80 } }])
+    expect(effects).toEqual([{ type: 'create', rect: { x: 10, y: 10, width: 40, height: 30 } }])
   })
 
   test('クリックとみなす大きさは、渡した値(拡大率に合わせた値)で決まる', () => {
