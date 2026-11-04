@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test'
 import {
   CARD_SIZE,
   COORD_MAX,
-  DEFAULT_SECTION_SIZE,
   MIN_SECTION_SIZE,
   SIZE_MAX,
   applyDeltaToMembers,
@@ -25,7 +24,6 @@ describe('定数(api の検証と同じ値)', () => {
   test('座標・大きさの上限と、既定の大きさ', () => {
     expect(COORD_MAX).toBe(1_000_000)
     expect(SIZE_MAX).toBe(100_000)
-    expect(DEFAULT_SECTION_SIZE).toEqual({ width: 300, height: 400 })
     expect(CARD_SIZE).toEqual({ width: 236, height: 138 })
     expect(MIN_SECTION_SIZE).toBe(80)
   })
@@ -79,13 +77,8 @@ describe('rectFromDrag', () => {
   test('左上へのドラッグ', () => {
     expect(rectFromDrag(s, { x: 0, y: 0 })).toEqual({ x: 0, y: 0, width: 100, height: 200 })
   })
-  test('クリックだけ(縦も横も 4 未満): 始点を左上に、既定の大きさ 300×400', () => {
-    expect(rectFromDrag(s, s)).toEqual({ x: 100, y: 200, width: 300, height: 400 })
-    expect(rectFromDrag(s, { x: 103, y: 197 })).toEqual({ x: 100, y: 200, width: 300, height: 400 })
-  })
-  test('クリックとみなす大きさは、引数で変えられる(拡大率に合わせる)', () => {
-    expect(rectFromDrag(s, { x: 110, y: 205 }, 20)).toEqual({ x: 100, y: 200, ...DEFAULT_SECTION_SIZE })
-    expect(rectFromDrag(s, { x: 110, y: 205 }, 4)).toEqual({ x: 100, y: 200, width: 10, height: 5 })
+  test('クリックだけ(動きが 0): 既定の 300×400 にせず、1×1 で置く', () => {
+    expect(rectFromDrag(s, s)).toEqual({ x: 100, y: 200, width: 1, height: 1 })
   })
   test('最小は決めない: 小さくドラッグしたら、ドラッグした大きさのまま置く', () => {
     expect(rectFromDrag(s, { x: 130, y: 150 })).toEqual({ x: 100, y: 150, width: 30, height: 50 })
