@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
 import { Modal } from '#/components/modal'
 import { IconButton } from '#/components/icon-button'
+import { TaskMessages } from './task-messages'
 import { Check, Pencil, X } from 'lucide-react'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
@@ -11,11 +12,13 @@ export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 function Detail({
   productId,
   target,
+  canReport,
   onEdit,
   onClose,
 }: {
   productId: string
   target: TaskDetailTarget
+  canReport: boolean
   onEdit?: () => void
   onClose: () => void
 }) {
@@ -68,13 +71,14 @@ function Detail({
           </dd>
         </div>
       </dl>
+      <TaskMessages productId={productId} taskId={task.taskId} />
       {report.isError && (
         <p role="alert" className="border-l border-line pl-3 text-m">
           ERR {report.error.message}
         </p>
       )}
       <div className="flex flex-wrap gap-3">
-        {!task.reportedAt && (
+        {canReport && !task.reportedAt && (
           <IconButton
             icon={Check}
             label="完了を報告"
@@ -99,16 +103,19 @@ function Detail({
   )
 }
 
-// 自分のタスクの詳細のモーダル。未報告なら「完了を報告」を出す(押すとリーダーに通知される)。
+// タスクの詳細のモーダル。やりとり(メッセージの履歴)を出す。
+// `canReport` は担当者本人にだけ渡す: 未報告なら「完了を報告」を出す(押すとリーダーに通知される。担当者でなければ、api が 403 にする)。
 // `onEdit` はリーダーにだけ渡す(編集のフォームへ移る)。`target` が null の間は閉じている
 export function TaskDetailDialog({
   productId,
   target,
+  canReport = false,
   onEdit,
   onClose,
 }: {
   productId: string
   target: TaskDetailTarget | null
+  canReport?: boolean
   onEdit?: (target: TaskDetailTarget) => void
   onClose: () => void
 }) {
@@ -119,6 +126,7 @@ export function TaskDetailDialog({
           key={target.task.taskId}
           productId={productId}
           target={target}
+          canReport={canReport}
           onEdit={onEdit && (() => onEdit(target))}
           onClose={onClose}
         />
