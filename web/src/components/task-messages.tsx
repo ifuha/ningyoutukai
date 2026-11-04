@@ -1,5 +1,7 @@
+import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
+import { TaskMessageForm } from '#/components/task-message-form'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
@@ -42,20 +44,32 @@ function MessageRow({ message }: { message: TaskMessage }) {
   )
 }
 
-// タスクの詳細の「やりとり」の欄。報告・再提出・差し戻し・承認・コメントを、古い順に出す(読むだけ)。
-// タスクを見られる人なら、誰でも読める(api が判定する)
+// タスクの詳細の「やりとり」の欄。報告・再提出・差し戻し・承認・コメントを、古い順に出す。
+// タスクを見られる人なら、誰でも読める(api が判定する)。
+// `canComment`(リーダーと担当者)のときだけ、コメントの入力欄を出す
 export function TaskMessages({
   productId,
   taskId,
+  canComment = false,
 }: {
   productId: string
   taskId: string
+  canComment?: boolean
 }) {
   const messages = useQuery({
     queryKey: ['products', productId, 'task', taskId, 'messages'],
     queryFn: () => listMessages(productId, taskId),
     retry: false,
   })
+
+  // 件数が変わったとき(初めて読み込んだとき、コメントを投稿したとき)に、いちばん新しいメッセージが見えるよう、
+  // 一覧の末尾までスクロールする。編集・削除は件数が変わらないので、動かさない
+  const listRef = useRef<HTMLUListElement>(null)
+  const count = messages.data?.messages.length
+  useEffect(() => {
+    const el = listRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [count])
 
   return (
     <section aria-label="やりとり" className="space-y-2">
@@ -69,12 +83,13 @@ export function TaskMessages({
       ) : messages.data.messages.length === 0 ? (
         <p className="text-m">やりとりはまだありません</p>
       ) : (
-        <ul className="max-h-64 space-y-3 overflow-y-auto">
+        <ul ref={listRef} className="max-h-64 space-y-3 overflow-y-auto">
           {messages.data.messages.map((message) => (
             <MessageRow key={message.messageId} message={message} />
           ))}
         </ul>
       )}
+      {canComment && <TaskMessageForm productId={productId} taskId={taskId} />}
     </section>
   )
 }
