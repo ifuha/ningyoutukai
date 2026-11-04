@@ -12,6 +12,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 import { themeInitScript } from '#/lib/theme'
 import { useClearCacheOnUserChange } from '#/lib/cache-owner'
+import { NotFound } from '#/components/not-found'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -43,6 +44,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     scripts: [{ children: themeInitScript }],
   }),
   component: RootComponent,
+  notFoundComponent: NotFound,
   shellComponent: RootDocument,
 })
 

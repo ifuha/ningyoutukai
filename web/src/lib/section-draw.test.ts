@@ -72,14 +72,14 @@ describe('drawReducer: 通常のドラッグ', () => {
     }
   })
 
-  test('ほぼクリックだけ(動かさずに離す)は、始点を左上にした既定の 300×400', () => {
+  test('動かさずに離す(クリックだけ)は、既定の大きさにせず、1×1', () => {
     const { effects } = run([down(500, 600), up(500, 600)])
-    expect(effects).toEqual([{ type: 'create', rect: { x: 500, y: 600, width: 300, height: 400 } }])
+    expect(effects).toEqual([{ type: 'create', rect: { x: 500, y: 600, width: 1, height: 1 } }])
   })
 
-  test('数ピクセルだけ動いた(最小に満たない)ときも、既定の大きさ', () => {
+  test('数ピクセルだけ動いたときは、動いた大きさのまま', () => {
     const { effects } = run([down(10, 10), move(14, 13), up(14, 13)])
-    expect(effects).toEqual([{ type: 'create', rect: { x: 10, y: 10, width: 300, height: 400 } }])
+    expect(effects).toEqual([{ type: 'create', rect: { x: 10, y: 10, width: 4, height: 3 } }])
   })
 
   test('負の座標でも、そのまま四角になる', () => {
@@ -206,9 +206,9 @@ describe('previewRect / formatSize', () => {
     expect(previewRect(DRAW_IDLE)).toBeNull()
   })
 
-  test('ドラッグ中は、いま離した場合に置かれる四角と同じ(押した直後は、既定の大きさ)', () => {
+  test('ドラッグ中は、いま離した場合に置かれる四角と同じ(押した直後は、1×1)', () => {
     const { state } = run([down(100, 100)])
-    expect(previewRect(state)).toEqual({ x: 100, y: 100, width: 300, height: 400 })
+    expect(previewRect(state)).toEqual({ x: 100, y: 100, width: 1, height: 1 })
     const dragged = run([down(100, 100), move(500, 400)]).state
     expect(previewRect(dragged)).toEqual({ x: 100, y: 100, width: 400, height: 300 })
   })

@@ -100,6 +100,9 @@ type Latest = {
   onDelete: () => void
 }
 
+// セクションの枠の太さ(section-box.tsx の border-2。キャンバスの単位)
+const SECTION_BORDER = 2
+
 export function SectionEditor({
   section,
   selected,
@@ -333,12 +336,12 @@ export function SectionEditor({
           style={{ borderColor: style.line, backgroundColor: style.fill }}
         />
       )}
-      {/* 選択中の印 */}
+      {/* 選択中の印。セクション自身の枠(border-2 = 2)の真上に、同じ太さで重ねる(外側に隙間をあけない) */}
       {selected && (
         <div
           aria-hidden="true"
           className="absolute inset-0"
-          style={{ outline: `${handleSize}px solid var(--color-ink)`, outlineOffset: handleSize }}
+          style={{ outline: `${SECTION_BORDER}px solid var(--color-ink)`, outlineOffset: -SECTION_BORDER }}
         />
       )}
 

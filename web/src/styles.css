@@ -232,6 +232,14 @@ body {
   animation: stage-in 0.25s ease-out 0.2s backwards;
 }
 
+/* 404 ページの文字の縁取り。左右の幕の記号に重なっても読めるよう、周りを、紙の色でにじませて消す(窓を使わない代わり) */
+.not-found-halo {
+  text-shadow:
+    0 0 3px var(--color-surface),
+    0 0 6px var(--color-surface),
+    0 0 10px var(--color-surface);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .code-char,
   .stage-in {

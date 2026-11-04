@@ -12,7 +12,7 @@ import type { Section } from '#/lib/section'
 //   拡大・等倍(`scale ≥ 1`)は、係数 1(拡大に比例して大きくなる)。枠線の太さは、係数を掛けない(ズームに比例して変わる)
 // 色は、`section-style.ts` の線の色(1 か所)から作る。Tailwind のクラスではなく、style で渡す(色の値を差し替えるだけで直るように)
 // ポインタを通す(ドラッグはキャンバスの移動になる)。選択・移動・大きさの変更は、編集枠(第 2 段階)が受ける
-// `selected`: 選択中の見た目(外側の輪郭)。`highlighted`: カードのドロップ先になっている見た目(輪を足し、塗りを 35% に濃くする)
+// `selected`: 選択中(`data-selected` を付けるだけ。選択中の枠は、`SectionEditor` が、この枠の真上に重ねて描く)。`highlighted`: カードのドロップ先になっている見た目(輪を足し、塗りを 35% に濃くする)
 // `scale`: キャンバスの拡大率(1 = 等倍)。名前の係数を求める。省略すると 1(係数なし)
 export function SectionBox({
   section,
@@ -39,9 +39,7 @@ export function SectionBox({
       data-section-id={section.sectionId}
       data-selected={selected || undefined}
       data-highlighted={highlighted || undefined}
-      className={`pointer-events-none absolute border-2 border-dashed ${
-        selected ? 'outline-2 outline-offset-4 outline-ink' : ''
-      } ${highlighted ? 'ring-4 ring-ink/40' : ''}`}
+      className={`pointer-events-none absolute border-2 border-dashed ${highlighted ? 'ring-4 ring-ink/40' : ''}`}
       style={{
         left: section.x + offsetX,
         top: section.y + offsetY,

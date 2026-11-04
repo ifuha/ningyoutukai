@@ -99,10 +99,9 @@ function Product() {
   const myId = tree.data?.viewerProductMemberId
   // 自分のタスクは詳細(リーダーも。編集は詳細から)、他人のタスクはリーダーだけ編集
   const canOpenTask = (m: TreeMember) => isLeader || m.productMemberId === myId
-  const openTask = (member: TreeMember, task: TreeTask) => {
+  const openTask = (_member: TreeMember, task: TreeTask) => {
     setListMemberId(null)
-    if (member.productMemberId === myId) setDetailId(task.taskId)
-    else setTaskForm({ edit: { task, member } })
+    setDetailId(task.taskId)
   }
   const detail: TaskDetailTarget | null = tree.data
     ? [tree.data.leader, ...tree.data.members].reduce<TaskDetailTarget | null>(
@@ -212,6 +211,7 @@ function Product() {
             <TaskDetailDialog
               productId={productId}
               target={detail}
+              canReport={detail?.member.productMemberId === myId}
               onEdit={
                 isLeader
                   ? ({ task, member }) => {
