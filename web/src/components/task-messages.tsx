@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
 import { TaskMessageForm } from '#/components/task-message-form'
@@ -61,6 +62,15 @@ export function TaskMessages({
     retry: false,
   })
 
+  // 件数が変わったとき(初めて読み込んだとき、コメントを投稿したとき)に、いちばん新しいメッセージが見えるよう、
+  // 一覧の末尾までスクロールする。編集・削除は件数が変わらないので、動かさない
+  const listRef = useRef<HTMLUListElement>(null)
+  const count = messages.data?.messages.length
+  useEffect(() => {
+    const el = listRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [count])
+
   return (
     <section aria-label="やりとり" className="space-y-2">
       <h3 className="text-s opacity-60">やりとり</h3>
@@ -73,7 +83,7 @@ export function TaskMessages({
       ) : messages.data.messages.length === 0 ? (
         <p className="text-m">やりとりはまだありません</p>
       ) : (
-        <ul className="max-h-64 space-y-3 overflow-y-auto">
+        <ul ref={listRef} className="max-h-64 space-y-3 overflow-y-auto">
           {messages.data.messages.map((message) => (
             <MessageRow key={message.messageId} message={message} />
           ))}
