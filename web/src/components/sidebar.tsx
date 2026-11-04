@@ -1,14 +1,16 @@
-import { PanelLeftClose, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { PanelLeftClose, Plus, SlidersHorizontal } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { Loading } from '#/components/loading'
+import { SettingsDialog } from '#/components/settings-dialog'
 import { SidebarInvitation } from '#/components/sidebar-invitation'
-import { ThemeToggle } from '#/components/theme-toggle'
 import type { Invitation } from '#/lib/invitation'
 
 export type SidebarProduct = { id: string; name: string }
 
 // サイドバー(Figma `side-light` / `side-dark`、幅 240px)。角丸は使わない(ユーザーの指定。Figma は 10px)。
-// データは、呼び出し側から渡す(api は、ここでは呼ばない)
+// データは、呼び出し側から渡す(api は、ここでは呼ばない)。
+// 下の「設定」で、設定のモーダルを開く(表示モードなど。開閉の状態は、ここで持つ)
 export function Sidebar({
   products,
   invitations = [],
@@ -28,9 +30,11 @@ export function Sidebar({
   onCollapse?: () => void
   isLoading?: boolean
 }) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
   return (
     <aside className="flex h-screen w-60 shrink-0 flex-col bg-side">
-      {/* ロゴ・招待・プロダクト一覧だけがスクロールし、「プロダクト作成」は下に固定する */}
+      {/* ロゴ・招待・プロダクト一覧だけがスクロールし、「プロダクト作成」と「設定」は下に固定する */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pt-4">
       <div className="flex items-center justify-between">
         <p className="text-l leading-normal font-semibold">
@@ -98,10 +102,18 @@ export function Sidebar({
             onClick={() => onCreateProduct?.()}
           />
         </div>
-        <div className="mt-2">
-          <ThemeToggle />
+        <div className="mt-2 flex justify-center">
+          <IconButton
+            icon={SlidersHorizontal}
+            label="設定"
+            showLabel
+            block
+            variant="outline"
+            onClick={() => setSettingsOpen(true)}
+          />
         </div>
       </div>
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </aside>
   )
 }

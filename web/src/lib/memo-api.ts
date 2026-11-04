@@ -3,7 +3,6 @@ import { eden, edenData, type Json } from '#/lib/eden'
 type Client = ReturnType<typeof eden>
 type Route = ReturnType<Client['api']['product']>
 type NotesRoute = Route['note']
-type NoteRoute = ReturnType<NotesRoute['get']>
 type Success<R extends { data: unknown; error: unknown }> = NonNullable<Extract<R, { error: null }>['data']>
 export type ProductNote = Json<Success<Awaited<ReturnType<NotesRoute['get']>>>>[number]
 export type ProductNotePatch = NonNullable<Parameters<ReturnType<NotesRoute>['patch']>[0]>
