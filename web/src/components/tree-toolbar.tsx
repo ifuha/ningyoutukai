@@ -10,7 +10,7 @@ import type { CanvasTool } from '#/lib/section-interaction-types'
 // 並びは「選択 | メンバー・セクション・メモ | 検索」
 // 選択・セクションは、道具(モード)の切り替え(押された道具を強調する)。キャンバスのドラッグでの移動は、「セクション」以外ではいつでも動く。
 //   セクションは、リーダーだけが使える(リーダーでなければ、押せない見た目。ツールチップで理由を示す)。選ぶと、キャンバスでドラッグして、セクションを置く(Esc か「選択」で戻る)
-//   メンバーは、メンバーの管理を開く(リーダーのみ)。メモ・検索は、無効の見た目(準備中)
+//   メンバーは、メンバーの管理を開く(リーダーのみ)。検索は、プロダクト内の名前検索を開く。メモは準備中
 
 export type TreeMode = CanvasTool
 
@@ -27,12 +27,18 @@ export function TreeToolbar({
   mode,
   onModeChange,
   onOpenMembers,
+  onOpenSearch,
+  onAddMemo,
   canEditSections = false,
 }: {
   mode: TreeMode
   onModeChange: (mode: TreeMode) => void
   /** メンバーの管理を開く。渡さない(リーダーでない)ときは、無効の見た目 */
   onOpenMembers?: () => void
+  /** プロダクト内のタスク・セクション・メンバー検索を開く */
+  onOpenSearch?: () => void
+  /** キャンバス中央に付箋を追加 */
+  onAddMemo?: () => void
   /** セクションを置ける(リーダー)か。false のときは、「セクション」が押せない見た目 */
   canEditSections?: boolean
 }) {
@@ -64,9 +70,14 @@ export function TreeToolbar({
         disabled={!canEditSections}
         onClick={() => onModeChange('section')}
       />
-      <IconButton icon={StickyNote} label="メモ" tip="メモ(準備中)" disabled />
+      <IconButton icon={StickyNote} label="メモ" tip="付箋を追加" onClick={onAddMemo} disabled={!onAddMemo} />
       <Divider />
-      <IconButton icon={Search} label="検索" tip="検索(準備中)" disabled />
+      <IconButton
+        icon={Search}
+        label="検索"
+        onClick={onOpenSearch}
+        disabled={!onOpenSearch}
+      />
     </div>
   )
 }

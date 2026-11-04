@@ -69,6 +69,17 @@ export function usePanZoom(
     const v = viewRef.current
     if (v) commit({ ...v, x: v.x + dx, y: v.y + dy })
   }
+  const panTo = (point: Point) => {
+    const s = sizeRef.current
+    const v = viewRef.current
+    if (!s || !v) return
+    const center = visibleCenter(s)
+    commit({
+      ...v,
+      x: center.x - point.x * v.scale,
+      y: center.y - point.y * v.scale,
+    })
+  }
   const reset = () => {
     viewRef.current = fit
     setUser(null)
@@ -279,6 +290,7 @@ export function usePanZoom(
     canZoomOut: !!view && view.scale > MIN_ZOOM * fitScale * 1.001,
     zoomIn: () => view && zoomTo(view.scale * BUTTON_STEP),
     zoomOut: () => view && zoomTo(view.scale / BUTTON_STEP),
+    panTo,
     reset,
     freeze,
     shiftOrigin,

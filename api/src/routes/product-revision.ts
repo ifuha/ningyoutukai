@@ -5,6 +5,7 @@ import { db } from "../db";
 import {
   productMembers,
   products,
+  productNotes,
   sections,
   taskMessages,
   taskTypes,
@@ -45,6 +46,7 @@ export async function computeProductRevision(productId: string): Promise<string>
       ${digest(productMembers, productMembers.productMemberId, eq(productMembers.productId, productId))},
       ${digest(users, users.userId, sql`${users.userId} in ${memberUserIds}`)},
       ${digest(sections, sections.sectionId, eq(sections.productId, productId))},
+      ${digest(productNotes, productNotes.noteId, eq(productNotes.productId, productId))},
       ${digest(tasks, tasks.taskId, sql`${tasks.productMemberId} in ${memberIds}`)},
       ${digest(taskTypes, taskTypes.taskTypeId, eq(taskTypes.productId, productId))},
       ${digest(taskMessages, taskMessages.messageId, sql`${taskMessages.taskId} in ${taskIds}`)}
