@@ -12,7 +12,7 @@ export type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 export const COORD_MAX = 1_000_000
 // セクションの幅・高さの上限(api の SIZE_MAX と同じ。下限は「0 より大きい」だけだが、画面では MIN_SECTION_SIZE を下回らせない)
 export const SIZE_MAX = 100_000
-// 画面で扱うセクションの最小の大きさ
+// 大きさを変える(縮める)ときの最小の大きさ。置くとき(ドラッグ)には使わない
 export const MIN_SECTION_SIZE = 80
 // 「クリックだけ」とみなす動きの大きさ(キャンバスの座標。画面では、拡大率で割って渡す)
 export const CLICK_DRAG_MAX = 4
@@ -56,17 +56,19 @@ export function rectDelta(before: Rect, after: Rect): Point {
   return { x: after.x - before.x, y: after.y - before.y }
 }
 
-// ドラッグの 1 軸ぶん。始点(s)は動かさず、終点(e)の向きに伸ばす。最小と上限の大きさに収める
+// 置くときの大きさの下限(api は「0 より大きい」だけを求める)。ドラッグした大きさのまま置き、0 になる辺だけを 1 にする
+const DRAW_MIN_SIZE = 1
+
+// ドラッグの 1 軸ぶん。始点(s)は動かさず、終点(e)の向きに伸ばす。上限の大きさに収める
 function dragAxis(s: number, e: number): { lo: number; size: number } {
-  const size = clamp(Math.abs(e - s), MIN_SECTION_SIZE, SIZE_MAX)
+  const size = clamp(Math.abs(e - s), DRAW_MIN_SIZE, SIZE_MAX)
   const lo = e >= s ? s : s - size
   return { lo: clampCoord(lo), size }
 }
 
 // ドラッグで四角を描く。どの向きにドラッグしても、正の幅・高さの四角にする(始点の角は動かさない)
 // - 縦も横も clickThreshold 未満しか動いていない(クリックだけ)ときは、始点を左上にして、既定の大きさ(300×400)にする
-// - それ以外で最小の大きさに満たない辺は、その辺だけを最小の大きさまで伸ばす(ドラッグした向きへ)。
-//   最小を狙って小さくドラッグしたときに、既定の大きさへ跳ねないようにする
+// - それ以外は、ドラッグした大きさのまま置く(最小は決めない。動きが 0 の辺だけ、1 にする)
 // - 座標と大きさが上限を超えるときは、上限に丸める
 export function rectFromDrag(start: Point, end: Point, clickThreshold = CLICK_DRAG_MAX): Rect {
   const s = clampCardPosition(start)

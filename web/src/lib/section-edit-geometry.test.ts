@@ -85,22 +85,14 @@ describe('rectFromDrag', () => {
   })
   test('クリックとみなす大きさは、引数で変えられる(拡大率に合わせる)', () => {
     expect(rectFromDrag(s, { x: 110, y: 205 }, 20)).toEqual({ x: 100, y: 200, ...DEFAULT_SECTION_SIZE })
-    expect(rectFromDrag(s, { x: 110, y: 205 }, 4)).toEqual({ x: 100, y: 200, width: 80, height: 80 })
+    expect(rectFromDrag(s, { x: 110, y: 205 }, 4)).toEqual({ x: 100, y: 200, width: 10, height: 5 })
   })
-  test('最小を狙って小さくドラッグしても、既定の大きさへ跳ねない: 最小の 80×80 になる', () => {
-    expect(rectFromDrag(s, { x: 130, y: 150 })).toEqual({ x: 100, y: 120, width: 80, height: 80 })
-    expect(rectFromDrag(s, { x: 100 + 79, y: 200 + 79 })).toEqual({ x: 100, y: 200, width: 80, height: 80 })
-    expect(rectFromDrag(s, { x: 100 + 4, y: 200 })).toEqual({ x: 100, y: 200, width: 80, height: 80 })
+  test('最小は決めない: 小さくドラッグしたら、ドラッグした大きさのまま置く', () => {
+    expect(rectFromDrag(s, { x: 130, y: 150 })).toEqual({ x: 100, y: 150, width: 30, height: 50 })
+    expect(rectFromDrag(s, { x: 180, y: 210 })).toEqual({ x: 100, y: 200, width: 80, height: 10 })
   })
-  test('最小ちょうど(80)の一辺があれば、その辺は 80', () => {
-    expect(rectFromDrag(s, { x: 180, y: 210 })).toEqual({ x: 100, y: 200, width: 80, height: 80 })
-  })
-  test('片方だけ最小に満たない: その辺だけを、ドラッグした向きに最小まで伸ばす(始点は動かさない)', () => {
-    expect(rectFromDrag(s, { x: 600, y: 210 })).toEqual({ x: 100, y: 200, width: 500, height: 80 })
-    // 上向きにドラッグしたときは、上へ伸びる(始点の y が下の辺)
-    expect(rectFromDrag(s, { x: 600, y: 190 })).toEqual({ x: 100, y: 120, width: 500, height: 80 })
-    // 左向き(x の差が 70 で最小に満たない → 左へ 80 まで伸びる)
-    expect(rectFromDrag(s, { x: 30, y: 700 })).toEqual({ x: 20, y: 200, width: 80, height: 500 })
+  test('片方の動きが 0 の辺は、1 にする(api は 0 より大きい値を求める)', () => {
+    expect(rectFromDrag(s, { x: 600, y: 200 })).toEqual({ x: 100, y: 200, width: 500, height: 1 })
   })
   test('小数の座標でも、正の大きさ', () => {
     const r = rectFromDrag({ x: 0.5, y: 0.5 }, { x: 200.25, y: 300.75 })
@@ -403,8 +395,8 @@ describe('性質テスト(固定シードの乱数)', () => {
       const rect = randomRect(rand)
       const handle = HANDLES[Math.floor(rand() * HANDLES.length)]!
       const r = resizeRect(rect, handle, randomDelta(rand))
-      expect(r.width).toBeGreaterThanOrEqual(MIN_SECTION_SIZE)
-      expect(r.height).toBeGreaterThanOrEqual(MIN_SECTION_SIZE)
+      expect(r.width).toBeGreaterThan(0)
+      expect(r.height).toBeGreaterThan(0)
       expect(r.width).toBeLessThanOrEqual(SIZE_MAX)
       expect(r.height).toBeLessThanOrEqual(SIZE_MAX)
       expect(Math.abs(r.x)).toBeLessThanOrEqual(COORD_MAX)
@@ -441,15 +433,15 @@ describe('性質テスト(固定シードの乱数)', () => {
     }
   })
 
-  test('rectFromDrag: 常に正の大きさ(最小以上・上限以下)で、座標は上限内', () => {
+  test('rectFromDrag: 常に正の大きさ(上限以下)で、座標は上限内', () => {
     const rand = rng(99)
     for (let i = 0; i < N; i++) {
       const scale = [100, 10_000, 5_000_000][Math.floor(rand() * 3)]!
       const s = { x: (rand() * 2 - 1) * scale, y: (rand() * 2 - 1) * scale }
       const e = { x: (rand() * 2 - 1) * scale, y: (rand() * 2 - 1) * scale }
       const r = rectFromDrag(s, e)
-      expect(r.width).toBeGreaterThanOrEqual(MIN_SECTION_SIZE)
-      expect(r.height).toBeGreaterThanOrEqual(MIN_SECTION_SIZE)
+      expect(r.width).toBeGreaterThan(0)
+      expect(r.height).toBeGreaterThan(0)
       expect(r.width).toBeLessThanOrEqual(SIZE_MAX)
       expect(r.height).toBeLessThanOrEqual(SIZE_MAX)
       expect(Math.abs(r.x)).toBeLessThanOrEqual(COORD_MAX)
