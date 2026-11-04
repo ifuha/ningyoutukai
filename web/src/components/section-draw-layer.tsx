@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { startDragSession } from '#/lib/drag-session'
 import type { DragSession, DragTarget } from '#/lib/drag-session'
 import { DRAW_IDLE, drawReducer, formatSize, previewRect, type DrawEvent, type DrawState } from '#/lib/section-draw'
-import { CLICK_DRAG_MAX, type Point, type Rect } from '#/lib/section-edit-geometry'
+import type { Point, Rect } from '#/lib/section-edit-geometry'
 import { sectionStyle } from '#/lib/section-style'
 
 // セクションをドラッグで置く層(第 2 段階 A)。ツールバーの「セクション」を選んでいる間だけ、キャンバスの上に重ねる
@@ -51,17 +51,15 @@ export function SectionDrawLayer({
   const sessionRef = useRef<DragSession | null>(null)
 
   // 最新の props を、イベントの処理(window の keydown を含む)から読むための ref
-  // clickThreshold: 画面で 4px 未満の動きを「クリックだけ」とみなす(キャンバスの座標では、拡大率で割る)
-  const clickThreshold = scale > 0 ? CLICK_DRAG_MAX / scale : CLICK_DRAG_MAX
-  const latest = useRef({ toCanvas, onCreate, onCancel, clickThreshold })
-  latest.current = { toCanvas, onCreate, onCancel, clickThreshold }
+  const latest = useRef({ toCanvas, onCreate, onCancel })
+  latest.current = { toCanvas, onCreate, onCancel }
 
   // 事象を状態機械に渡し、副作用(onCreate / onCancel)を実行する。この層が受けたかどうかを返す
   // `render: false` のとき(動き)は、プレビューの描き直しを、次のフレームにまとめる
   function apply(event: DrawEvent, render = true): boolean {
-    const step = drawReducer(stateRef.current, event, latest.current.clickThreshold)
+    const step = drawReducer(stateRef.current, event)
     stateRef.current = step.state
-    if (render) setPreview(previewRect(step.state, latest.current.clickThreshold))
+    if (render) setPreview(previewRect(step.state))
     if (step.effect?.type === 'create') latest.current.onCreate(step.effect.rect)
     else if (step.effect?.type === 'cancel') latest.current.onCancel()
     return step.consumed
@@ -118,7 +116,7 @@ export function SectionDrawLayer({
         if (stateRef.current.kind === 'dragging') s.requestFrame()
         return consumed
       },
-      onFrame: () => setPreview(previewRect(stateRef.current, latest.current.clickThreshold)),
+      onFrame: () => setPreview(previewRect(stateRef.current)),
       onUp: (ev) => {
         sessionRef.current = null
         // 離した座標で、置く四角を決める(最後の pointermove ではなく)

@@ -14,10 +14,6 @@ export const COORD_MAX = 1_000_000
 export const SIZE_MAX = 100_000
 // 大きさを変える(縮める)ときの最小の大きさ。置くとき(ドラッグ)には使わない
 export const MIN_SECTION_SIZE = 80
-// 「クリックだけ」とみなす動きの大きさ(キャンバスの座標。画面では、拡大率で割って渡す)
-export const CLICK_DRAG_MAX = 4
-// 置いたときの既定の大きさ(Figma の section-* と同じ 300×400)
-export const DEFAULT_SECTION_SIZE: Size = { width: 300, height: 400 }
 // メンバーのカードの大きさ(Figma の task カード)
 export const CARD_SIZE: Size = { width: 236, height: 138 }
 
@@ -67,15 +63,12 @@ function dragAxis(s: number, e: number): { lo: number; size: number } {
 }
 
 // ドラッグで四角を描く。どの向きにドラッグしても、正の幅・高さの四角にする(始点の角は動かさない)
-// - 縦も横も clickThreshold 未満しか動いていない(クリックだけ)ときは、始点を左上にして、既定の大きさ(300×400)にする
-// - それ以外は、ドラッグした大きさのまま置く(最小は決めない。動きが 0 の辺だけ、1 にする)
+// - ドラッグした大きさのまま置く(最小は決めない。クリックだけでも、既定の大きさにはしない)
+// - 動きが 0 の辺だけ、1 にする(api は 0 より大きい値を求める)
 // - 座標と大きさが上限を超えるときは、上限に丸める
-export function rectFromDrag(start: Point, end: Point, clickThreshold = CLICK_DRAG_MAX): Rect {
+export function rectFromDrag(start: Point, end: Point): Rect {
   const s = clampCardPosition(start)
   const e = clampCardPosition(end)
-  if (Math.abs(e.x - s.x) < clickThreshold && Math.abs(e.y - s.y) < clickThreshold) {
-    return { x: s.x, y: s.y, ...DEFAULT_SECTION_SIZE }
-  }
   const xs = dragAxis(s.x, e.x)
   const ys = dragAxis(s.y, e.y)
   return { x: xs.lo, y: ys.lo, width: xs.size, height: ys.size }
