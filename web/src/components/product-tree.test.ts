@@ -160,7 +160,7 @@ describe('ProductTree(カードの位置。座標は左上)', () => {
 
 describe('TreeToolbar', () => {
   const bar = (props: Record<string, unknown>) =>
-    renderToStaticMarkup(createElement(TreeToolbar, { mode: 'select', onModeChange: () => {}, ...props } as never))
+    renderToStaticMarkup(createElement(TreeToolbar, { mode: 'select', onModeChange: () => {}, onOpenSearch: () => {}, ...props } as never))
 
   test('並びと寸法(高さ 56、ボタン 40×40)で、5 つのボタンと 2 つの区切りがある。「移動」はない', () => {
     const html = bar({ onOpenMembers: () => {} })
@@ -192,14 +192,15 @@ describe('TreeToolbar', () => {
     expect(bar({ mode: 'select' })).toMatch(/aria-label="選択" aria-pressed="true"/)
     expect(bar({ mode: 'section', canEditSections: true })).toMatch(/aria-label="選択" aria-pressed="false"/)
   })
-  test('メモ・検索は、無効(準備中)。セクションは、リーダーでなければ無効', () => {
+  test('メモは準備中で無効。検索は有効。セクションは、リーダーでなければ無効', () => {
     const html = bar({ onOpenMembers: () => {} })
-    expect(html.split('(準備中)</span>').length - 1).toBe(2) // メモ・検索のツールチップ
-    expect(html.split('disabled=""').length - 1).toBe(3) // メモ・検索・セクション(リーダーでない)
+    expect(html.split('(準備中)</span>').length - 1).toBe(1) // メモのツールチップ
+    expect(html.split('disabled=""').length - 1).toBe(2) // メモ・セクション(リーダーでない)
+    expect(html).toContain('aria-label="検索"')
   })
   test('セクションは、リーダー(canEditSections)のときだけ押せる', () => {
     const leader = bar({ onOpenMembers: () => {}, canEditSections: true })
-    expect(leader.split('disabled=""').length - 1).toBe(2) // メモ・検索だけ
+    expect(leader.split('disabled=""').length - 1).toBe(1) // メモだけ
     expect(leader).toContain('>セクションを置く(Esc で戻る)</span>')
     const notLeader = bar({ onOpenMembers: () => {}, canEditSections: false })
     expect(notLeader).toContain('>セクション(リーダーのみ)</span>')
@@ -208,9 +209,9 @@ describe('TreeToolbar', () => {
     expect(bar({ mode: 'section', canEditSections: true })).toMatch(/aria-label="セクション" aria-pressed="true"/)
   })
   test('メンバーは、リーダーのときだけ押せる', () => {
-    expect(bar({ onOpenMembers: () => {} }).split('disabled=""').length - 1).toBe(3)
+    expect(bar({ onOpenMembers: () => {} }).split('disabled=""').length - 1).toBe(2)
     const member = bar({})
-    expect(member.split('disabled=""').length - 1).toBe(4)
+    expect(member.split('disabled=""').length - 1).toBe(3)
     expect(member).toContain('>メンバーの管理(リーダーのみ)</span>')
   })
 })
