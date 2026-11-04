@@ -79,12 +79,20 @@ describe('rectFromDrag', () => {
   test('左上へのドラッグ', () => {
     expect(rectFromDrag(s, { x: 0, y: 0 })).toEqual({ x: 0, y: 0, width: 100, height: 200 })
   })
-  test('ほぼクリックだけ(縦も横も最小に満たない): 始点を左上に、既定の大きさ 300×400', () => {
+  test('クリックだけ(縦も横も 4 未満): 始点を左上に、既定の大きさ 300×400', () => {
     expect(rectFromDrag(s, s)).toEqual({ x: 100, y: 200, width: 300, height: 400 })
-    expect(rectFromDrag(s, { x: 130, y: 150 })).toEqual({ x: 100, y: 200, width: 300, height: 400 })
-    expect(rectFromDrag(s, { x: 100 + 79, y: 200 + 79 })).toEqual({ x: 100, y: 200, ...DEFAULT_SECTION_SIZE })
+    expect(rectFromDrag(s, { x: 103, y: 197 })).toEqual({ x: 100, y: 200, width: 300, height: 400 })
   })
-  test('最小ちょうど(80)の一辺があれば、クリック扱いにならない', () => {
+  test('クリックとみなす大きさは、引数で変えられる(拡大率に合わせる)', () => {
+    expect(rectFromDrag(s, { x: 110, y: 205 }, 20)).toEqual({ x: 100, y: 200, ...DEFAULT_SECTION_SIZE })
+    expect(rectFromDrag(s, { x: 110, y: 205 }, 4)).toEqual({ x: 100, y: 200, width: 80, height: 80 })
+  })
+  test('最小を狙って小さくドラッグしても、既定の大きさへ跳ねない: 最小の 80×80 になる', () => {
+    expect(rectFromDrag(s, { x: 130, y: 150 })).toEqual({ x: 100, y: 120, width: 80, height: 80 })
+    expect(rectFromDrag(s, { x: 100 + 79, y: 200 + 79 })).toEqual({ x: 100, y: 200, width: 80, height: 80 })
+    expect(rectFromDrag(s, { x: 100 + 4, y: 200 })).toEqual({ x: 100, y: 200, width: 80, height: 80 })
+  })
+  test('最小ちょうど(80)の一辺があれば、その辺は 80', () => {
     expect(rectFromDrag(s, { x: 180, y: 210 })).toEqual({ x: 100, y: 200, width: 80, height: 80 })
   })
   test('片方だけ最小に満たない: その辺だけを、ドラッグした向きに最小まで伸ばす(始点は動かさない)', () => {

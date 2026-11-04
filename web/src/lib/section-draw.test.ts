@@ -77,9 +77,20 @@ describe('drawReducer: 通常のドラッグ', () => {
     expect(effects).toEqual([{ type: 'create', rect: { x: 500, y: 600, width: 300, height: 400 } }])
   })
 
-  test('数ピクセルだけ動いた(最小に満たない)ときも、既定の大きさ', () => {
-    const { effects } = run([down(10, 10), move(14, 13), up(14, 13)])
+  test('数ピクセルだけ動いた(4 未満)ときも、既定の大きさ', () => {
+    const { effects } = run([down(10, 10), move(13, 12), up(13, 12)])
     expect(effects).toEqual([{ type: 'create', rect: { x: 10, y: 10, width: 300, height: 400 } }])
+  })
+
+  test('最小を狙って小さくドラッグしたときは、既定の大きさではなく最小の 80×80', () => {
+    const { effects } = run([down(10, 10), move(50, 40), up(50, 40)])
+    expect(effects).toEqual([{ type: 'create', rect: { x: 10, y: 10, width: 80, height: 80 } }])
+  })
+
+  test('クリックとみなす大きさは、渡した値(拡大率に合わせた値)で決まる', () => {
+    const down1 = drawReducer(DRAW_IDLE, down(10, 10)).state
+    const step = drawReducer(down1, up(30, 30), 40)
+    expect(step.effect).toEqual({ type: 'create', rect: { x: 10, y: 10, width: 300, height: 400 } })
   })
 
   test('負の座標でも、そのまま四角になる', () => {

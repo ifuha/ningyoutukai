@@ -1,4 +1,4 @@
-import { rectFromDrag, type Point, type Rect } from '#/lib/section-edit-geometry'
+import { CLICK_DRAG_MAX, rectFromDrag, type Point, type Rect } from '#/lib/section-edit-geometry'
 
 // 「ドラッグでセクションを置く」操作の状態遷移(画面や DOM に依存しない純粋な関数)
 // 座標はすべて「キャンバスの座標」。画面の座標からの変換(`toCanvas`)は、呼び出す側(部品)が行う
@@ -37,7 +37,8 @@ export type DrawStep = {
 
 const ignore = (state: DrawState): DrawStep => ({ state, effect: null, consumed: false })
 
-export function drawReducer(state: DrawState, event: DrawEvent): DrawStep {
+// clickThreshold: 「クリックだけ」とみなす動き(キャンバスの座標。画面の 4px を拡大率で割った値を渡す)
+export function drawReducer(state: DrawState, event: DrawEvent, clickThreshold = CLICK_DRAG_MAX): DrawStep {
   switch (event.type) {
     case 'down': {
       // 待機のときだけ始める。ドラッグ中の 2 回目の押下(2 本目の指、別のボタン)は無視する
@@ -60,7 +61,7 @@ export function drawReducer(state: DrawState, event: DrawEvent): DrawStep {
       if (event.button !== 0) return ignore(state)
       return {
         state: DRAW_IDLE,
-        effect: { type: 'create', rect: rectFromDrag(state.start, event.point) },
+        effect: { type: 'create', rect: rectFromDrag(state.start, event.point, clickThreshold) },
         consumed: true,
       }
     }
@@ -76,9 +77,9 @@ export function drawReducer(state: DrawState, event: DrawEvent): DrawStep {
   }
 }
 
-/** ドラッグ中のプレビューの四角(キャンバスの座標)。ドラッグ中でなければ null。ほぼクリックのときは、既定の大きさ(置かれる大きさ)を見せる */
-export function previewRect(state: DrawState): Rect | null {
-  return state.kind === 'dragging' ? rectFromDrag(state.start, state.current) : null
+/** ドラッグ中のプレビューの四角(キャンバスの座標)。ドラッグ中でなければ null。クリックだけのときは、既定の大きさ(置かれる大きさ)を見せる */
+export function previewRect(state: DrawState, clickThreshold = CLICK_DRAG_MAX): Rect | null {
+  return state.kind === 'dragging' ? rectFromDrag(state.start, state.current, clickThreshold) : null
 }
 
 /** プレビューに添える大きさの文字("300×400") */
