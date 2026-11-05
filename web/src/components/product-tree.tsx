@@ -109,6 +109,7 @@ export function ProductTree({
   // 別のダイアログ(タスクなど)の中で押したときは、何もしない(検索パネル自身は除く)
   const searchOpenRef = useRef(false)
   searchOpenRef.current = searchOpen
+  const toolRef = useRef<string>('select')
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const isFind = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f'
@@ -120,6 +121,8 @@ export function ProductTree({
         target.closest('[role="dialog"]:not([aria-label="プロダクト内を検索"])')
       ) return
       event.preventDefault()
+      // 「セクション」を使っている間は、検索を開かない(道具は同時に使えない)
+      if (isFind && !searchOpenRef.current && toolRef.current === 'section') return
       setSearchOpen(isFind ? !searchOpenRef.current : false)
     }
     window.addEventListener('keydown', onKeyDown)
@@ -268,6 +271,7 @@ export function ProductTree({
       ? [leader, ...members].find((m) => m.productMemberId === cardDrag.draggingId)
       : undefined
   const mode = interaction.tool
+  toolRef.current = mode
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase()
   const searchResults: TreeSearchResult[] = []
   if (normalizedQuery) {
@@ -575,6 +579,7 @@ export function ProductTree({
       <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2">
         <TreeToolbar
           mode={mode}
+          searchOpen={searchOpen}
           onModeChange={interaction.setTool}
           onOpenMembers={onOpenMembers}
           onOpenSearch={() => setSearchOpen((open) => !open)}

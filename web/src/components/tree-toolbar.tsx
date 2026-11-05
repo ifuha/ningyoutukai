@@ -30,6 +30,7 @@ export function TreeToolbar({
   onOpenSearch,
   onAddMemo,
   canEditSections = false,
+  searchOpen = false,
 }: {
   mode: TreeMode
   onModeChange: (mode: TreeMode) => void
@@ -41,7 +42,13 @@ export function TreeToolbar({
   onAddMemo?: () => void
   /** セクションを置ける(リーダー)か。false のときは、「セクション」が押せない見た目 */
   canEditSections?: boolean
+  /** 検索を開いているか。開いている間は、検索以外の道具を使えない */
+  searchOpen?: boolean
 }) {
+  // 道具は同時に使えない: 「セクション」を使っている間は、検索・メンバー・メモを押せない。検索を開いている間は、「セクション」・メンバー・メモを押せない
+  const sectionActive = mode === 'section'
+  const busyTip = sectionActive ? 'セクションを置いている間は使えません(Esc で戻る)' : '検索を閉じてから使えます'
+  const busy = sectionActive || searchOpen
   return (
     <div
       role="toolbar"
@@ -58,25 +65,34 @@ export function TreeToolbar({
       <IconButton
         icon={User}
         label="メンバー"
-        tip={onOpenMembers ? 'メンバーの管理' : 'メンバーの管理(リーダーのみ)'}
-        disabled={!onOpenMembers}
+        tip={busy ? busyTip : onOpenMembers ? 'メンバーの管理' : 'メンバーの管理(リーダーのみ)'}
+        disabled={!onOpenMembers || busy}
         onClick={onOpenMembers}
       />
       <IconButton
         icon={SquareDashed}
         label="セクション"
-        tip={canEditSections ? 'セクションを置く(Esc で戻る)' : 'セクション(リーダーのみ)'}
+        tip={
+          searchOpen ? busyTip : canEditSections ? 'セクションを置く(Esc で戻る)' : 'セクション(リーダーのみ)'
+        }
         pressed={mode === 'section'}
-        disabled={!canEditSections}
+        disabled={!canEditSections || searchOpen}
         onClick={() => onModeChange('section')}
       />
-      <IconButton icon={StickyNote} label="メモ" tip="付箋を追加" onClick={onAddMemo} disabled={!onAddMemo} />
+      <IconButton
+        icon={StickyNote}
+        label="メモ"
+        tip={busy ? busyTip : '付箋を追加'}
+        onClick={onAddMemo}
+        disabled={!onAddMemo || busy}
+      />
       <Divider />
       <IconButton
         icon={Search}
         label="検索"
+        tip={sectionActive ? busyTip : undefined}
         onClick={onOpenSearch}
-        disabled={!onOpenSearch}
+        disabled={!onOpenSearch || sectionActive}
       />
     </div>
   )
