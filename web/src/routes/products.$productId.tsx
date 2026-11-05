@@ -137,7 +137,7 @@ function Product() {
           </>
         )}
       </div>
-      <div className="pointer-events-auto flex flex-wrap items-center gap-3">
+      <div className="pointer-events-auto flex flex-wrap items-center">
         {tree.data && <ManageMenu items={manageItems} />}
         {product.data?.role === 'leader' && (
           <>
