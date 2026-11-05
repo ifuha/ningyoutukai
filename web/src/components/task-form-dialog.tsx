@@ -2,8 +2,8 @@ import { Modal } from '#/components/modal'
 import { TaskForm } from '#/components/task-form'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 
-/** 開くフォーム。`edit` があれば編集、なければ作成 */
-export type TaskFormTarget = { edit?: { task: TreeTask; member: TreeMember } }
+/** 開くフォーム。`edit` があれば編集、なければ作成。作成のとき `memberId` があれば、その人を担当者としてあらかじめ選ぶ(メンバーのカードの「タスクを追加」) */
+export type TaskFormTarget = { edit?: { task: TreeTask; member: TreeMember }; memberId?: string }
 
 // タスクの作成・編集のモーダル(リーダーにだけ出す)。`target` が null の間は閉じている。
 // 編集の対象が変わったら作り直すよう、`key` にタスクの id を使う
@@ -22,10 +22,11 @@ export function TaskFormDialog({
     <Modal open={target !== null} onClose={onClose}>
       {target && (
         <TaskForm
-          key={target.edit?.task.taskId ?? 'new'}
+          key={target.edit?.task.taskId ?? `new-${target.memberId ?? ''}`}
           productId={productId}
           members={members}
           edit={target.edit}
+          initialMemberId={target.memberId}
           onDone={onClose}
         />
       )}

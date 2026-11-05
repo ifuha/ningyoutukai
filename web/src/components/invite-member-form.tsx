@@ -93,13 +93,13 @@ export function InviteMemberForm({ productId }: { productId: string }) {
             onFocus={() => setListOpen(true)}
             onBlur={() => setListOpen(false)}
             onKeyDown={onKeyDown}
-            className="h-10 w-full shadow-box bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
+            className="h-10 w-full shadow-box bg-panel px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
           />
           {showList && (
             <ul
               id="invite-member-candidates"
               role="listbox"
-              className="absolute inset-x-0 top-full z-10 mt-1 shadow-box bg-surface"
+              className="absolute inset-x-0 top-full z-10 mt-1 shadow-box bg-panel"
             >
               {candidates.map((c, i) => (
                 <li
@@ -142,6 +142,7 @@ export function InviteMemberForm({ productId }: { productId: string }) {
           label="招待"
           showLabel
           variant="outline"
+          className="bg-panel"
           side="bottom"
           disabled={invite.isPending}
         />

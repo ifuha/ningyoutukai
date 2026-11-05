@@ -15,9 +15,9 @@ type ListResult = Awaited<
 type TaskKind = Json<NonNullable<Extract<ListResult, { error: null }>['data']>>[number]
 
 const buttonClass =
-  'flex h-10 shrink-0 items-center justify-center shadow-box bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+  'flex h-10 shrink-0 items-center justify-center shadow-box bg-panel px-3 text-m text-ink hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-panel'
 const inputClass =
-  'h-10 min-w-0 flex-1 shadow-box bg-surface px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'h-10 min-w-0 flex-1 shadow-box bg-panel px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
 function ErrorText({ message }: { message: string }) {
   return (
@@ -89,12 +89,14 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
             label="保存"
             showLabel
             variant="outline"
+            className="bg-panel"
             disabled={busy || !name.trim()}
           />
           <IconButton
             icon={X}
             label="やめる"
             variant="outline"
+            className="bg-panel"
             disabled={busy}
             onClick={() => {
               setMode('view')
@@ -121,6 +123,7 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
               icon={X}
               label="やめる"
               variant="outline"
+              className="bg-panel"
               disabled={busy}
               onClick={() => {
                 setMode('view')
@@ -136,6 +139,7 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
             icon={Pencil}
             label="名前を変更"
             variant="outline"
+            className="bg-panel"
             onClick={() => {
               setName(kind.taskTypeName)
               setMode('edit')
@@ -146,6 +150,7 @@ function KindRow({ productId, kind }: { productId: string; kind: TaskKind }) {
             icon={Trash2}
             label="削除"
             variant="outline"
+            className="bg-panel"
             onClick={() => {
               setMode('confirm')
               rename.reset()
@@ -197,6 +202,7 @@ function AddForm({ productId }: { productId: string }) {
           label="追加"
           showLabel
           variant="outline"
+          className="bg-panel"
           disabled={add.isPending || !name.trim()}
         />
       </form>
@@ -239,7 +245,7 @@ export function TaskKindDialog({
           ))}
         </ul>
       )}
-      <IconButton icon={X} label="閉じる" variant="outline" onClick={onClose} />
+      <IconButton icon={X} label="閉じる" variant="outline" className="bg-panel" onClick={onClose} />
     </Modal>
   )
 }

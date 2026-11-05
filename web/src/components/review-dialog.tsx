@@ -34,7 +34,7 @@ const reportedFormat = new Intl.DateTimeFormat('ja-JP', {
 })
 
 const buttonClass =
-  'flex h-10 items-center justify-center shadow-box bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+  'flex h-10 items-center justify-center shadow-box bg-panel px-3 text-m text-ink hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-panel'
 
 // 確認待ち 1 件分の行。成功したらツリーを取り直し、行は消える。
 // 404/409 は、行を残してエラーを読めるようにし、押せないままにする(取り直すと行ごと消える)
@@ -86,6 +86,7 @@ function ReviewRow({
           label="完了を確定"
           showLabel
           variant="outline"
+          className="bg-panel"
           disabled={complete.isPending || stale || confirming}
           onClick={() => setConfirming(true)}
         />
@@ -110,6 +111,7 @@ function ReviewRow({
               icon={X}
               label="やめる"
               variant="outline"
+              className="bg-panel"
               disabled={complete.isPending}
               onClick={() => {
                 setConfirming(false)
@@ -152,7 +154,7 @@ export function ReviewDialog({
           ))}
         </ul>
       )}
-      <IconButton icon={X} label="閉じる" variant="outline" onClick={onClose} />
+      <IconButton icon={X} label="閉じる" variant="outline" className="bg-panel" onClick={onClose} />
     </Modal>
   )
 }

@@ -32,12 +32,15 @@ export function DragSlot({
   )
 }
 
+const noop = () => {}
+
 /**
  * ドラッグ中のカードの影。`position` は基準の位置(ドラッグを始めたときのカードの左上のキャンバス座標。`offsetX` / `offsetY` は、
  * 負の座標があるときの全体のずらし量)。動きは、`elementRef` の要素の transform に、フックが直接書く(React の状態を経由しない。
  * `position` は、ドラッグ中は変わらないので、再描画されても、transform は消えない)。
  * `cardId` は付けない(カードの位置を測る目印が、元のカードと重ならないように)。ポインタは通す。
  * 重ね順は z-40(描く層 z-30・編集枠の上)。
+ * `addTask` が true のとき、元のカードと同じ高さになるよう、一番下の「+ タスクを追加」の行も描く(押せない。ポインタは通す)。
  */
 export function CardGhost({
   member,
@@ -45,12 +48,14 @@ export function CardGhost({
   offsetX = 0,
   offsetY = 0,
   elementRef,
+  addTask = false,
 }: {
   member: TreeMember
   position: { x: number; y: number }
   offsetX?: number
   offsetY?: number
   elementRef?: (el: HTMLElement | null) => void
+  addTask?: boolean
 }) {
   return (
     <div
@@ -59,7 +64,7 @@ export function CardGhost({
       className="pointer-events-none absolute z-40 opacity-90 shadow-lg"
       style={{ left: position.x + offsetX, top: position.y + offsetY }}
     >
-      <MemberCard member={member} />
+      <MemberCard member={member} onAddTask={addTask ? noop : undefined} />
     </div>
   )
 }
