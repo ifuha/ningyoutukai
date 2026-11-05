@@ -1,10 +1,12 @@
 import { and, asc, eq, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
-import { productNotes, users } from "../db/schema";
+import { productNotes, products, users } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
 import { noteAuthorize } from "../lib/note-authorize";
-import { getMembership } from "../lib/product-access";
+import { webOrigin } from "../auth";
+import { mailer } from "../lib/mailer";
+import { getMemberContactsExcept, getMembership } from "../lib/product-access";
 import { MessageSchema } from "../lib/response-schema";
 import { coordSchema } from "../lib/section-input";
 
@@ -47,6 +49,25 @@ async function findNote(noteId: string) {
   return note;
 }
 
+/** メール本文に載せるメモの内容の長さ(これを超えたら省略する) */
+const MAIL_PREVIEW_LENGTH = 200;
+
+/**
+ * メモを非公開から公開に切り替えたとき、ほかのメンバー全員へメールで知らせる(切り替えた本人には送らない)。
+ * mailer.send は失敗しても例外を投げないので、メモの更新は成功させる
+ */
+async function notifyNotePublished(args: { productId: string; publisherUserId: string; publisherName: string; content: string }) {
+  const recipients = await getMemberContactsExcept(args.productId, args.publisherUserId);
+  if (recipients.length === 0) return;
+  const [product] = await db.select({ productName: products.productName }).from(products).where(eq(products.productId, args.productId));
+  const productName = product?.productName ?? "プロダクト";
+  const preview = args.content.length > MAIL_PREVIEW_LENGTH ? `${args.content.slice(0, MAIL_PREVIEW_LENGTH)}…` : args.content;
+  const lines = [`${args.publisherName} さんが、プロダクト「${productName}」のメモを公開しました。`];
+  if (preview.trim()) lines.push("", preview);
+  lines.push("", "プロダクトを開く:", `${webOrigin}/products/${args.productId}`);
+  await mailer.send({ to: recipients.map((r) => r.email), subject: `メモが公開されました: ${productName}`, text: lines.join("\n") });
+}
+
 export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGuard).use(noteAuthorize)
   .get("/api/product/:productId/note", async ({ params, user, authorize, status }) => {
     const membership = await getMembership(params.productId, user.userId);
@@ -76,6 +97,10 @@ export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGu
     if (!can.canEdit(note)) return status(403, forbiddenEdit);
     await db.update(productNotes).set({ ...body, updatedAt: new Date() }).where(eq(productNotes.noteId, params.noteId));
     const updated = await findNote(params.noteId);
+    // 非公開 → 公開に切り替えたときだけ、ほかのメンバーへ知らせる
+    if (updated && body.isPublic === true && !note.isPublic) {
+      await notifyNotePublished({ productId: params.productId, publisherUserId: user.userId, publisherName: user.userName, content: updated.content });
+    }
     return updated ? { ...updated, canEdit: can.canEdit(updated) } : status(404, notFound);
   }, { requireUser: true, params: noteParams, body: t.Object({ content: t.Optional(t.String({ maxLength: 2000, pattern: "^[^\\u0000]*$" })), x: t.Optional(coordSchema()), y: t.Optional(coordSchema()), isPublic: t.Optional(t.Boolean()) }), response: { 200: noteSchema, 403: MessageSchema, 404: MessageSchema }, detail: { summary: "メモ更新(作成者のみ)" } })
   .delete("/api/product/:productId/note/:noteId", async ({ params, user, authorize, status }) => {

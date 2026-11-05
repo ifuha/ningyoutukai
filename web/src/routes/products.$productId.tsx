@@ -118,8 +118,8 @@ function Product() {
 
   // 見出しと右のボタン群。キャンバスの上に重ねる(ボタンのところだけ操作できる)
   const header = (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className="min-w-48 flex-1">
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex min-w-48 flex-1 flex-wrap items-baseline gap-x-3">
         {product.isError && product.data === undefined ? (
           <p role="alert" className="border-l border-line pl-3 text-m">
             ERR {product.error.message}
@@ -131,13 +131,13 @@ function Product() {
             <h1 className="text-l font-bold break-words">
               {product.data.productName}
             </h1>
-            <p className="mt-1 text-m opacity-70">
+            <p className="text-m opacity-70">
               {roleLabel[product.data.role]}
             </p>
           </>
         )}
       </div>
-      <div className="pointer-events-auto flex flex-wrap items-center gap-3">
+      <div className="pointer-events-auto flex flex-wrap items-center">
         {tree.data && <ManageMenu items={manageItems} />}
         {product.data?.role === 'leader' && (
           <>
@@ -146,6 +146,7 @@ function Product() {
               label="タスクを追加"
               showLabel
               variant="outline"
+              className="bg-panel"
               side="bottom"
               onClick={() => setTaskForm({})}
             />
@@ -155,6 +156,7 @@ function Product() {
                 label={`確認待ち ${pendingReviews(tree.data).length} 件`}
                 showLabel
                 variant="outline"
+                className="bg-panel"
                 side="bottom"
                 onClick={() => setReviewOpen(true)}
               />
@@ -165,6 +167,7 @@ function Product() {
         icon={ArrowLeft}
         label="ホームへ戻る"
         variant="outline"
+        className="bg-panel"
         side="bottom"
         onClick={() => void navigate({ to: '/home' })}
       />

@@ -1,8 +1,9 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, spyOn, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { app } from "../../src/app";
 import { db } from "../../src/db";
 import { productNotes } from "../../src/db/schema";
+import { mailer } from "../../src/lib/mailer";
 import { cleanup, createOutsider, setupProduct } from "../task/helpers";
 
 // メモの公開範囲と権限。公開 = メンバー全員に見える、非公開 = 作成者だけ。非公開は、作成者が NULL(持ち主がいない)でも他人に見せない。作成者が NULL の公開メモは、全員が変更できる
@@ -11,11 +12,15 @@ type Setup = Awaited<ReturnType<typeof setupProduct>>;
 let a: Setup; // リーダー + メンバー 2 人
 let b: Setup; // 別のプロダクト
 
+const sendSpy = spyOn(mailer, "send");
+
 beforeAll(async () => {
+  sendSpy.mockResolvedValue({ ok: true });
   a = await setupProduct();
   b = await setupProduct({ members: 1 });
 });
 afterAll(cleanup);
+afterEach(() => sendSpy.mockClear());
 
 const url = (productId: string, noteId?: string) => `/api/product/${productId}/note${noteId ? `/${noteId}` : ""}`;
 
@@ -200,6 +205,46 @@ describe("canEdit(見ている人が変更・削除できるか)", () => {
     expect(created.canEdit).toBe(true);
     const patched = (await (await call("PATCH", url(a.productId, created.noteId), m.cookie, { isPublic: true })).json()) as { canEdit: boolean };
     expect(patched.canEdit).toBe(true);
+  });
+});
+
+describe("公開したときのメール", () => {
+  test("非公開 → 公開に切り替えると、本人以外のメンバー全員に送る(本人には送らない)", async () => {
+    const m = a.members[0]!;
+    const n = await insertNote(a.productId, { createdBy: m.userId, content: "公開するメモ" });
+    const res = await call("PATCH", url(a.productId, n.noteId), m.cookie, { isPublic: true });
+    expect(res.status).toBe(200);
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+    const mail = sendSpy.mock.calls[0]![0];
+    const to = (Array.isArray(mail.to) ? mail.to : [mail.to]).sort();
+    const everyone = [a.leader, ...a.members];
+    const expected = everyone.filter((u) => u.userId !== m.userId).map((u) => u.email).sort();
+    expect(to).toEqual(expected);
+    expect(to).not.toContain(m.email);
+    expect(mail.subject).toContain("メモが公開されました");
+    expect(mail.text).toContain("公開するメモ");
+    expect(mail.text).toContain(`プロダクトを開く:\n`);
+    expect(mail.text).toMatch(new RegExp(`https?://[^\\s]+/products/${a.productId}`));
+  });
+
+  test("すでに公開のメモの更新・非公開への切り替え・内容だけの更新では送らない", async () => {
+    const m = a.members[0]!;
+    const pub = await insertNote(a.productId, { createdBy: m.userId, isPublic: true });
+    await call("PATCH", url(a.productId, pub.noteId), m.cookie, { isPublic: true });
+    await call("PATCH", url(a.productId, pub.noteId), m.cookie, { content: "x" });
+    await call("PATCH", url(a.productId, pub.noteId), m.cookie, { isPublic: false });
+    const priv = await insertNote(a.productId, { createdBy: m.userId });
+    await call("PATCH", url(a.productId, priv.noteId), m.cookie, { content: "y" });
+    expect(sendSpy).not.toHaveBeenCalled();
+  });
+
+  test("長い内容は省略して送る", async () => {
+    const m = a.members[0]!;
+    const n = await insertNote(a.productId, { createdBy: m.userId, content: "あ".repeat(500) });
+    await call("PATCH", url(a.productId, n.noteId), m.cookie, { isPublic: true });
+    const mail = sendSpy.mock.calls[0]![0];
+    expect(mail.text).toContain("あ".repeat(200) + "…");
+    expect(mail.text).not.toContain("あ".repeat(201));
   });
 });
 
