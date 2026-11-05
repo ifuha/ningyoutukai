@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { productNotes, users } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
+import { noteAuthorize } from "../lib/note-authorize";
 import { getMembership } from "../lib/product-access";
 import { MessageSchema } from "../lib/response-schema";
 import { coordSchema } from "../lib/section-input";
@@ -39,19 +40,6 @@ export function visibleNoteFilter(userId: string) {
 
 type NoteRow = { isPublic: boolean; createdBy: string | null };
 
-/** 見ている人(ユーザーと、そのプロダクトでの役割) */
-export type Me = { userId: string; role: "leader" | "member" };
-
-/**
- * メモの権限。`authorize(me).canEdit(note)`。
- * 変更・削除・公開の切り替えができるのは、作成者だけ(リーダーでも、他の人のメモは変更も削除もできない)。
- * 例外: 作成者が NULL(退会した人・作成者を保存する前のメモ)のメモは、持ち主がいないので、リーダーが片付けられる
- */
-export function authorize(me: Me) {
-  return {
-    canEdit: (note: NoteRow): boolean => note.createdBy === me.userId || (note.createdBy === null && me.role === "leader"),
-  };
-}
 const isVisible = (note: NoteRow, userId: string) => note.isPublic || note.createdBy === userId;
 
 async function findNote(noteId: string) {
@@ -59,8 +47,8 @@ async function findNote(noteId: string) {
   return note;
 }
 
-export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGuard)
-  .get("/api/product/:productId/note", async ({ params, user, status }) => {
+export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGuard).use(noteAuthorize)
+  .get("/api/product/:productId/note", async ({ params, user, authorize, status }) => {
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, { message: "プロダクトが見つかりません" });
     const rows = await db.select(noteColumns).from(productNotes).leftJoin(users, eq(productNotes.createdBy, users.userId))
@@ -69,7 +57,7 @@ export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGu
     const can = authorize({ userId: user.userId, role: membership.role });
     return rows.map((n) => ({ ...n, canEdit: can.canEdit(n) }));
   }, { requireUser: true, params, response: { 200: noteListSchema, 404: MessageSchema }, detail: { summary: "メモ一覧取得(公開と自分のメモ)" } })
-  .post("/api/product/:productId/note", async ({ params, body, user, status }) => {
+  .post("/api/product/:productId/note", async ({ params, body, user, authorize, status }) => {
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, { message: "プロダクトが見つかりません" });
     // isPublic は DB の既定(非公開)のまま。公開は PATCH で作成者が切り替える
@@ -77,7 +65,7 @@ export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGu
     const note = (await findNote(created.noteId))!;
     return status(201, { ...note, canEdit: authorize({ userId: user.userId, role: membership.role }).canEdit(note) });
   }, { requireUser: true, params, body: t.Object({ x: coordSchema(), y: coordSchema() }), response: { 201: noteSchema, 404: MessageSchema }, detail: { summary: "メモ作成" } })
-  .patch("/api/product/:productId/note/:noteId", async ({ params, body, user, status }) => {
+  .patch("/api/product/:productId/note/:noteId", async ({ params, body, user, authorize, status }) => {
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, notFound);
     const note = await findNote(params.noteId);
@@ -90,7 +78,7 @@ export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGu
     const updated = await findNote(params.noteId);
     return updated ? { ...updated, canEdit: can.canEdit(updated) } : status(404, notFound);
   }, { requireUser: true, params: noteParams, body: t.Object({ content: t.Optional(t.String({ maxLength: 2000, pattern: "^[^\\u0000]*$" })), x: t.Optional(coordSchema()), y: t.Optional(coordSchema()), isPublic: t.Optional(t.Boolean()) }), response: { 200: noteSchema, 403: MessageSchema, 404: MessageSchema }, detail: { summary: "メモ更新(作成者のみ)" } })
-  .delete("/api/product/:productId/note/:noteId", async ({ params, user, status }) => {
+  .delete("/api/product/:productId/note/:noteId", async ({ params, user, authorize, status }) => {
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, notFound);
     const note = await findNote(params.noteId);
