@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 
 const MAX_TASKS = 3
@@ -31,17 +32,20 @@ export function formatLimit(iso: string): string {
 // ツリーの 1 人分のカード(見出し部: アバター・名前・役割 / 本体: タスク 3 件まで / フッター: 件数)
 // `onEditTask` を渡すと、タスク名が押せる(リーダーにだけ渡す。ツリーに完了済みは出ないので、すべて編集できる)
 // `onShowTasks` を渡すと、4 件目以降があるとき「他 N 件」が押せて、全タスクの一覧を開ける
+// `onAddTask` を渡すと(リーダーにだけ渡す)、カードの一番下に、破線で区切った「+ タスクを追加」の行が出て、その人を渡す(その人を担当者にして、フォームを開く)
 // `cardId` を渡すと、カードに `data-card-id` を付ける(親子の線の端点を、カードの実際の位置・高さで描くために、測る目印)
 export function MemberCard({
   member,
   cardId,
   onEditTask,
   onShowTasks,
+  onAddTask,
 }: {
   member: TreeMember
   cardId?: string
   onEditTask?: (task: TreeTask) => void
   onShowTasks?: (member: TreeMember) => void
+  onAddTask?: (member: TreeMember) => void
 }) {
   const isLeader = member.role === 'leader'
   const shown = member.tasks.slice(0, MAX_TASKS)
@@ -135,6 +139,16 @@ export function MemberCard({
         )}
         {pending > 0 && <span>確認待ち {pending} 件</span>}
       </footer>
+      {onAddTask && (
+        <button
+          type="button"
+          onClick={() => onAddTask(member)}
+          className="flex w-full cursor-pointer items-center gap-1 border-t border-dashed border-ink/50 px-2 py-2 text-left text-m hover:bg-side-item focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink"
+        >
+          <Plus aria-hidden="true" size={14} className="shrink-0" />
+          タスクを追加
+        </button>
+      )}
     </article>
   )
 }

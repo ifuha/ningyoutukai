@@ -34,17 +34,22 @@ type Props = {
   members: TreeMember[]
   /** 渡すと編集、なければ作成。編集では担当者は変えられない(表示のみ) */
   edit?: { task: TreeTask; member: TreeMember }
+  /** 作成のとき、あらかじめ選んでおく担当者(メンバーのカードの「タスクを追加」から開いたとき) */
+  initialMemberId?: string
   /** 成功したとき(モーダルを閉じる) */
   onDone: () => void
 }
 
 // タスクの作成と編集のフォーム(リーダーにだけ出す)。見た目は暫定(ターミナル風)
-export function TaskForm({ productId, members, edit, onDone }: Props) {
+export function TaskForm({ productId, members, edit, initialMemberId, onDone }: Props) {
   const queryClient = useQueryClient()
   const initial = edit?.task
   const [taskName, setTaskName] = useState(initial?.taskName ?? '')
   const [memberId, setMemberId] = useState(
-    edit?.member.productMemberId ?? members[0]?.productMemberId ?? '',
+    edit?.member.productMemberId ??
+      members.find((m) => m.productMemberId === initialMemberId)?.productMemberId ??
+      members[0]?.productMemberId ??
+      '',
   )
   const [description, setDescription] = useState(initial?.description ?? '')
   const [timeLimit, setTimeLimit] = useState(toInputValue(initial?.timeLimit ?? null))

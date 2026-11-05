@@ -56,6 +56,7 @@ const ABOVE_TOOLBAR = 'bottom-[74px]'
 // 入力は `usePanZoom`(ドラッグ・二本指スクロール・ピンチ・キー)。ページの縦スクロールは、領域の外で行う
 // `onEditTask` を渡すと、タスクが押せて、押した人とタスクを渡す(`canOpenTask` があれば、それが true の人のタスクだけ)
 // `onShowTasks` を渡すと、「他 N 件」が押せて、その人を渡す(全員向け)
+// `onAddTask` を渡すと(リーダーにだけ渡す)、各カードの一番下に「+ タスクを追加」が出て、その人を渡す
 // 下の中央の道具のバー(`TreeToolbar`)。`onOpenMembers` を渡すと(リーダーのみ)「メンバー」が押せて、メンバーの管理を開く
 // 道具(モード)は「選択」「セクション」(`useSectionInteraction`)。初期は「選択」。キャンバスのドラッグでの移動は、「セクション」以外ではいつでも動く。
 //   「セクション」を選ぶと、キャンバスのカーソルが十字になり、ドラッグでの移動は止まる(描く層が受ける)。Esc か「選択」で戻る
@@ -75,6 +76,7 @@ export function ProductTree({
   onEditTask,
   canOpenTask,
   onShowTasks,
+  onAddTask,
   onOpenMembers,
   canEditSections = false,
   sectionActions = NO_SECTION_ACTIONS,
@@ -89,6 +91,7 @@ export function ProductTree({
   onEditTask?: (member: TreeMember, task: TreeTask) => void
   canOpenTask?: (member: TreeMember) => boolean
   onShowTasks?: (member: TreeMember) => void
+  onAddTask?: (member: TreeMember) => void
   onOpenMembers?: () => void
   /** 自分がリーダーか(セクションの作成・大きさの変更・削除・カードの移動ができる) */
   canEditSections?: boolean
@@ -483,6 +486,7 @@ export function ProductTree({
                   cardId={leader.productMemberId}
                   onEditTask={editFor(leader)}
                   onShowTasks={onShowTasks}
+                  onAddTask={onAddTask}
                 />
               </DragSlot>
             )}
@@ -534,6 +538,7 @@ export function ProductTree({
                             cardId={m.productMemberId}
                             onEditTask={editFor(m)}
                             onShowTasks={onShowTasks}
+                  onAddTask={onAddTask}
                           />
                         </DragSlot>
                       </li>
@@ -559,6 +564,7 @@ export function ProductTree({
                   cardId={member.productMemberId}
                   onEditTask={editFor(member)}
                   onShowTasks={onShowTasks}
+                  onAddTask={onAddTask}
                 />
               </DragSlot>
             </div>
