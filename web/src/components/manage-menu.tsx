@@ -37,6 +37,7 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
         label={items[0].label}
         showLabel
         variant="outline"
+        className="bg-panel"
         side="bottom"
         onClick={items[0].onSelect}
       />
@@ -55,6 +56,7 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
           label="管理"
           showLabel
           variant="outline"
+          className="bg-panel"
           side="bottom"
           aria-haspopup="menu"
           aria-expanded={open}
