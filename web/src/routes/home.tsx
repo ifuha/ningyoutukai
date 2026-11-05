@@ -64,8 +64,6 @@ function Home() {
                     icon={CalendarPlus}
                     label="Googleカレンダーを連携"
                     showLabel
-                    variant="outline"
-                    className="bg-panel"
                     size="sm"
                     side="bottom"
                     onClick={() => void connectGoogleCalendar()}
@@ -75,7 +73,6 @@ function Home() {
                   icon={LogOut}
                   label="ログアウト"
                   variant="outline"
-                  className="bg-panel"
                   size="sm"
                   side="bottom"
                   onClick={() => void signOut()}
@@ -105,7 +102,7 @@ function Home() {
                 </Link>
               </p>
             ) : (
-              <ol className="mt-4 border-t border-line bg-panel">
+              <ol className="mt-4 border-t border-line bg-surface">
                 {list.map((p, i) => (
                   <li
                     key={p.productId}
