@@ -422,3 +422,15 @@ describe('ProductTree(セクションの動かす面。カードの下・リー�
     expect(placedCard).toBeGreaterThan(surface)
   })
 })
+
+describe('メンバーのカードの「+ タスクを追加」', () => {
+  test('onAddTask を渡すと(リーダー用)、リーダーとメンバー全員のカードの一番下に、破線で区切った行が出る', () => {
+    const html = render({ tree: tree(L, [M1, M2]), onAddTask: () => {} })
+    expect(html.split('タスクを追加').length - 1).toBe(3)
+    expect(html).toContain('border-t border-dashed')
+  })
+  test('onAddTask がなければ(メンバー用)、出ない', () => {
+    const html = render({ tree: tree(L, [M1, M2]) })
+    expect(html).not.toContain('タスクを追加')
+  })
+})

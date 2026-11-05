@@ -160,6 +160,17 @@ describe('DragSlot(カードを包む要素)', () => {
   })
 })
 
+describe('CardGhost(ドラッグ中のカードの影)の「+ タスクを追加」', () => {
+  const ghost = (addTask?: boolean) =>
+    renderToStaticMarkup(createElement(CardGhost, { member: M1 as never, position: { x: 0, y: 0 }, addTask }))
+  test('addTask が true なら、元のカードと同じように、一番下の「+ タスクを追加」の行を描く(ドラッグ中に消えない)', () => {
+    expect(ghost(true)).toContain('タスクを追加')
+  })
+  test('addTask がなければ(メンバー用)、描かない', () => {
+    expect(ghost()).not.toContain('タスクを追加')
+  })
+})
+
 describe('CardGhost(ドラッグ中のカードの影)', () => {
   const html = renderToStaticMarkup(
     createElement(CardGhost, { member: M1 as never, position: { x: 120, y: 80 }, offsetX: 30, offsetY: 10 }),

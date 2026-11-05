@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, ClipboardCheck, Plus } from 'lucide-react'
+import { ArrowLeft, ClipboardCheck } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { AppShell } from '#/components/app-shell'
 import { Loading } from '#/components/loading'
@@ -141,15 +141,6 @@ function Product() {
         {tree.data && <ManageMenu items={manageItems} />}
         {product.data?.role === 'leader' && (
           <>
-            <IconButton
-              icon={Plus}
-              label="タスクを追加"
-              showLabel
-              variant="outline"
-              className="bg-panel"
-              side="bottom"
-              onClick={() => setTaskForm({})}
-            />
             {tree.data && (
               <IconButton
                 icon={ClipboardCheck}
@@ -207,6 +198,7 @@ function Product() {
                 onEditTask={openTask}
                 canOpenTask={canOpenTask}
                 onShowTasks={(member) => setListMemberId(member.productMemberId)}
+                onAddTask={isLeader ? (member) => setTaskForm({ memberId: member.productMemberId }) : undefined}
                 onOpenMembers={isLeader ? () => setMembersOpen(true) : undefined}
               />
             <TaskListDialog
