@@ -23,8 +23,8 @@ const variantClass: Record<IconButtonVariant, string> = {
   solid: 'border border-ink bg-ink text-surface hover:opacity-80',
 }
 
-// 押された状態(切り替えのボタン)。塗りつぶさず、細い輪だけで示す
-const pressedClass = 'shadow-box'
+// 押された状態(切り替えのボタン)。見た目は変えない(状態は `aria-pressed` で示す)
+const pressedClass = ''
 
 const sizeClass: Record<IconButtonSize, { box: string; labeled: string; icon: number }> = {
   sm: { box: 'size-8', labeled: 'h-8 gap-2 px-3', icon: 20 },

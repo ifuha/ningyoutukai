@@ -35,10 +35,10 @@ describe('IconButton', () => {
     expect(html).toContain('>リーダーのみ</span>')
   })
 
-  test('pressed は aria-pressed と押された見た目になる。省略なら aria-pressed を出さない', () => {
+  test('pressed は aria-pressed を出す(塗りも枠も付けない)。省略なら aria-pressed を出さない', () => {
     expect(render({ pressed: true })).toContain('aria-pressed="true"')
-    expect(render({ pressed: true })).toContain('shadow-box')
     expect(render({ pressed: true })).not.toContain('bg-ink text-surface')
+    expect(render({ pressed: true })).not.toContain('shadow-box')
     expect(render()).not.toContain('aria-pressed')
   })
 
