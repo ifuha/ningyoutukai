@@ -97,7 +97,7 @@ export function NoteContextMenu({
         else if (e.key === 'End') move(-1)
       }}
       onContextMenu={(e) => e.preventDefault()}
-      className="fixed z-50 w-56 shadow-box bg-surface p-1 text-m text-ink"
+      className="fixed z-50 w-56 shadow-box bg-panel p-1 text-m text-ink"
       style={{ left: pos.left, top: pos.top }}
     >
       <button type="button" role="menuitem" className={itemClass} onClick={choose(onEdit)}>

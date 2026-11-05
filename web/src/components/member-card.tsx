@@ -51,7 +51,7 @@ export function MemberCard({
   return (
     <article
       data-card-id={cardId}
-      className="w-[240px] shrink-0 shadow-box bg-surface text-left"
+      className="w-[240px] shrink-0 shadow-box bg-panel text-left"
     >
       <header
         className={`flex items-center gap-2 border-b border-line p-2 ${isLeader ? 'bg-ink text-surface' : ''}`}
