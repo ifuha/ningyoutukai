@@ -11,7 +11,7 @@ import {
 } from '#/lib/message-body'
 
 const textareaClass =
-  'min-h-20 w-full resize-y border border-line bg-surface p-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'min-h-20 w-full resize-y border border-line bg-panel p-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
 // コメントの入力欄。リーダーと担当者にだけ出す(api が、それ以外は 403、完了済みは 409 にする)。
 // 送れたら入力欄を空にして、履歴を取り直す。失敗したら、入力は残して、理由を出す
@@ -81,6 +81,7 @@ export function TaskMessageForm({
           label="送信"
           showLabel
           variant="outline"
+          className="bg-panel"
           disabled={post.isPending || !submittable}
         />
       </div>
