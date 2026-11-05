@@ -27,28 +27,25 @@ function GoogleLogo({ className }: { className?: string }) {
   )
 }
 
-// GitHub は塗りつぶし、Google は枠線(ライト / ダークの色は styles.css のトークン)
+// 2 つとも、テーマのアウトラインのボタン(細い輪 `shadow-box`、背景は `bg-panel`)
 // キーボードの 1 / 2 でも押せる(ターミナルの選択肢のように)
 const providers: {
   id: Provider
   key: string
   label: string
   icon: React.ReactNode
-  className: string
 }[] = [
   {
     id: 'github',
     key: '1',
     label: 'GitHubではじめる',
     icon: <Github className="h-5 w-5" aria-hidden="true" />,
-    className: 'bg-primary text-on-primary border border-primary',
   },
   {
     id: 'google',
     key: '2',
     label: 'Googleではじめる',
     icon: <GoogleLogo className="h-5 w-5" />,
-    className: 'bg-secondary text-outline shadow-box',
   },
 ]
 
@@ -104,7 +101,7 @@ export function LoginButtons({ callbackPath = '/home' }: { callbackPath?: string
           type="button"
           disabled={pending !== null}
           onClick={() => void signIn(p.id)}
-          className={`group flex h-[60px] w-full items-center gap-3 px-4 text-left font-mono text-l transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none ${p.className}`}
+          className="flex h-[60px] w-full cursor-pointer items-center gap-3 shadow-box bg-panel px-4 text-left font-mono text-l text-ink hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-panel"
         >
           <span className="opacity-60" aria-hidden="true">
             [{p.key}]
