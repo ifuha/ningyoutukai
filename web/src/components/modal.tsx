@@ -49,7 +49,7 @@ export function Modal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
-      className={`m-auto ${sizeClass} shadow-box bg-surface text-ink backdrop:bg-black/40 ${overflowVisible ? 'overflow-visible' : ''}`}
+      className={`m-auto ${sizeClass} shadow-box bg-panel text-ink backdrop:bg-black/40 ${overflowVisible ? 'overflow-visible' : ''}`}
     >
       {open && (
         <div className={size === 'full' ? 'h-full' : 'space-y-4 p-6'}>
