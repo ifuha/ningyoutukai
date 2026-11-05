@@ -30,8 +30,8 @@ const sizeClass: Record<IconButtonSize, { box: string; labeled: string; icon: nu
   sm: { box: 'size-8', labeled: 'h-8 gap-2 px-3', icon: 20 },
   md: { box: 'size-10', labeled: 'h-10 gap-2 px-4', icon: 24 },
   lg: { box: 'size-12', labeled: 'h-12 gap-3 px-5', icon: 28 },
-  // 画面の上のヘッダーのボタン(高さ 56px。ツールバーと同じ高さ)
-  xl: { box: 'size-14', labeled: 'h-14 gap-3 px-5', icon: 28 },
+  // 画面の上のヘッダーのボタン(高さ 48px)
+  xl: { box: 'size-12', labeled: 'h-12 gap-3 px-5', icon: 28 },
 }
 
 const sideClass: Record<TipSide, string> = {
