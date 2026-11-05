@@ -35,8 +35,8 @@ export function Sidebar({
   return (
     <aside className="flex h-screen w-60 shrink-0 flex-col bg-side">
       {/* ロゴ・招待・プロダクト一覧だけがスクロールし、「プロダクト作成」と「設定」は下に固定する */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 pt-4">
-      <div className="flex items-center justify-between">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-4">
+      <div className="flex items-center justify-between px-2">
         <p className="text-l leading-normal font-semibold">
           人形使い
         </p>
@@ -56,7 +56,7 @@ export function Sidebar({
       </div>
 
       {invitations.length > 0 && (
-        <section aria-label="招待" className="mt-4">
+        <section aria-label="招待" className="mt-4 px-2">
           <p className="text-m font-medium">招待({invitations.length})</p>
           <ul className="mt-[7px] flex flex-col gap-4">
             {invitations.map((i) => (
@@ -67,7 +67,7 @@ export function Sidebar({
       )}
 
       <nav aria-label="プロダクト" className="mt-4">
-        <p className="text-m">プロダクト</p>
+        <p className="px-2 text-m">プロダクト</p>
         <ul className="mt-[7px] flex flex-col gap-2">
           {isLoading ? (
             <li className="flex h-12 items-center">
