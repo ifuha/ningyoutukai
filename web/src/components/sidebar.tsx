@@ -68,7 +68,7 @@ export function Sidebar({
 
       <nav aria-label="プロダクト" className="mt-4">
         <p className="px-2 text-m">プロダクト</p>
-        <ul className="mt-[7px] flex flex-col gap-2">
+        <ul className="mt-[7px] flex flex-col">
           {isLoading ? (
             <li className="flex h-12 items-center">
               <Loading />
