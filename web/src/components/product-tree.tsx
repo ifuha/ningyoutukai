@@ -384,7 +384,7 @@ export function ProductTree({
     <div className="relative h-full w-full">
       <div
         ref={headerRef}
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 border-b border-ink/30 pl-4"
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 pl-4"
       >
         {header}
       </div>
