@@ -118,7 +118,7 @@ function Product() {
 
   // 見出しと右のボタン群。キャンバスの上に重ねる(ボタンのところだけ操作できる)
   const header = (
-    <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="flex flex-wrap items-center justify-between gap-4">
       <div className="min-w-48 flex-1">
         {product.isError && product.data === undefined ? (
           <p role="alert" className="border-l border-line pl-3 text-m">
@@ -146,6 +146,7 @@ function Product() {
               label="タスクを追加"
               showLabel
               variant="outline"
+              size="xl"
               side="bottom"
               onClick={() => setTaskForm({})}
             />
@@ -155,6 +156,7 @@ function Product() {
                 label={`確認待ち ${pendingReviews(tree.data).length} 件`}
                 showLabel
                 variant="outline"
+                size="xl"
                 side="bottom"
                 onClick={() => setReviewOpen(true)}
               />
@@ -165,6 +167,7 @@ function Product() {
         icon={ArrowLeft}
         label="ホームへ戻る"
         variant="outline"
+        size="xl"
         side="bottom"
         onClick={() => void navigate({ to: '/home' })}
       />
