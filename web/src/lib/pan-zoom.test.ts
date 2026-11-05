@@ -3,6 +3,7 @@ import {
   clampPan,
   clampScale,
   fitView,
+  isFiniteView,
   MAX_ZOOM,
   MIN_ZOOM,
   revealDelta,
@@ -11,6 +12,17 @@ import {
 } from './pan-zoom'
 
 const size = { cw: 800, ch: 600, w: 1000, h: 300 }
+
+describe('isFiniteView', () => {
+  test('位置と倍率がすべて有限なら true', () => {
+    expect(isFiniteView({ x: 0, y: -20.5, scale: 1 })).toBe(true)
+  })
+  test('NaN や Infinity が 1 つでもあれば false', () => {
+    expect(isFiniteView({ x: Number.NaN, y: 0, scale: 1 })).toBe(false)
+    expect(isFiniteView({ x: 0, y: Number.POSITIVE_INFINITY, scale: 1 })).toBe(false)
+    expect(isFiniteView({ x: 0, y: 0, scale: Number.NaN })).toBe(false)
+  })
+})
 
 describe('fitView', () => {
   test('広い中身は、幅(余白を除く)に合わせて縮小し、横を中央に置く', () => {

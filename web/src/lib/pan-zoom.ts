@@ -14,6 +14,11 @@ export type Size = {
 }
 
 // 全体表示のときの、領域の端からの余白(px)
+/** 表示の位置と倍率が、すべて有限の数か(NaN や Infinity の表示を、状態に入れないための確認) */
+export function isFiniteView(view: View): boolean {
+  return Number.isFinite(view.x) && Number.isFinite(view.y) && Number.isFinite(view.scale)
+}
+
 export const FIT_PADDING = 16
 // 全体表示の倍率(fit)に対する、相対倍率の範囲
 export const MIN_ZOOM = 0.25

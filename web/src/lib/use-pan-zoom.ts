@@ -7,6 +7,7 @@ import {
   MAX_ZOOM,
   MIN_ZOOM,
   revealDelta,
+  isFiniteView,
   visibleCenter,
   zoomAt,
 } from '#/lib/pan-zoom'
@@ -53,7 +54,8 @@ export function usePanZoom(
 
   const commit = (next: View) => {
     const s = sizeRef.current
-    if (!s) return
+    // NaN の表示を入れると、以降の移動・拡大縮小がすべて NaN になって固まる(リロードまで戻らない)ので、捨てる
+    if (!s || !isFiniteView(next)) return
     const v = clampPan(next, s)
     viewRef.current = v
     setUser(v)
