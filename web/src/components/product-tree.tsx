@@ -105,17 +105,22 @@ export function ProductTree({
   const showMemoError = (error: unknown) => {
     setMemoError(error instanceof Error ? error.message : '保存できませんでした。時間をおいて再度お試しください')
   }
+  // Cmd/Ctrl+F で検索を開閉する(開いているときに押すと閉じる)。Esc でも閉じる(フォーカスが検索欄の外にあっても)。
+  // 別のダイアログ(タスクなど)の中で押したときは、何もしない(検索パネル自身は除く)
+  const searchOpenRef = useRef(false)
+  searchOpenRef.current = searchOpen
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') {
-        const target = event.target
-        if (
-          target instanceof HTMLElement &&
-          target.closest('[role="dialog"]:not([aria-label="プロダクト内を検索"])')
-        ) return
-        event.preventDefault()
-        setSearchOpen(true)
-      }
+      const isFind = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f'
+      const isEscape = event.key === 'Escape' && searchOpenRef.current
+      if (!isFind && !isEscape) return
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        target.closest('[role="dialog"]:not([aria-label="プロダクト内を検索"])')
+      ) return
+      event.preventDefault()
+      setSearchOpen(isFind ? !searchOpenRef.current : false)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
