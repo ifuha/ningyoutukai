@@ -3,7 +3,7 @@ import { NoteContextMenu } from '#/components/note-context-menu'
 import type { ProductNote, ProductNotePatch } from '#/lib/memo-api'
 import { useCanvasView } from '#/lib/canvas-view'
 
-// メモ(付箋)。見た目はセクションに近づける: 破線の枠(2px)と、薄い塗り(文字色 = ink を、紙の色に 20% 混ぜた不透明な色。後ろが透けない)。タイトルの帯や、ゴミ箱のボタンは持たない
+// メモ(付箋)。見た目は黒: 背景は黒(不透明。後ろが透けない)、文字は白、枠は実線(1px、白の 25%)。タイトルの帯や、ゴミ箱のボタンは持たない
 // - 動かす: 入力欄のまわりの余白をつかんでドラッグ(編集中の入力欄の中は、文字の選択になる)
 // - 右クリック(スマホは長押し)でメニュー: 編集・削除・公開 / 非公開の切り替え(`NoteContextMenu`)。誰ができるかは API が決める(ここでは制限しない)
 // - 内容の入力欄は、ふだんは読み取り専用。メニューの「編集」で編集できる状態にする(追加したばかりのメモ = `autoEdit` は、すぐ編集できる)。フォーカスが外れると、読み取り専用に戻る
@@ -56,7 +56,7 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete,
         data-sticky-note=""
         tabIndex={0}
         aria-label="メモ"
-        className="absolute z-20 flex h-52 w-56 cursor-grab touch-none select-none flex-col border-2 border-dashed border-ink bg-[color-mix(in_srgb,var(--color-ink)_20%,var(--color-surface))] p-2 text-ink outline-none focus-visible:border-solid active:cursor-grabbing [-webkit-touch-callout:none]"
+        className="absolute z-20 flex h-52 w-56 cursor-grab touch-none select-none flex-col border border-white/25 bg-black p-2 text-white outline-none focus-visible:border-white/60 active:cursor-grabbing [-webkit-touch-callout:none]"
         style={{ left: position.x + offsetX, top: position.y + offsetY }}
         onContextMenu={(e) => {
           // ブラウザ標準のメニューは出さない
@@ -121,7 +121,7 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete,
           onMouseDown={(e) => {
             if (!editing) e.preventDefault()
           }}
-          className={`min-h-0 flex-1 resize-none ${editing ? 'cursor-text select-text' : 'cursor-[inherit]'} bg-transparent p-1 text-sm leading-5 outline-none placeholder:text-ink/45`}
+          className={`min-h-0 flex-1 resize-none ${editing ? 'cursor-text select-text' : 'cursor-[inherit]'} bg-transparent p-1 text-sm leading-5 outline-none placeholder:text-white/45`}
           placeholder="メモを書く…"
           maxLength={2000}
           value={content}
