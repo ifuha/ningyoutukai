@@ -5,7 +5,7 @@ import { db } from "../../src/db";
 import { productNotes } from "../../src/db/schema";
 import { cleanup, createOutsider, setupProduct } from "../task/helpers";
 
-// メモの公開範囲と権限。公開 = メンバー全員に見える、非公開 = 作成者だけ。作成者が NULL のメモは全員に見えて、全員が変更できる
+// メモの公開範囲と権限。公開 = メンバー全員に見える、非公開 = 作成者だけ。非公開は、作成者が NULL(持ち主がいない)でも他人に見せない。作成者が NULL の公開メモは、全員が変更できる
 
 type Setup = Awaited<ReturnType<typeof setupProduct>>;
 let a: Setup; // リーダー + メンバー 2 人
@@ -56,28 +56,32 @@ describe("作成", () => {
 });
 
 describe("一覧の見える範囲", () => {
-  test("公開・自分の非公開・作成者 NULL は見える。他人の非公開は見えない", async () => {
+  test("公開・自分の非公開は見える。他人の非公開と、作成者 NULL の非公開は見えない", async () => {
     const m1 = a.members[0]!;
     const m2 = a.members[1]!;
     const pub = await insertNote(a.productId, { createdBy: m2.userId, isPublic: true });
     const mine = await insertNote(a.productId, { createdBy: m1.userId });
-    const orphan = await insertNote(a.productId, { createdBy: null });
+    const orphanPublic = await insertNote(a.productId, { createdBy: null, isPublic: true });
+    const orphanPrivate = await insertNote(a.productId, { createdBy: null });
     const theirs = await insertNote(a.productId, { createdBy: m2.userId });
 
     const ids = await listIds(a.productId, m1.cookie);
-    expect(ids).toEqual(expect.arrayContaining([pub.noteId, mine.noteId, orphan.noteId]));
+    expect(ids).toEqual(expect.arrayContaining([pub.noteId, mine.noteId, orphanPublic.noteId]))
     expect(ids).not.toContain(theirs.noteId);
+    // 作成者が NULL の非公開(作成者を保存する前のメモなど)は、誰にも見せない(リーダーにも)
+    expect(ids).not.toContain(orphanPrivate.noteId);
+    expect(await listIds(a.productId, a.leader.cookie)).not.toContain(orphanPrivate.noteId);
     // リーダーでも、他人の非公開は見えない
     expect(await listIds(a.productId, a.leader.cookie)).not.toContain(theirs.noteId);
     expect(await listIds(a.productId, m2.cookie)).toContain(theirs.noteId);
   });
 
   test("authorName は users から引き、作成者 NULL なら null", async () => {
-    const orphan = await insertNote(a.productId, { createdBy: null });
+    const orphan = await insertNote(a.productId, { createdBy: null, isPublic: true });
     const pub = await insertNote(a.productId, { createdBy: a.members[1]!.userId, isPublic: true });
     const res = await call("GET", url(a.productId), a.leader.cookie);
     const list = (await res.json()) as { noteId: string; authorName: string | null; createdBy: string | null; isPublic: boolean }[];
-    expect(list.find((n) => n.noteId === orphan.noteId)).toMatchObject({ authorName: null, createdBy: null, isPublic: false });
+    expect(list.find((n) => n.noteId === orphan.noteId)).toMatchObject({ authorName: null, createdBy: null, isPublic: true });
     expect(list.find((n) => n.noteId === pub.noteId)).toMatchObject({ authorName: "member2", isPublic: true });
   });
 
@@ -110,8 +114,10 @@ describe("更新", () => {
     expect((await call("PATCH", url(a.productId, n.noteId), a.members[1]!.cookie, { content: "x" })).status).toBe(404);
   });
 
-  test("作成者 NULL のメモは、メンバー全員が変更できる", async () => {
-    const n = await insertNote(a.productId, { createdBy: null });
+  test("作成者 NULL の公開メモは、メンバー全員が変更できる。非公開は 404", async () => {
+    const hidden = await insertNote(a.productId, { createdBy: null });
+    expect((await call("PATCH", url(a.productId, hidden.noteId), a.members[1]!.cookie, { content: "x" })).status).toBe(404);
+    const n = await insertNote(a.productId, { createdBy: null, isPublic: true });
     const res = await call("PATCH", url(a.productId, n.noteId), a.members[1]!.cookie, { content: "ok" });
     expect(res.status).toBe(200);
     expect((await findNote(n.noteId))!.content).toBe("ok");
@@ -156,8 +162,10 @@ describe("削除", () => {
     expect((await call("DELETE", url(a.productId, n.noteId), a.members[1]!.cookie)).status).toBe(404);
   });
 
-  test("作成者 NULL のメモは、メンバー全員が削除できる", async () => {
-    const n = await insertNote(a.productId, { createdBy: null });
+  test("作成者 NULL の公開メモは、メンバー全員が削除できる。非公開は 404", async () => {
+    const hidden = await insertNote(a.productId, { createdBy: null });
+    expect((await call("DELETE", url(a.productId, hidden.noteId), a.members[1]!.cookie)).status).toBe(404);
+    const n = await insertNote(a.productId, { createdBy: null, isPublic: true });
     expect((await call("DELETE", url(a.productId, n.noteId), a.members[1]!.cookie)).status).toBe(204);
   });
 });
