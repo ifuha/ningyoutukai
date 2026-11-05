@@ -44,8 +44,12 @@ export function NoteContextMenu({
     })
   }, [x, y])
 
+  // 開いたとき、先頭の項目にフォーカスする(開いている間に 1 回だけ)
   useEffect(() => {
     ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus({ preventScroll: true })
+  }, [])
+
+  useEffect(() => {
     const outside = (e: Event) => {
       if (e.target instanceof Node && ref.current?.contains(e.target)) return
       onClose()
@@ -93,7 +97,7 @@ export function NoteContextMenu({
         else if (e.key === 'End') move(-1)
       }}
       onContextMenu={(e) => e.preventDefault()}
-      className="fixed z-50 w-48 shadow-box bg-surface p-1 text-m text-ink"
+      className="fixed z-50 w-56 shadow-box bg-surface p-1 text-m text-ink"
       style={{ left: pos.left, top: pos.top }}
     >
       <button type="button" role="menuitem" className={itemClass} onClick={choose(onEdit)}>
