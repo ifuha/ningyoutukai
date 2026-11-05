@@ -32,7 +32,7 @@ export function TreeSearchPanel({
     <section
       role="dialog"
       aria-label="プロダクト内を検索"
-      className="w-[min(28rem,calc(100vw-1.5rem))] overflow-hidden bg-black text-white shadow-box"
+      className="w-[min(28rem,calc(100vw-1.5rem))] overflow-hidden bg-panel text-ink shadow-box"
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault()
@@ -43,7 +43,7 @@ export function TreeSearchPanel({
         }
       }}
     >
-      <div className="flex h-12 items-center gap-3 border-b border-white/20 px-3">
+      <div className="flex h-12 items-center gap-3 border-b border-line px-3">
         <Search aria-hidden="true" size={20} className="shrink-0 opacity-60" />
         <input
           ref={inputRef}
@@ -52,7 +52,7 @@ export function TreeSearchPanel({
           placeholder="タスク・セクション・メンバーを検索"
           value={query}
           onChange={(event) => onQueryChange(event.currentTarget.value)}
-          className="min-w-0 flex-1 bg-transparent text-m outline-none placeholder:text-white/45"
+          className="min-w-0 flex-1 bg-transparent text-m outline-none placeholder:text-ink/45"
         />
       </div>
       <div className="max-h-72 overflow-y-auto p-1.5">
@@ -69,7 +69,7 @@ export function TreeSearchPanel({
                 <button
                   type="button"
                   onClick={result.onSelect}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-white/15 focus-visible:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-side-item focus-visible:bg-side-item focus-visible:outline-2 focus-visible:outline-ink"
                 >
                   <span className="w-16 shrink-0 text-xs opacity-60">{result.kind}</span>
                   <span className="min-w-0 flex-1 truncate text-sm">{result.name}</span>
@@ -82,7 +82,7 @@ export function TreeSearchPanel({
           </ul>
         )}
       </div>
-      <p className="border-t border-white/20 px-3 py-1.5 text-xs opacity-50">
+      <p className="border-t border-line px-3 py-1.5 text-xs opacity-50">
         {query.trim() ? `${results.length} 件` : '名前で検索'}
         {' · Enter で先頭の候補を開く · Esc で閉じる'}
       </p>

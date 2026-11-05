@@ -50,7 +50,7 @@ export function SectionEditorMenu({
       <div
         role={menu === 'confirm-delete' ? 'alertdialog' : 'menu'}
         aria-label={menu === 'confirm-delete' ? 'セクションの削除の確認' : 'セクションのメニュー'}
-        className="absolute top-0 left-0 w-60 space-y-2 shadow-box bg-surface p-2 text-m text-ink"
+        className="absolute top-0 left-0 w-60 space-y-2 shadow-box bg-panel p-2 text-m text-ink"
       >
         {menu === 'confirm-delete' ? (
           <>

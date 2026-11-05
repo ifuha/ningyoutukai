@@ -25,7 +25,7 @@ export function SectionNotice({
   return (
     <p
       role="alert"
-      className="flex items-center gap-3 border-l border-line bg-surface/90 px-3 py-2 text-m"
+      className="flex items-center gap-3 border-l border-line bg-panel/90 px-3 py-2 text-m"
     >
       <span>ERR {message}</span>
       <IconButton

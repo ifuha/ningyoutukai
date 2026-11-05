@@ -18,6 +18,8 @@
   /* サイドバーの背景と、項目のマウスオーバー・選択中の背景(Figma `side-light` / `side-dark`) */
   --color-side: #edebe4;
   --color-side-item: #e2dfd4;
+  /* キャンバスの上に浮かぶパネル(検索・ツールバー・メニュー・メンバーのカードなど)の背景。ライトは紙の色、ダークは黒(#000)で、背景(ダークは #1b1f2a)と区別する */
+  --color-panel: var(--color-surface);
   /* 線の色(区切り線・内側の輪)。文字色を紙の色に混ぜる。濃さは、この割合で変える */
   --color-line: color-mix(in srgb, var(--color-ink) 30%, var(--color-surface));
   /* 文字の大きさは、小・中・大の 3 つだけ(text-s / text-m / text-l) */
@@ -61,6 +63,7 @@
     --color-outline: #ebebeb;
     --color-side: #0e1015;
     --color-side-item: #2a2e39;
+    --color-panel: #000000;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -73,6 +76,7 @@
     --color-outline: #ebebeb;
     --color-side: #0e1015;
     --color-side-item: #2a2e39;
+    --color-panel: #000000;
   }
 }
 
