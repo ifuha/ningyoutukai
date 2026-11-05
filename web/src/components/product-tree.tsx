@@ -108,6 +108,10 @@ export function ProductTree({
   memoEditingRef.current = memoEditing
   // 編集を終える操作(キャンバスを押して、入力欄の外へ出る)の、直後の click は、何もしない(押した先のセクションなどを、同時に選ばない)
   const swallowClickRef = useRef(false)
+  // 追加したばかりのメモは、そのまま編集できる状態にする: 追加の操作のあとに増えたメモを探して、その ID を持つ
+  const awaitingNewMemoRef = useRef(false)
+  const knownNoteIdsRef = useRef<Set<string> | null>(null)
+  const [autoEditNoteId, setAutoEditNoteId] = useState<string | null>(null)
   const showMemoError = (error: unknown) => {
     setMemoError(error instanceof Error ? error.message : '保存できませんでした。時間をおいて再度お試しください')
   }
@@ -134,6 +138,16 @@ export function ProductTree({
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
+  useEffect(() => {
+    const ids = new Set(notes.map((n) => n.noteId))
+    const known = knownNoteIdsRef.current
+    knownNoteIdsRef.current = ids
+    if (!known || !awaitingNewMemoRef.current) return
+    const added = notes.find((n) => !known.has(n.noteId))
+    if (!added) return
+    awaitingNewMemoRef.current = false
+    setAutoEditNoteId(added.noteId)
+  }, [notes])
   // 位置を持つカード(座標に置く)と、持たないカード(自動配置のまま)に分ける。リーダーも位置を持てる
   const leaderPlaced = hasPosition(leader)
   const { flow: flowMembers, placed: placedMembers } = splitByPosition(members)
@@ -419,7 +433,7 @@ export function ProductTree({
             offsetY={bounds.offsetY}
             scale={scale}
           />
-          {notes.map((note) => <StickyNote key={note.noteId} note={note} onEditingChange={setMemoEditing} offsetX={bounds.offsetX} offsetY={bounds.offsetY} onUpdate={(id, patch) => { void Promise.resolve(onUpdateMemo?.(id, patch)).catch(showMemoError) }} onDelete={(id) => { void Promise.resolve(onDeleteMemo?.(id)).catch(showMemoError) }} />)}
+          {notes.map((note) => <StickyNote key={note.noteId} note={note} autoEdit={note.noteId === autoEditNoteId} onEditingChange={setMemoEditing} offsetX={bounds.offsetX} offsetY={bounds.offsetY} onUpdate={(id, patch) => { void Promise.resolve(onUpdateMemo?.(id, patch)).catch(showMemoError) }} onDelete={(id) => { void Promise.resolve(onDeleteMemo?.(id)).catch(showMemoError) }} />)}
           {/* 内側の「動かす面」(カードの下)。カードのない空いた場所のドラッグで、セクションを動かす(カードのように)。
               リーダーだけ。面積の大きい順に並べるので、重なるときは、小さい(内側の)セクションが手前になる */}
           {moveSurfacesOn &&
@@ -602,7 +616,11 @@ export function ProductTree({
             const rect = containerRef.current?.getBoundingClientRect()
             if (!rect) return
             const center = toCanvas({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
-            void Promise.resolve(onAddMemo?.({ x: center.x - 112, y: center.y - 104 })).catch(showMemoError)
+            awaitingNewMemoRef.current = true
+            void Promise.resolve(onAddMemo?.({ x: center.x - 112, y: center.y - 104 })).catch((error) => {
+              awaitingNewMemoRef.current = false
+              showMemoError(error)
+            })
           }}
           canEditSections={canEditSections}
         />
