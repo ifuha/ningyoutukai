@@ -10,6 +10,7 @@ import type { CanvasTool } from '#/lib/section-interaction-types'
 // 並びは「選択 | メンバー・セクション・メモ | 検索」
 // 選択・セクションは、道具(モード)の切り替え(押された道具を強調する)。キャンバスのドラッグでの移動は、「セクション」以外ではいつでも動く。
 //   セクションは、リーダーだけが使える(リーダーでなければ、押せない見た目。ツールチップで理由を示す)。選ぶと、キャンバスでドラッグして、セクションを置く(Esc か「選択」で戻る)
+// 道具は同時に使えない(セクションを置く間・検索を開く間・メモを編集する間は、他の道具が押せない)
 //   メンバーは、メンバーの管理を開く(リーダーのみ)。検索は、プロダクト内の名前検索を開く。メモは準備中
 
 export type TreeMode = CanvasTool
@@ -31,6 +32,7 @@ export function TreeToolbar({
   onAddMemo,
   canEditSections = false,
   searchOpen = false,
+  memoEditing = false,
 }: {
   mode: TreeMode
   onModeChange: (mode: TreeMode) => void
@@ -44,11 +46,17 @@ export function TreeToolbar({
   canEditSections?: boolean
   /** 検索を開いているか。開いている間は、検索以外の道具を使えない */
   searchOpen?: boolean
+  /** メモの内容を編集中か。編集中は、選択以外の道具を使えない */
+  memoEditing?: boolean
 }) {
   // 道具は同時に使えない: 「セクション」を使っている間は、検索・メンバー・メモを押せない。検索を開いている間は、「セクション」・メンバー・メモを押せない
   const sectionActive = mode === 'section'
-  const busyTip = sectionActive ? 'セクションを置いている間は使えません(Esc で戻る)' : '検索を閉じてから使えます'
-  const busy = sectionActive || searchOpen
+  const busyTip = memoEditing
+    ? 'メモを編集している間は使えません'
+    : sectionActive
+      ? 'セクションを置いている間は使えません(Esc で戻る)'
+      : '検索を閉じてから使えます'
+  const busy = sectionActive || searchOpen || memoEditing
   return (
     <div
       role="toolbar"
@@ -73,10 +81,10 @@ export function TreeToolbar({
         icon={SquareDashed}
         label="セクション"
         tip={
-          searchOpen ? busyTip : canEditSections ? 'セクションを置く(Esc で戻る)' : 'セクション(リーダーのみ)'
+          searchOpen || memoEditing ? busyTip : canEditSections ? 'セクションを置く(Esc で戻る)' : 'セクション(リーダーのみ)'
         }
         pressed={mode === 'section'}
-        disabled={!canEditSections || searchOpen}
+        disabled={!canEditSections || searchOpen || memoEditing}
         onClick={() => onModeChange('section')}
       />
       <IconButton
@@ -90,9 +98,9 @@ export function TreeToolbar({
       <IconButton
         icon={Search}
         label="検索"
-        tip={sectionActive ? busyTip : undefined}
+        tip={sectionActive || memoEditing ? busyTip : undefined}
         onClick={onOpenSearch}
-        disabled={!onOpenSearch || sectionActive}
+        disabled={!onOpenSearch || sectionActive || memoEditing}
       />
     </div>
   )

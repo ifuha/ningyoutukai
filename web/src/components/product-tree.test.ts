@@ -215,6 +215,12 @@ describe('TreeToolbar', () => {
     expect(enabledOf(html, '選択')).toBe(true)
     expect(html).toContain('検索を閉じてから使えます')
   })
+  test('道具は同時に使えない: メモを編集している間は、選択以外が押せない', () => {
+    const html = bar({ ...allOn, memoEditing: true })
+    for (const l of ['セクション', 'メンバー', 'メモ', '検索']) expect(enabledOf(html, l)).toBe(false)
+    expect(enabledOf(html, '選択')).toBe(true)
+    expect(html).toContain('メモを編集している間は使えません')
+  })
   test('何も使っていないときは、すべて押せる', () => {
     const html = bar(allOn)
     for (const l of ['選択', 'メンバー', 'セクション', 'メモ', '検索']) expect(enabledOf(html, l)).toBe(true)
