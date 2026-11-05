@@ -64,7 +64,7 @@ async function notifyNotePublished(args: { productId: string; publisherUserId: s
   const preview = args.content.length > MAIL_PREVIEW_LENGTH ? `${args.content.slice(0, MAIL_PREVIEW_LENGTH)}…` : args.content;
   const lines = [`${args.publisherName} さんが、プロダクト「${productName}」のメモを公開しました。`];
   if (preview.trim()) lines.push("", preview);
-  lines.push("", `${webOrigin}/products/${args.productId}`);
+  lines.push("", "プロダクトを開く:", `${webOrigin}/products/${args.productId}`);
   await mailer.send({ to: recipients.map((r) => r.email), subject: `メモが公開されました: ${productName}`, text: lines.join("\n") });
 }
 

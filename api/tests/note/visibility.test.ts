@@ -223,7 +223,8 @@ describe("公開したときのメール", () => {
     expect(to).not.toContain(m.email);
     expect(mail.subject).toContain("メモが公開されました");
     expect(mail.text).toContain("公開するメモ");
-    expect(mail.text).toContain(`/products/${a.productId}`);
+    expect(mail.text).toContain(`プロダクトを開く:\n`);
+    expect(mail.text).toMatch(new RegExp(`https?://[^\\s]+/products/${a.productId}`));
   });
 
   test("すでに公開のメモの更新・非公開への切り替え・内容だけの更新では送らない", async () => {
