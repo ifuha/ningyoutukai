@@ -37,7 +37,8 @@ describe('IconButton', () => {
 
   test('pressed は aria-pressed と押された見た目になる。省略なら aria-pressed を出さない', () => {
     expect(render({ pressed: true })).toContain('aria-pressed="true"')
-    expect(render({ pressed: true })).toContain('bg-ink text-surface')
+    expect(render({ pressed: true })).toContain('shadow-box')
+    expect(render({ pressed: true })).not.toContain('bg-ink text-surface')
     expect(render()).not.toContain('aria-pressed')
   })
 
