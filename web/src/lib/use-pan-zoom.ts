@@ -3,10 +3,14 @@ import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent, UIEvent, RefO
 import {
   clampPan,
   clampScale,
+  easeOut,
   fitView,
   MAX_ZOOM,
   MIN_ZOOM,
   revealDelta,
+  isFiniteView,
+  lerpView,
+  PAN_DURATION_MS,
   visibleCenter,
   zoomAt,
 } from '#/lib/pan-zoom'
@@ -51,12 +55,26 @@ export function usePanZoom(
   const gesture = useRef<Gesture | null>(null)
   const moved = useRef(false)
 
-  const commit = (next: View) => {
+  // なめらかな移動(panTo)の途中のアニメーション。ユーザーの操作(commit)が来たら止める
+  const animRef = useRef<number | null>(null)
+  const cancelAnim = () => {
+    if (animRef.current !== null) cancelAnimationFrame(animRef.current)
+    animRef.current = null
+  }
+  useEffect(() => cancelAnim, [])
+
+  const apply = (next: View) => {
     const s = sizeRef.current
-    if (!s) return
+    // NaN の表示を入れると、以降の移動・拡大縮小がすべて NaN になって固まる(リロードまで戻らない)ので、捨てる
+    if (!s || !isFiniteView(next)) return
     const v = clampPan(next, s)
     viewRef.current = v
     setUser(v)
+  }
+  // ユーザーの操作による変更。動いているアニメーションがあれば止める
+  const commit = (next: View) => {
+    cancelAnim()
+    apply(next)
   }
   const zoomTo = (scale: number, p?: Point) => {
     const s = sizeRef.current
@@ -69,7 +87,34 @@ export function usePanZoom(
     const v = viewRef.current
     if (v) commit({ ...v, x: v.x + dx, y: v.y + dy })
   }
+  // 指定の点が見える領域の中心に来るまで、なめらかに動く(動きを減らす設定のときは、一気に動く)
+  const panTo = (point: Point) => {
+    const s = sizeRef.current
+    const v = viewRef.current
+    if (!s || !v) return
+    const center = visibleCenter(s)
+    const target = clampPan(
+      { ...v, x: center.x - point.x * v.scale, y: center.y - point.y * v.scale },
+      s,
+    )
+    if (!isFiniteView(target)) return
+    cancelAnim()
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (reduced || Math.hypot(target.x - v.x, target.y - v.y) < 1) {
+      apply(target)
+      return
+    }
+    const from = v
+    const start = performance.now()
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / PAN_DURATION_MS)
+      apply(t >= 1 ? target : lerpView(from, target, easeOut(t)))
+      animRef.current = t >= 1 ? null : requestAnimationFrame(step)
+    }
+    animRef.current = requestAnimationFrame(step)
+  }
   const reset = () => {
+    cancelAnim()
     viewRef.current = fit
     setUser(null)
   }
@@ -279,6 +324,7 @@ export function usePanZoom(
     canZoomOut: !!view && view.scale > MIN_ZOOM * fitScale * 1.001,
     zoomIn: () => view && zoomTo(view.scale * BUTTON_STEP),
     zoomOut: () => view && zoomTo(view.scale / BUTTON_STEP),
+    panTo,
     reset,
     freeze,
     shiftOrigin,

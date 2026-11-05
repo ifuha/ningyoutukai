@@ -10,6 +10,7 @@ import { memberRoutes } from "./routes/member";
 import { productRoutes } from "./routes/product";
 import { productRevisionRoutes } from "./routes/product-revision";
 import { productManageRoutes } from "./routes/product-manage";
+import { productNoteRoutes } from "./routes/product-note";
 import { productTreeRoutes } from "./routes/product-tree";
 import { sectionRoutes } from "./routes/section";
 import { taskRoutes } from "./routes/task";
@@ -33,6 +34,7 @@ export const app = new Elysia()
   .use(productRoutes)
   .use(productTreeRoutes)
   .use(productRevisionRoutes)
+  .use(productNoteRoutes)
   .use(sectionRoutes)
   .use(taskRoutes)
   .use(meRoutes)

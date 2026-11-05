@@ -160,7 +160,7 @@ describe('ProductTree(カードの位置。座標は左上)', () => {
 
 describe('TreeToolbar', () => {
   const bar = (props: Record<string, unknown>) =>
-    renderToStaticMarkup(createElement(TreeToolbar, { mode: 'select', onModeChange: () => {}, ...props } as never))
+    renderToStaticMarkup(createElement(TreeToolbar, { mode: 'select', onModeChange: () => {}, onOpenSearch: () => {}, ...props } as never))
 
   test('並びと寸法(高さ 56、ボタン 40×40)で、5 つのボタンと 2 つの区切りがある。「移動」はない', () => {
     const html = bar({ onOpenMembers: () => {} })
@@ -192,14 +192,42 @@ describe('TreeToolbar', () => {
     expect(bar({ mode: 'select' })).toMatch(/aria-label="選択" aria-pressed="true"/)
     expect(bar({ mode: 'section', canEditSections: true })).toMatch(/aria-label="選択" aria-pressed="false"/)
   })
-  test('メモ・検索は、無効(準備中)。セクションは、リーダーでなければ無効', () => {
+  test('メモは onAddMemo が無いと無効。検索は有効。セクションは、リーダーでなければ無効', () => {
     const html = bar({ onOpenMembers: () => {} })
-    expect(html.split('(準備中)</span>').length - 1).toBe(2) // メモ・検索のツールチップ
-    expect(html.split('disabled=""').length - 1).toBe(3) // メモ・検索・セクション(リーダーでない)
+    expect(html.split('disabled=""').length - 1).toBe(2) // メモ(onAddMemo なし)・セクション(リーダーでない)
+    expect(html).toContain('aria-label="検索"')
+  })
+  const enabledOf = (html: string, label: string) =>
+    !new RegExp(`aria-label="${label}"[^>]*disabled=""`).test(html) &&
+    !new RegExp(`disabled=""[^>]*aria-label="${label}"`).test(html)
+  const allOn = { onOpenMembers: () => {}, onAddMemo: () => {}, canEditSections: true }
+  test('道具は同時に使えない: 「セクション」を使っている間は、検索・メンバー・メモが押せない。「選択」は押せる', () => {
+    const html = bar({ ...allOn, mode: 'section' })
+    for (const l of ['検索', 'メンバー', 'メモ']) expect(enabledOf(html, l)).toBe(false)
+    expect(enabledOf(html, '選択')).toBe(true)
+    expect(enabledOf(html, 'セクション')).toBe(true)
+    expect(html).toContain('セクションを置いている間は使えません')
+  })
+  test('道具は同時に使えない: 検索を開いている間は、セクション・メンバー・メモが押せない。検索は押せる(閉じるため)', () => {
+    const html = bar({ ...allOn, searchOpen: true })
+    for (const l of ['セクション', 'メンバー', 'メモ']) expect(enabledOf(html, l)).toBe(false)
+    expect(enabledOf(html, '検索')).toBe(true)
+    expect(enabledOf(html, '選択')).toBe(true)
+    expect(html).toContain('検索を閉じてから使えます')
+  })
+  test('道具は同時に使えない: メモを編集している間は、選択以外が押せない', () => {
+    const html = bar({ ...allOn, memoEditing: true })
+    for (const l of ['セクション', 'メンバー', 'メモ', '検索']) expect(enabledOf(html, l)).toBe(false)
+    expect(enabledOf(html, '選択')).toBe(true)
+    expect(html).toContain('メモを編集している間は使えません')
+  })
+  test('何も使っていないときは、すべて押せる', () => {
+    const html = bar(allOn)
+    for (const l of ['選択', 'メンバー', 'セクション', 'メモ', '検索']) expect(enabledOf(html, l)).toBe(true)
   })
   test('セクションは、リーダー(canEditSections)のときだけ押せる', () => {
     const leader = bar({ onOpenMembers: () => {}, canEditSections: true })
-    expect(leader.split('disabled=""').length - 1).toBe(2) // メモ・検索だけ
+    expect(leader.split('disabled=""').length - 1).toBe(1) // メモだけ
     expect(leader).toContain('>セクションを置く(Esc で戻る)</span>')
     const notLeader = bar({ onOpenMembers: () => {}, canEditSections: false })
     expect(notLeader).toContain('>セクション(リーダーのみ)</span>')
@@ -208,9 +236,9 @@ describe('TreeToolbar', () => {
     expect(bar({ mode: 'section', canEditSections: true })).toMatch(/aria-label="セクション" aria-pressed="true"/)
   })
   test('メンバーは、リーダーのときだけ押せる', () => {
-    expect(bar({ onOpenMembers: () => {} }).split('disabled=""').length - 1).toBe(3)
+    expect(bar({ onOpenMembers: () => {} }).split('disabled=""').length - 1).toBe(2)
     const member = bar({})
-    expect(member.split('disabled=""').length - 1).toBe(4)
+    expect(member.split('disabled=""').length - 1).toBe(3)
     expect(member).toContain('>メンバーの管理(リーダーのみ)</span>')
   })
 })

@@ -8,7 +8,11 @@ import { SectionLayer } from '#/components/section-layer'
 import { SectionMoveSurface } from '#/components/section-move-surface'
 import { SectionNotice } from '#/components/section-notice'
 import { TreeConnectors } from '#/components/tree-connectors'
+import { TreeSearchPanel } from '#/components/tree-search-panel'
+import type { TreeSearchResult } from '#/components/tree-search-panel'
 import { TreeToolbar } from '#/components/tree-toolbar'
+import { StickyNote } from '#/components/sticky-note'
+import type { ProductNote, ProductNotePatch } from '#/lib/memo-api'
 import { boxToCanvasRect, CanvasViewContext, clientToCanvas } from '#/lib/canvas-view'
 import type { CanvasView } from '#/lib/section-interaction-types'
 import { cursorClass } from '#/lib/canvas-tool'
@@ -74,6 +78,10 @@ export function ProductTree({
   onOpenMembers,
   canEditSections = false,
   sectionActions = NO_SECTION_ACTIONS,
+  notes = [],
+  onAddMemo,
+  onUpdateMemo,
+  onDeleteMemo,
 }: {
   header?: ReactNode
   tree: ProductTreeData
@@ -85,8 +93,61 @@ export function ProductTree({
   /** 自分がリーダーか(セクションの作成・大きさの変更・削除・カードの移動ができる) */
   canEditSections?: boolean
   sectionActions?: SectionActions
+  notes?: ProductNote[]
+  onAddMemo?: (position: { x: number; y: number }) => void | Promise<void>
+  onUpdateMemo?: (id: string, patch: ProductNotePatch) => void | Promise<void>
+  onDeleteMemo?: (id: string) => void | Promise<void>
 }) {
   const { leader, members } = tree
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [memoError, setMemoError] = useState<string | null>(null)
+  // メモの内容を編集中か。編集中は、セクションやカードなど他の操作を止める(道具は同時に使えない)
+  const [memoEditing, setMemoEditing] = useState(false)
+  const memoEditingRef = useRef(false)
+  memoEditingRef.current = memoEditing
+  // 編集を終える操作(キャンバスを押して、入力欄の外へ出る)の、直後の click は、何もしない(押した先のセクションなどを、同時に選ばない)
+  const swallowClickRef = useRef(false)
+  // 追加したばかりのメモは、そのまま編集できる状態にする: 追加の操作のあとに増えたメモを探して、その ID を持つ
+  const awaitingNewMemoRef = useRef(false)
+  const knownNoteIdsRef = useRef<Set<string> | null>(null)
+  const [autoEditNoteId, setAutoEditNoteId] = useState<string | null>(null)
+  const showMemoError = (error: unknown) => {
+    setMemoError(error instanceof Error ? error.message : '保存できませんでした。時間をおいて再度お試しください')
+  }
+  // Cmd/Ctrl+F で検索を開閉する(開いているときに押すと閉じる)。Esc でも閉じる(フォーカスが検索欄の外にあっても)。
+  // 別のダイアログ(タスクなど)の中で押したときは、何もしない(検索パネル自身は除く)
+  const searchOpenRef = useRef(false)
+  searchOpenRef.current = searchOpen
+  const toolRef = useRef<string>('select')
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isFind = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f'
+      const isEscape = event.key === 'Escape' && searchOpenRef.current
+      if (!isFind && !isEscape) return
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        target.closest('[role="dialog"]:not([aria-label="プロダクト内を検索"])')
+      ) return
+      event.preventDefault()
+      // 「セクション」を使っている間は、検索を開かない(道具は同時に使えない)
+      if (isFind && !searchOpenRef.current && (toolRef.current === 'section' || memoEditingRef.current)) return
+      setSearchOpen(isFind ? !searchOpenRef.current : false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+  useEffect(() => {
+    const ids = new Set(notes.map((n) => n.noteId))
+    const known = knownNoteIdsRef.current
+    knownNoteIdsRef.current = ids
+    if (!known || !awaitingNewMemoRef.current) return
+    const added = notes.find((n) => !known.has(n.noteId))
+    if (!added) return
+    awaitingNewMemoRef.current = false
+    setAutoEditNoteId(added.noteId)
+  }, [notes])
   // 位置を持つカード(座標に置く)と、持たないカード(自動配置のまま)に分ける。リーダーも位置を持てる
   const leaderPlaced = hasPosition(leader)
   const { flow: flowMembers, placed: placedMembers } = splitByPosition(members)
@@ -134,7 +195,7 @@ export function ProductTree({
     headerHeight,
     BOTTOM_INSET,
   )
-  const { view, freeze, shiftOrigin, handlers } = usePanZoom(containerRef, size)
+  const { view, freeze, shiftOrigin, panTo, handlers } = usePanZoom(containerRef, size)
   // 中身のずらし量(負の座標を表示するための、中身の最小座標から決まる値)が変わったとき、どの要素も画面上の位置が変わらないよう、
   // パンを逆向きに補正する(セクションを左・上へ動かして範囲が変わっても、見ている画面が勝手に動かない)。
   // レイアウトの直後・描画の前に行うので、ちらつかない。楽観更新の取り消しで、ずらし量が元に戻るときも、同じ計算で元の見え方に戻る
@@ -184,7 +245,7 @@ export function ProductTree({
   )
   const interaction = useSectionInteraction({
     actions: guardedActions,
-    canEdit: canEditSections,
+    canEdit: canEditSections && !memoEditing,
     sections,
     scale,
     toCanvas,
@@ -230,6 +291,67 @@ export function ProductTree({
       ? [leader, ...members].find((m) => m.productMemberId === cardDrag.draggingId)
       : undefined
   const mode = interaction.tool
+  toolRef.current = mode
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase()
+  const searchResults: TreeSearchResult[] = []
+  if (normalizedQuery) {
+    for (const section of sections) {
+      if (section.sectionName.toLocaleLowerCase().includes(normalizedQuery)) {
+        searchResults.push({
+          id: section.sectionId,
+          kind: 'セクション',
+          name: section.sectionName,
+          onSelect: () => {
+            panTo({
+              x: section.x + bounds.offsetX + section.width / 2,
+              y: section.y + bounds.offsetY + section.height / 2,
+            })
+            setSearchOpen(false)
+          },
+        })
+      }
+    }
+    for (const member of [leader, ...members]) {
+      if (member.userName.toLocaleLowerCase().includes(normalizedQuery)) {
+        searchResults.push({
+          id: member.productMemberId,
+          kind: 'メンバー',
+          name: member.userName,
+          detail: member.role === 'leader' ? 'リーダー' : 'メンバー',
+          onSelect: () => {
+            const rect = getCardRect(member.productMemberId)
+            if (rect) {
+              panTo({
+                x: rect.x + bounds.offsetX + rect.width / 2,
+                y: rect.y + bounds.offsetY + rect.height / 2,
+              })
+            }
+            setSearchOpen(false)
+          },
+        })
+      }
+      for (const task of member.tasks) {
+        if (!task.taskName.toLocaleLowerCase().includes(normalizedQuery)) continue
+        searchResults.push({
+          id: task.taskId,
+          kind: 'タスク',
+          name: task.taskName,
+          detail: member.userName,
+          onSelect: () => {
+            setSearchOpen(false)
+            const open = editFor(member)
+            if (open) open(task)
+            else onShowTasks?.(member)
+          },
+        })
+      }
+    }
+  }
+  searchResults.sort((a, b) => {
+    const aPrefix = a.name.toLocaleLowerCase().startsWith(normalizedQuery) ? 0 : 1
+    const bPrefix = b.name.toLocaleLowerCase().startsWith(normalizedQuery) ? 0 : 1
+    return aPrefix - bPrefix || a.name.localeCompare(b.name, 'ja')
+  })
   // セクションを動かすとき、一緒に動く、位置を持つ所属カード(api と同じ規則: 位置を持つ所属メンバーだけ)
   const followIdsFor = (sectionId: string) =>
     placedCards.filter((c) => c.member.sectionId === sectionId).map((c) => c.member.productMemberId)
@@ -272,12 +394,20 @@ export function ProductTree({
         aria-label="ツリー(ドラッグか矢印キーで移動、+ と - で拡大縮小、0 で全体表示)"
         tabIndex={0}
         {...containerHandlers}
-        onClick={(e) =>
+        onPointerDownCapture={() => {
+          swallowClickRef.current = memoEditingRef.current
+        }}
+        onClick={(e) => {
+          if (swallowClickRef.current) {
+            swallowClickRef.current = false
+            return
+          }
+          setSearchOpen(false)
           interaction.handleCanvasClick(
             e.target instanceof Element ? e.target : null,
             toCanvas({ x: e.clientX, y: e.clientY }),
           )
-        }
+        }}
         className={`absolute inset-0 touch-none select-none overflow-clip overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${cursorClass(mode)}`}
       >
         <div
@@ -303,6 +433,7 @@ export function ProductTree({
             offsetY={bounds.offsetY}
             scale={scale}
           />
+          {notes.map((note) => <StickyNote key={note.noteId} note={note} autoEdit={note.noteId === autoEditNoteId} onEditingChange={setMemoEditing} offsetX={bounds.offsetX} offsetY={bounds.offsetY} onUpdate={(id, patch) => { void Promise.resolve(onUpdateMemo?.(id, patch)).catch(showMemoError) }} onDelete={(id) => { void Promise.resolve(onDeleteMemo?.(id)).catch(showMemoError) }} />)}
           {/* 内側の「動かす面」(カードの下)。カードのない空いた場所のドラッグで、セクションを動かす(カードのように)。
               リーダーだけ。面積の大きい順に並べるので、重なるときは、小さい(内側の)セクションが手前になる */}
           {moveSurfacesOn &&
@@ -448,7 +579,7 @@ export function ProductTree({
               (`interiorSelectable` は、カードより下に置くときだけ使うので、使わない)。
               `data-no-deselect` で包む: 編集枠の中のクリック(札・メニューの余白など)が、「背景のクリック」として選択を外さないようにする。
               `display: contents` なので、配置には影響しない */}
-          {canEditSections && (
+          {canEditSections && !memoEditing && (
             <div data-no-deselect className="contents">
               {sections.map((s) => (
                 <SectionEditor
@@ -475,11 +606,41 @@ export function ProductTree({
       <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2">
         <TreeToolbar
           mode={mode}
+          searchOpen={searchOpen}
+          memoEditing={memoEditing}
           onModeChange={interaction.setTool}
           onOpenMembers={onOpenMembers}
+          onOpenSearch={() => setSearchOpen((open) => !open)}
+          onAddMemo={() => {
+            setMemoError(null)
+            const rect = containerRef.current?.getBoundingClientRect()
+            if (!rect) return
+            const center = toCanvas({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+            awaitingNewMemoRef.current = true
+            void Promise.resolve(onAddMemo?.({ x: center.x - 112, y: center.y - 104 })).catch((error) => {
+              awaitingNewMemoRef.current = false
+              showMemoError(error)
+            })
+          }}
           canEditSections={canEditSections}
         />
       </div>
+      {searchOpen && (
+        <div className="absolute bottom-[74px] left-1/2 z-30 -translate-x-1/2">
+          <TreeSearchPanel
+            query={searchQuery}
+            results={searchResults}
+            onQueryChange={setSearchQuery}
+            onClose={() => setSearchOpen(false)}
+          />
+        </div>
+      )}
+      {memoError && (
+        <div role="alert" className="absolute bottom-[74px] left-1/2 z-40 -translate-x-1/2 border border-line bg-surface px-4 py-2 text-m shadow-box">
+          メモ: {memoError}
+          <button type="button" className="ml-3 underline" onClick={() => setMemoError(null)}>閉じる</button>
+        </div>
+      )}
       {sectionActions.notice && (
         <div className={`absolute left-1/2 ${ABOVE_TOOLBAR} z-20 -translate-x-1/2`}>
           <SectionNotice

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
 import { Modal } from '#/components/modal'
 import { IconButton } from '#/components/icon-button'
-import { TaskMessages } from './task-messages'
+import { TaskMessages } from '#/components/task-messages'
 import { Check, Pencil, X } from 'lucide-react'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
@@ -13,12 +13,14 @@ function Detail({
   productId,
   target,
   canReport,
+  canComment,
   onEdit,
   onClose,
 }: {
   productId: string
   target: TaskDetailTarget
   canReport: boolean
+  canComment: boolean
   onEdit?: () => void
   onClose: () => void
 }) {
@@ -71,7 +73,11 @@ function Detail({
           </dd>
         </div>
       </dl>
-      <TaskMessages productId={productId} taskId={task.taskId} />
+      <TaskMessages
+        productId={productId}
+        taskId={task.taskId}
+        canComment={canComment}
+      />
       {report.isError && (
         <p role="alert" className="border-l border-line pl-3 text-m">
           ERR {report.error.message}
@@ -105,17 +111,20 @@ function Detail({
 
 // タスクの詳細のモーダル。やりとり(メッセージの履歴)を出す。
 // `canReport` は担当者本人にだけ渡す: 未報告なら「完了を報告」を出す(押すとリーダーに通知される。担当者でなければ、api が 403 にする)。
+// `canComment` はリーダーと担当者にだけ渡す: コメントの入力欄を出す(それ以外は、api が 403 にする)。
 // `onEdit` はリーダーにだけ渡す(編集のフォームへ移る)。`target` が null の間は閉じている
 export function TaskDetailDialog({
   productId,
   target,
   canReport = false,
+  canComment = false,
   onEdit,
   onClose,
 }: {
   productId: string
   target: TaskDetailTarget | null
   canReport?: boolean
+  canComment?: boolean
   onEdit?: (target: TaskDetailTarget) => void
   onClose: () => void
 }) {
@@ -127,6 +136,7 @@ export function TaskDetailDialog({
           productId={productId}
           target={target}
           canReport={canReport}
+          canComment={canComment}
           onEdit={onEdit && (() => onEdit(target))}
           onClose={onClose}
         />

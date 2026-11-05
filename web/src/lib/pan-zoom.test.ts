@@ -2,7 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import {
   clampPan,
   clampScale,
+  easeOut,
   fitView,
+  isFiniteView,
+  lerpView,
   MAX_ZOOM,
   MIN_ZOOM,
   revealDelta,
@@ -11,6 +14,38 @@ import {
 } from './pan-zoom'
 
 const size = { cw: 800, ch: 600, w: 1000, h: 300 }
+
+describe('isFiniteView', () => {
+  test('位置と倍率がすべて有限なら true', () => {
+    expect(isFiniteView({ x: 0, y: -20.5, scale: 1 })).toBe(true)
+  })
+  test('NaN や Infinity が 1 つでもあれば false', () => {
+    expect(isFiniteView({ x: Number.NaN, y: 0, scale: 1 })).toBe(false)
+    expect(isFiniteView({ x: 0, y: Number.POSITIVE_INFINITY, scale: 1 })).toBe(false)
+    expect(isFiniteView({ x: 0, y: 0, scale: Number.NaN })).toBe(false)
+  })
+})
+
+describe('easeOut / lerpView(なめらかな移動)', () => {
+  test('easeOut: 0 で 0、1 で 1、途中は単調に増え、はじめの方が速い', () => {
+    expect(easeOut(0)).toBe(0)
+    expect(easeOut(1)).toBe(1)
+    expect(easeOut(0.5)).toBeGreaterThan(0.5)
+    expect(easeOut(0.25)).toBeLessThan(easeOut(0.5))
+    expect(easeOut(0.5)).toBeLessThan(easeOut(0.75))
+  })
+  test('easeOut: 範囲の外は 0〜1 に収める', () => {
+    expect(easeOut(-1)).toBe(0)
+    expect(easeOut(2)).toBe(1)
+  })
+  test('lerpView: t = 0 で from、t = 1 で to、途中はその間', () => {
+    const a = { x: 0, y: 100, scale: 1 }
+    const b = { x: 200, y: -100, scale: 2 }
+    expect(lerpView(a, b, 0)).toEqual(a)
+    expect(lerpView(a, b, 1)).toEqual(b)
+    expect(lerpView(a, b, 0.5)).toEqual({ x: 100, y: 0, scale: 1.5 })
+  })
+})
 
 describe('fitView', () => {
   test('広い中身は、幅(余白を除く)に合わせて縮小し、横を中央に置く', () => {
