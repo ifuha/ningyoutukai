@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Search, X } from 'lucide-react'
+import { Search } from 'lucide-react'
 
 export type TreeSearchResult = {
   id: string
@@ -54,14 +54,6 @@ export function TreeSearchPanel({
           onChange={(event) => onQueryChange(event.currentTarget.value)}
           className="min-w-0 flex-1 bg-transparent text-m outline-none placeholder:text-white/45"
         />
-        <button
-          type="button"
-          aria-label="検索を閉じる"
-          onClick={onClose}
-          className="flex size-8 shrink-0 items-center justify-center hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
-        >
-          <X aria-hidden="true" size={18} />
-        </button>
       </div>
       <div className="max-h-72 overflow-y-auto p-1.5">
         {!query.trim() ? (
