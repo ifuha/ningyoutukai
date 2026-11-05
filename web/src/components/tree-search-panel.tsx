@@ -32,7 +32,7 @@ export function TreeSearchPanel({
     <section
       role="dialog"
       aria-label="プロダクト内を検索"
-      className="w-[min(28rem,calc(100vw-1.5rem))] overflow-hidden bg-surface text-ink shadow-box"
+      className="w-[min(28rem,calc(100vw-1.5rem))] overflow-hidden bg-panel text-ink shadow-box"
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault()
