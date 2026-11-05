@@ -102,24 +102,52 @@ export function ProductTree({
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [memoError, setMemoError] = useState<string | null>(null)
+  // メモの内容を編集中か。編集中は、セクションやカードなど他の操作を止める(道具は同時に使えない)
+  const [memoEditing, setMemoEditing] = useState(false)
+  const memoEditingRef = useRef(false)
+  memoEditingRef.current = memoEditing
+  // 編集を終える操作(キャンバスを押して、入力欄の外へ出る)の、直後の click は、何もしない(押した先のセクションなどを、同時に選ばない)
+  const swallowClickRef = useRef(false)
+  // 追加したばかりのメモは、そのまま編集できる状態にする: 追加の操作のあとに増えたメモを探して、その ID を持つ
+  const awaitingNewMemoRef = useRef(false)
+  const knownNoteIdsRef = useRef<Set<string> | null>(null)
+  const [autoEditNoteId, setAutoEditNoteId] = useState<string | null>(null)
   const showMemoError = (error: unknown) => {
     setMemoError(error instanceof Error ? error.message : '保存できませんでした。時間をおいて再度お試しください')
   }
+  // Cmd/Ctrl+F で検索を開閉する(開いているときに押すと閉じる)。Esc でも閉じる(フォーカスが検索欄の外にあっても)。
+  // 別のダイアログ(タスクなど)の中で押したときは、何もしない(検索パネル自身は除く)
+  const searchOpenRef = useRef(false)
+  searchOpenRef.current = searchOpen
+  const toolRef = useRef<string>('select')
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') {
-        const target = event.target
-        if (
-          target instanceof HTMLElement &&
-          target.closest('[role="dialog"]:not([aria-label="プロダクト内を検索"])')
-        ) return
-        event.preventDefault()
-        setSearchOpen(true)
-      }
+      const isFind = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f'
+      const isEscape = event.key === 'Escape' && searchOpenRef.current
+      if (!isFind && !isEscape) return
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        target.closest('[role="dialog"]:not([aria-label="プロダクト内を検索"])')
+      ) return
+      event.preventDefault()
+      // 「セクション」を使っている間は、検索を開かない(道具は同時に使えない)
+      if (isFind && !searchOpenRef.current && (toolRef.current === 'section' || memoEditingRef.current)) return
+      setSearchOpen(isFind ? !searchOpenRef.current : false)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
+  useEffect(() => {
+    const ids = new Set(notes.map((n) => n.noteId))
+    const known = knownNoteIdsRef.current
+    knownNoteIdsRef.current = ids
+    if (!known || !awaitingNewMemoRef.current) return
+    const added = notes.find((n) => !known.has(n.noteId))
+    if (!added) return
+    awaitingNewMemoRef.current = false
+    setAutoEditNoteId(added.noteId)
+  }, [notes])
   // 位置を持つカード(座標に置く)と、持たないカード(自動配置のまま)に分ける。リーダーも位置を持てる
   const leaderPlaced = hasPosition(leader)
   const { flow: flowMembers, placed: placedMembers } = splitByPosition(members)
@@ -217,7 +245,7 @@ export function ProductTree({
   )
   const interaction = useSectionInteraction({
     actions: guardedActions,
-    canEdit: canEditSections,
+    canEdit: canEditSections && !memoEditing,
     sections,
     scale,
     toCanvas,
@@ -263,6 +291,7 @@ export function ProductTree({
       ? [leader, ...members].find((m) => m.productMemberId === cardDrag.draggingId)
       : undefined
   const mode = interaction.tool
+  toolRef.current = mode
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase()
   const searchResults: TreeSearchResult[] = []
   if (normalizedQuery) {
@@ -365,7 +394,14 @@ export function ProductTree({
         aria-label="ツリー(ドラッグか矢印キーで移動、+ と - で拡大縮小、0 で全体表示)"
         tabIndex={0}
         {...containerHandlers}
+        onPointerDownCapture={() => {
+          swallowClickRef.current = memoEditingRef.current
+        }}
         onClick={(e) => {
+          if (swallowClickRef.current) {
+            swallowClickRef.current = false
+            return
+          }
           setSearchOpen(false)
           interaction.handleCanvasClick(
             e.target instanceof Element ? e.target : null,
@@ -397,7 +433,7 @@ export function ProductTree({
             offsetY={bounds.offsetY}
             scale={scale}
           />
-          {notes.map((note) => <StickyNote key={note.noteId} note={note} offsetX={bounds.offsetX} offsetY={bounds.offsetY} onUpdate={(id, patch) => { void Promise.resolve(onUpdateMemo?.(id, patch)).catch(showMemoError) }} onDelete={(id) => { void Promise.resolve(onDeleteMemo?.(id)).catch(showMemoError) }} />)}
+          {notes.map((note) => <StickyNote key={note.noteId} note={note} autoEdit={note.noteId === autoEditNoteId} onEditingChange={setMemoEditing} offsetX={bounds.offsetX} offsetY={bounds.offsetY} onUpdate={(id, patch) => { void Promise.resolve(onUpdateMemo?.(id, patch)).catch(showMemoError) }} onDelete={(id) => { void Promise.resolve(onDeleteMemo?.(id)).catch(showMemoError) }} />)}
           {/* 内側の「動かす面」(カードの下)。カードのない空いた場所のドラッグで、セクションを動かす(カードのように)。
               リーダーだけ。面積の大きい順に並べるので、重なるときは、小さい(内側の)セクションが手前になる */}
           {moveSurfacesOn &&
@@ -543,7 +579,7 @@ export function ProductTree({
               (`interiorSelectable` は、カードより下に置くときだけ使うので、使わない)。
               `data-no-deselect` で包む: 編集枠の中のクリック(札・メニューの余白など)が、「背景のクリック」として選択を外さないようにする。
               `display: contents` なので、配置には影響しない */}
-          {canEditSections && (
+          {canEditSections && !memoEditing && (
             <div data-no-deselect className="contents">
               {sections.map((s) => (
                 <SectionEditor
@@ -570,6 +606,8 @@ export function ProductTree({
       <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2">
         <TreeToolbar
           mode={mode}
+          searchOpen={searchOpen}
+          memoEditing={memoEditing}
           onModeChange={interaction.setTool}
           onOpenMembers={onOpenMembers}
           onOpenSearch={() => setSearchOpen((open) => !open)}
@@ -578,7 +616,11 @@ export function ProductTree({
             const rect = containerRef.current?.getBoundingClientRect()
             if (!rect) return
             const center = toCanvas({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
-            void Promise.resolve(onAddMemo?.({ x: center.x - 112, y: center.y - 104 })).catch(showMemoError)
+            awaitingNewMemoRef.current = true
+            void Promise.resolve(onAddMemo?.({ x: center.x - 112, y: center.y - 104 })).catch((error) => {
+              awaitingNewMemoRef.current = false
+              showMemoError(error)
+            })
           }}
           canEditSections={canEditSections}
         />
