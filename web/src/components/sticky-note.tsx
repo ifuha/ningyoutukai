@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { NoteContextMenu } from '#/components/note-context-menu'
 import type { ProductNote, ProductNotePatch } from '#/lib/memo-api'
 import { useCanvasView } from '#/lib/canvas-view'
+import { labelTextRect, labelTypography, titleFactor } from '#/lib/section-label'
 
 // メモ(付箋)。見た目は黒: 背景は黒(不透明。後ろが透けない)、文字は白、枠は実線(1px、白の 25%)。タイトルの帯や、ゴミ箱のボタンは持たない
 // - 動かす: 入力欄のまわりの余白をつかんでドラッグ(編集中の入力欄の中は、文字の選択になる)
@@ -10,6 +11,9 @@ import { useCanvasView } from '#/lib/canvas-view'
 /** 長押しと見なす時間(ms)と、指がこの距離(px)以上動いたら取り消す */
 const LONG_PRESS_MS = 500
 const LONG_PRESS_MOVE_PX = 8
+/** メモの幅(px。`w-56`)と、枠線の太さ(px。`border`)。作成者の名前の位置に使う */
+const NOTE_WIDTH_PX = 224
+const NOTE_BORDER_PX = 1
 
 export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete, onEditingChange, autoEdit = false }: { note: ProductNote; offsetX?: number; offsetY?: number; onUpdate: (id: string, patch: ProductNotePatch) => void; onDelete: (id: string) => void; onEditingChange?: (editing: boolean) => void; autoEdit?: boolean }) {
   const { scale } = useCanvasView()
@@ -40,6 +44,9 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete,
   }
   useEffect(() => cancelLongPress, [])
   const isPublic = note.isPublic ?? false
+  // 作成者の名前: セクションの名前と同じ位置(枠の外側の上辺の上、左)と大きさ。縮小しても、読める大きさを保つ(`section-box.tsx` と同じ)
+  const factor = titleFactor(scale)
+  const authorRect = labelTextRect(NOTE_WIDTH_PX, factor)
   const [content, setContent] = useState(note.content)
   const drag = useRef<{ x: number; y: number; startX: number; startY: number } | null>(null)
   const [position, setPosition] = useState({ x: note.x, y: note.y })
@@ -112,6 +119,23 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete,
           drag.current = null
         }}
       >
+        {note.authorName && (
+          <span
+            data-note-author=""
+            title={note.authorName}
+            className="pointer-events-none absolute truncate text-ink"
+            style={{
+              // 絶対配置の基準は枠線の内側。外側の左上が原点の位置から、枠線の分だけ戻す
+              left: authorRect.left - NOTE_BORDER_PX,
+              top: authorRect.top - NOTE_BORDER_PX,
+              width: authorRect.width,
+              height: authorRect.height,
+              ...labelTypography(factor),
+            }}
+          >
+            {note.authorName}
+          </span>
+        )}
         <textarea
           ref={textareaRef}
           aria-label="メモの内容"
