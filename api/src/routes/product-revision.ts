@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { eq, sql, type SQL } from "drizzle-orm";
+import { and, eq, sql, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { db } from "../db";
 import {
@@ -15,6 +15,7 @@ import {
 import { authGuard } from "../lib/auth-guard";
 import { getMembership } from "../lib/product-access";
 import { MessageSchema } from "../lib/response-schema";
+import { visibleNoteFilter } from "./product-note";
 
 // プロダクトの「版(リビジョン)」GET /api/product/:productId/revision(プロダクトのメンバーなら誰でも)
 //
@@ -24,6 +25,7 @@ import { MessageSchema } from "../lib/response-schema";
 // 変更のたびに、版を上げる処理を足す必要がない(新しい列や API を足しても、自動で拾う)。
 //
 // 注意:
+// - メモは、見る人に見えるものだけから計算する(他の人の非公開メモの変更で、値が変わらない。版は見る人ごとに決まる)
 // - 値は、それ自体に意味のない文字列(32 桁の 16 進数)。変わったかどうかだけに使う。内容は漏れない
 // - メンバーには見えない非公開タスクの変更でも、値は変わる(取り直すと、同じ内容が返るだけ)。「何かが変わった」ことは分かる
 // - 招待(product_invitations)は、ツリーに出ないので含めない
@@ -35,7 +37,7 @@ function digest(table: PgTable, orderBy: PgColumn, where: SQL): SQL {
 }
 
 /** プロダクトの版を計算する */
-export async function computeProductRevision(productId: string): Promise<string> {
+export async function computeProductRevision(productId: string, viewerUserId: string): Promise<string> {
   const memberIds = sql`(select ${productMembers.productMemberId} from ${productMembers} where ${productMembers.productId} = ${productId})`;
   const memberUserIds = sql`(select ${productMembers.userId} from ${productMembers} where ${productMembers.productId} = ${productId})`;
   const taskIds = sql`(select ${tasks.taskId} from ${tasks} where ${tasks.productMemberId} in ${memberIds})`;
@@ -46,7 +48,7 @@ export async function computeProductRevision(productId: string): Promise<string>
       ${digest(productMembers, productMembers.productMemberId, eq(productMembers.productId, productId))},
       ${digest(users, users.userId, sql`${users.userId} in ${memberUserIds}`)},
       ${digest(sections, sections.sectionId, eq(sections.productId, productId))},
-      ${digest(productNotes, productNotes.noteId, eq(productNotes.productId, productId))},
+      ${digest(productNotes, productNotes.noteId, and(eq(productNotes.productId, productId), visibleNoteFilter(viewerUserId))!)},
       ${digest(tasks, tasks.taskId, sql`${tasks.productMemberId} in ${memberIds}`)},
       ${digest(taskTypes, taskTypes.taskTypeId, eq(taskTypes.productId, productId))},
       ${digest(taskMessages, taskMessages.messageId, sql`${taskMessages.taskId} in ${taskIds}`)}
@@ -67,7 +69,7 @@ export const productRevisionRoutes = new Elysia({ name: "product-revision" })
 
       // 数秒ごとに呼ばれる。ブラウザや中継が、古い値を使い回さないようにする
       set.headers["cache-control"] = "no-store";
-      return { revision: await computeProductRevision(params.productId) };
+      return { revision: await computeProductRevision(params.productId, user.userId) };
     },
     {
       requireUser: true,
