@@ -3,7 +3,6 @@ import { eden, edenData, type Json } from '#/lib/eden'
 type Client = ReturnType<typeof eden>
 type Route = ReturnType<Client['api']['product']>
 type NotesRoute = Route['note']
-type NoteRoute = ReturnType<NotesRoute['get']>
 type Success<R extends { data: unknown; error: unknown }> = NonNullable<Extract<R, { error: null }>['data']>
 // 作成者(`createdBy` / `authorName`)と公開の状態(`isPublic`)は、API がまだ返さない(別の PR で対応)。それまで型エラーにならないよう、eden の型に足している
 // API の対応後に、eden の型だけにする(この足した型と、`updateProductNote` のキャストを消す)
