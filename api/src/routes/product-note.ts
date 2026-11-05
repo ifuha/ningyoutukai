@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, or } from "drizzle-orm";
+import { and, asc, eq, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { productNotes, users } from "../db/schema";
@@ -27,15 +27,16 @@ const noteColumns = {
 };
 
 /**
- * 見えるメモの条件: 公開、自分が作成者、作成者が NULL(誰にも見えなくならないよう全員に見せる)。
- * 他人の非公開メモは含まない。product-revision.ts も同じ条件を使う
+ * 見えるメモの条件: 公開、または自分が作成者。他人の非公開メモは含まない。
+ * 作成者が NULL(退会した人・作成者を保存する前のメモ)の非公開メモは、持ち主がいないので、誰にも見えない(他人に見せない)。
+ * product-revision.ts も同じ条件を使う
  */
 export function visibleNoteFilter(userId: string) {
-  return or(eq(productNotes.isPublic, true), eq(productNotes.createdBy, userId), isNull(productNotes.createdBy));
+  return or(eq(productNotes.isPublic, true), eq(productNotes.createdBy, userId));
 }
 
 type NoteRow = { isPublic: boolean; createdBy: string | null };
-const isVisible = (note: NoteRow, userId: string) => note.isPublic || note.createdBy === null || note.createdBy === userId;
+const isVisible = (note: NoteRow, userId: string) => note.isPublic || note.createdBy === userId;
 
 async function findNote(noteId: string) {
   const [note] = await db.select(noteColumns).from(productNotes).leftJoin(users, eq(productNotes.createdBy, users.userId)).where(eq(productNotes.noteId, noteId));
@@ -60,7 +61,7 @@ export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGu
     const note = await findNote(params.noteId);
     // 他人の非公開メモは存在を漏らさないよう、無いのと同じ 404 にする
     if (!note || note.productId !== params.productId || !isVisible(note, user.userId)) return status(404, notFound);
-    // 変更できるのは作成者だけ(作成者が NULL のメモは守る人がいないので、メンバー全員)
+    // 変更できるのは作成者だけ(作成者が NULL の公開メモは、持ち主がいないので、メンバー全員)
     if (note.createdBy !== null && note.createdBy !== user.userId) return status(403, forbiddenEdit);
     await db.update(productNotes).set({ ...body, updatedAt: new Date() }).where(eq(productNotes.noteId, params.noteId));
     return (await findNote(params.noteId)) ?? status(404, notFound);
@@ -70,7 +71,7 @@ export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGu
     if (!membership) return status(404, notFound);
     const note = await findNote(params.noteId);
     if (!note || note.productId !== params.productId || !isVisible(note, user.userId)) return status(404, notFound);
-    // 削除できるのは作成者とリーダー(作成者が NULL のメモは、メンバー全員)
+    // 削除できるのは作成者とリーダー(作成者が NULL の公開メモは、メンバー全員)
     if (note.createdBy !== null && note.createdBy !== user.userId && membership.role !== "leader") return status(403, forbiddenDelete);
     await db.delete(productNotes).where(eq(productNotes.noteId, params.noteId));
     return status(204, undefined);
