@@ -19,6 +19,24 @@ export function isFiniteView(view: View): boolean {
   return Number.isFinite(view.x) && Number.isFinite(view.y) && Number.isFinite(view.scale)
 }
 
+/** panTo のなめらかな移動にかける時間(ミリ秒) */
+export const PAN_DURATION_MS = 280
+
+/** 0〜1 の進み具合を、はじめが速く、終わりがゆっくりな進み具合にする(easeOutCubic) */
+export function easeOut(t: number): number {
+  const c = Math.min(1, Math.max(0, t))
+  return 1 - (1 - c) ** 3
+}
+
+/** 2 つの表示の間(t = 0 で from、t = 1 で to) */
+export function lerpView(from: View, to: View, t: number): View {
+  return {
+    x: from.x + (to.x - from.x) * t,
+    y: from.y + (to.y - from.y) * t,
+    scale: from.scale + (to.scale - from.scale) * t,
+  }
+}
+
 export const FIT_PADDING = 16
 // 全体表示の倍率(fit)に対する、相対倍率の範囲
 export const MIN_ZOOM = 0.25
