@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "../db";
 import { productMembers, users } from "../db/schema";
 
@@ -38,6 +38,15 @@ export async function getMemberContact(memberId: string) {
     .innerJoin(users, eq(productMembers.userId, users.userId))
     .where(eq(productMembers.productMemberId, memberId));
   return row;
+}
+
+/** プロダクトのメンバー全員の連絡先(指定したユーザーを除く)。メモを公開したときの通知先 */
+export async function getMemberContactsExcept(productId: string, exceptUserId: string) {
+  return await db
+    .select({ email: users.email, userName: users.userName })
+    .from(productMembers)
+    .innerJoin(users, eq(productMembers.userId, users.userId))
+    .where(and(eq(productMembers.productId, productId), ne(productMembers.userId, exceptUserId)));
 }
 
 /** プロダクトのリーダーの連絡先の一覧(完了報告の通知先) */
