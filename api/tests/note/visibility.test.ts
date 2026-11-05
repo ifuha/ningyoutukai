@@ -114,13 +114,20 @@ describe("更新", () => {
     expect((await call("PATCH", url(a.productId, n.noteId), a.members[1]!.cookie, { content: "x" })).status).toBe(404);
   });
 
-  test("作成者 NULL の公開メモは、メンバー全員が変更できる。非公開は 404", async () => {
+  test("作成者 NULL のメモは、リーダーだけが変更できる(メンバーは 403)。非公開は 404", async () => {
     const hidden = await insertNote(a.productId, { createdBy: null });
     expect((await call("PATCH", url(a.productId, hidden.noteId), a.members[1]!.cookie, { content: "x" })).status).toBe(404);
     const n = await insertNote(a.productId, { createdBy: null, isPublic: true });
-    const res = await call("PATCH", url(a.productId, n.noteId), a.members[1]!.cookie, { content: "ok" });
+    expect((await call("PATCH", url(a.productId, n.noteId), a.members[1]!.cookie, { content: "no" })).status).toBe(403);
+    const res = await call("PATCH", url(a.productId, n.noteId), a.leader.cookie, { content: "ok" });
     expect(res.status).toBe(200);
     expect((await findNote(n.noteId))!.content).toBe("ok");
+  });
+
+  test("リーダーでも、他の人(作成者あり)の公開メモは変更できない: 403", async () => {
+    const n = await insertNote(a.productId, { createdBy: a.members[0]!.userId, isPublic: true });
+    expect((await call("PATCH", url(a.productId, n.noteId), a.leader.cookie, { content: "x" })).status).toBe(403);
+    expect((await findNote(n.noteId))!.content).toBe("");
   });
 
   test("別のプロダクトのメモ・非メンバー・存在しない id は 404", async () => {
@@ -140,9 +147,10 @@ describe("削除", () => {
     expect(await findNote(n.noteId)).toBeUndefined();
   });
 
-  test("リーダーは他人の公開メモを削除できる", async () => {
+  test("リーダーでも、他人の公開メモは削除できない: 403", async () => {
     const n = await insertNote(a.productId, { createdBy: a.members[0]!.userId, isPublic: true });
-    expect((await call("DELETE", url(a.productId, n.noteId), a.leader.cookie)).status).toBe(204);
+    expect((await call("DELETE", url(a.productId, n.noteId), a.leader.cookie)).status).toBe(403);
+    expect(await findNote(n.noteId)).toBeDefined();
   });
 
   test("リーダーでも、他人の非公開メモは 404", async () => {
@@ -162,11 +170,36 @@ describe("削除", () => {
     expect((await call("DELETE", url(a.productId, n.noteId), a.members[1]!.cookie)).status).toBe(404);
   });
 
-  test("作成者 NULL の公開メモは、メンバー全員が削除できる。非公開は 404", async () => {
+  test("作成者 NULL のメモは、リーダーだけが削除できる(メンバーは 403)。非公開は 404", async () => {
     const hidden = await insertNote(a.productId, { createdBy: null });
     expect((await call("DELETE", url(a.productId, hidden.noteId), a.members[1]!.cookie)).status).toBe(404);
     const n = await insertNote(a.productId, { createdBy: null, isPublic: true });
-    expect((await call("DELETE", url(a.productId, n.noteId), a.members[1]!.cookie)).status).toBe(204);
+    expect((await call("DELETE", url(a.productId, n.noteId), a.members[1]!.cookie)).status).toBe(403);
+    expect((await call("DELETE", url(a.productId, n.noteId), a.leader.cookie)).status).toBe(204);
+  });
+});
+
+describe("canEdit(見ている人が変更・削除できるか)", () => {
+  test("一覧: 自分のメモは true、他人の公開メモは false(リーダーでも)、作成者 NULL の公開メモはリーダーだけ true", async () => {
+    const m1 = a.members[0]!;
+    const mine = await insertNote(a.productId, { createdBy: m1.userId });
+    const theirs = await insertNote(a.productId, { createdBy: a.members[1]!.userId, isPublic: true });
+    const orphan = await insertNote(a.productId, { createdBy: null, isPublic: true });
+    const canEdit = async (cookie: string) => {
+      const list = (await (await call("GET", url(a.productId), cookie)).json()) as { noteId: string; canEdit: boolean }[];
+      return (id: string) => list.find((n) => n.noteId === id)?.canEdit;
+    };
+    const asMember = await canEdit(m1.cookie);
+    expect([asMember(mine.noteId), asMember(theirs.noteId), asMember(orphan.noteId)]).toEqual([true, false, false]);
+    const asLeader = await canEdit(a.leader.cookie);
+    expect([asLeader(theirs.noteId), asLeader(orphan.noteId)]).toEqual([false, true]);
+  });
+  test("作成と更新の返事にも canEdit が入る", async () => {
+    const m = a.members[0]!;
+    const created = (await (await call("POST", url(a.productId), m.cookie, { x: 1, y: 1 })).json()) as { noteId: string; canEdit: boolean };
+    expect(created.canEdit).toBe(true);
+    const patched = (await (await call("PATCH", url(a.productId, created.noteId), m.cookie, { isPublic: true })).json()) as { canEdit: boolean };
+    expect(patched.canEdit).toBe(true);
   });
 });
 
