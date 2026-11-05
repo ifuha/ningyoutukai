@@ -41,6 +41,9 @@ export const FIT_PADDING = 16
 // 全体表示の倍率(fit)に対する、相対倍率の範囲
 export const MIN_ZOOM = 0.25
 export const MAX_ZOOM = 4
+// 拡大の上限の、絶対値の下限。全体が大きく、全体表示の倍率(fit)がとても小さいときでも、文字が読める大きさ(等倍の 2 倍)までは拡大できる
+// (fit の相対値だけだと、fit = 0.01 のとき上限が 0.04 倍になり、細かい文字が読めない大きさまでしか拡大できない)
+export const MAX_READABLE_SCALE = 2
 // 中身の一辺が、領域の内側に最低これだけ残るよう、動かせる範囲を制限する(px)
 export const MIN_VISIBLE = 80
 
@@ -54,8 +57,13 @@ export function fitView({ cw, ch, w, h, top = 0, bottom = 0 }: Size): View {
   return { x: (cw - w * scale) / 2, y: top + FIT_PADDING, scale }
 }
 
+/** 拡大の上限の倍率: fit の MAX_ZOOM 倍と、読める大きさ(MAX_READABLE_SCALE)の大きい方 */
+export function maxScale(fitScale: number): number {
+  return Math.max(MAX_ZOOM * fitScale, MAX_READABLE_SCALE)
+}
+
 export function clampScale(scale: number, fitScale: number): number {
-  return Math.min(MAX_ZOOM * fitScale, Math.max(MIN_ZOOM * fitScale, scale))
+  return Math.min(maxScale(fitScale), Math.max(MIN_ZOOM * fitScale, scale))
 }
 
 // 中身が完全に見えなくならないよう、位置を制限する
