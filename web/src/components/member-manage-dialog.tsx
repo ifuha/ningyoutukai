@@ -67,6 +67,7 @@ function MemberRow({
             icon={Trash2}
             label="外す"
             variant="outline"
+            className="bg-panel"
             size="sm"
             side="left"
             disabled={gone}
@@ -85,6 +86,7 @@ function MemberRow({
               icon={Check}
               label="外す(確定)"
               variant="outline"
+              className="bg-panel"
               disabled={remove.isPending || gone}
               onClick={() => remove.mutate()}
             />
@@ -92,6 +94,7 @@ function MemberRow({
               icon={X}
               label="やめる"
               variant="outline"
+              className="bg-panel"
               disabled={remove.isPending}
               onClick={() => {
                 setConfirming(false)
@@ -143,6 +146,7 @@ export function MemberManageDialog({
         icon={X}
         label="閉じる"
         variant="outline"
+        className="bg-panel"
         onClick={onClose}
       />
     </Modal>

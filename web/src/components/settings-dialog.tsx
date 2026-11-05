@@ -57,6 +57,7 @@ export function SettingsDialog({
               label="閉じる"
               side="left"
               variant="outline"
+              className="bg-panel"
               onClick={onClose}
             />
           </header>
