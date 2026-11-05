@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { ArrowLeft, ClipboardCheck, Plus } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { AppShell } from '#/components/app-shell'
 import { Loading } from '#/components/loading'
@@ -150,13 +150,14 @@ function Product() {
               onClick={() => setTaskForm({})}
             />
             {tree.data && (
-              <button
-                type="button"
+              <IconButton
+                icon={ClipboardCheck}
+                label={`確認待ち ${pendingReviews(tree.data).length} 件`}
+                showLabel
+                variant="outline"
+                side="bottom"
                 onClick={() => setReviewOpen(true)}
-                className="flex h-10 shrink-0 items-center justify-center shadow-box bg-secondary px-3 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none"
-              >
-                確認待ち {pendingReviews(tree.data).length} 件
-              </button>
+              />
             )}
           </>
         )}

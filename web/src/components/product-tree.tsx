@@ -636,7 +636,7 @@ export function ProductTree({
         </div>
       )}
       {memoError && (
-        <div role="alert" className="absolute bottom-[74px] left-1/2 z-40 -translate-x-1/2 border border-line bg-surface px-4 py-2 text-m shadow-box">
+        <div role="alert" className="absolute bottom-[74px] left-1/2 z-40 -translate-x-1/2 border border-line bg-panel px-4 py-2 text-m shadow-box">
           メモ: {memoError}
           <button type="button" className="ml-3 underline" onClick={() => setMemoError(null)}>閉じる</button>
         </div>
