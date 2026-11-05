@@ -8,9 +8,9 @@ import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
 const buttonClass =
-  'flex h-10 shrink-0 items-center justify-center shadow-box bg-secondary px-3 text-m text-outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+  'flex h-10 shrink-0 items-center justify-center shadow-box bg-panel px-3 text-m text-ink hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-panel'
 const inputClass =
-  'h-10 min-w-0 flex-1 shadow-box bg-surface px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'h-10 min-w-0 flex-1 shadow-box bg-panel px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
 function ErrorText({ message }: { message: string }) {
   return (
@@ -69,6 +69,7 @@ function RenameBlock({
           icon={Pencil}
           label="名前の変更"
           variant="outline"
+          className="bg-panel"
           disabled={rename.isPending || !name.trim() || unchanged}
         />
       </div>
@@ -133,6 +134,7 @@ function DeleteBlock({
               icon={X}
               label="やめる"
               variant="outline"
+              className="bg-panel"
               disabled={remove.isPending}
               onClick={() => {
                 setConfirming(false)
@@ -147,6 +149,7 @@ function DeleteBlock({
           icon={Trash2}
           label="このプロダクトを削除"
           variant="outline"
+          className="bg-panel"
           onClick={() => setConfirming(true)}
         />
       )}
@@ -183,6 +186,7 @@ export function ProductManageDialog({
         icon={X}
         label="閉じる"
         variant="outline"
+        className="bg-panel"
         onClick={onClose}
       />
     </Modal>

@@ -66,7 +66,7 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
       {open && (
         <div
           role="menu"
-          className="absolute left-0 z-10 mt-1 flex min-w-40 flex-col shadow-box bg-secondary"
+          className="absolute left-0 z-10 mt-1 flex min-w-40 flex-col shadow-box bg-panel"
         >
           {items.map((item) => (
             <button
@@ -79,7 +79,7 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
                 setOpen(false)
                 item.onSelect()
               }}
-              className="h-9 whitespace-nowrap px-3 text-left text-m text-outline hover:bg-ink hover:text-surface focus-visible:bg-ink focus-visible:text-surface focus-visible:outline-none"
+              className="h-9 whitespace-nowrap px-3 text-left text-m text-ink hover:bg-side-item focus-visible:bg-side-item focus-visible:outline-none"
             >
               {item.label}
             </button>

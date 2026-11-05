@@ -21,6 +21,7 @@ export function InviteMemberDialog({
         icon={X}
         label="閉じる"
         variant="outline"
+        className="bg-panel"
         onClick={onClose}
       />
     </Modal>

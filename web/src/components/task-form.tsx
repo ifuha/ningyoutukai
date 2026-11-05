@@ -24,9 +24,9 @@ function toIso(value: string): string {
 }
 
 const fieldClass =
-  'w-full shadow-box bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'w-full shadow-box bg-panel px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 const buttonClass =
-  'flex h-10 shrink-0 items-center justify-center shadow-box bg-secondary px-4 text-m text-outline transition-transform duration-100 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0_0_var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-0 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:shadow-none'
+  'flex h-10 shrink-0 items-center justify-center shadow-box bg-panel px-4 text-m text-ink hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-panel'
 
 type Props = {
   productId: string
@@ -262,12 +262,14 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
           label={save.isPending ? '送信中…' : initial ? '保存' : '追加'}
           showLabel
           variant="outline"
+          className="bg-panel"
           disabled={save.isPending || remove.isPending}
         />
         <IconButton
           icon={X}
           label="閉じる"
           variant="outline"
+          className="bg-panel"
           disabled={save.isPending || remove.isPending}
           onClick={onDone}
         />
@@ -301,6 +303,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
                   icon={X}
                   label="やめる"
                   variant="outline"
+                  className="bg-panel"
                   disabled={remove.isPending}
                   onClick={() => {
                     remove.reset()
@@ -314,6 +317,7 @@ export function TaskForm({ productId, members, edit, onDone }: Props) {
               icon={Trash2}
               label="このタスクを削除"
               variant="outline"
+              className="bg-panel"
               disabled={save.isPending}
               onClick={() => setConfirmingRemove(true)}
             />

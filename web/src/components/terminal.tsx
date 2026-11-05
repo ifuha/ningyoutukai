@@ -7,7 +7,7 @@ export function Terminal({
   children: React.ReactNode
 }) {
   return (
-    <section className="w-full max-w-[560px] shadow-box bg-surface font-mono">
+    <section className="w-full max-w-[560px] shadow-box bg-panel font-mono">
       <header className="flex items-center gap-3 border-b border-line px-4 py-2 text-s">
         <span className="flex gap-1.5" aria-hidden="true">
           <span className="h-2.5 w-2.5 shadow-box" />

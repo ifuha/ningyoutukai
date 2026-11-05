@@ -90,6 +90,7 @@ function Detail({
             label="完了を報告"
             showLabel
             variant="outline"
+            className="bg-panel"
             disabled={report.isPending}
             onClick={() => report.mutate()}
           />
@@ -99,11 +100,12 @@ function Detail({
             icon={Pencil}
             label="編集"
             variant="outline"
+            className="bg-panel"
             disabled={report.isPending}
             onClick={onEdit}
           />
         )}
-        <IconButton icon={X} label="閉じる" variant="outline" onClick={onClose} />
+        <IconButton icon={X} label="閉じる" variant="outline" className="bg-panel" onClick={onClose} />
       </div>
     </>
   )
