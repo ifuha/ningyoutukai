@@ -293,8 +293,8 @@ export function ProductTree({
             const rect = getCardRect(member.productMemberId)
             if (rect) {
               panTo({
-                x: rect.left + bounds.offsetX + rect.width / 2,
-                y: rect.top + bounds.offsetY + rect.height / 2,
+                x: rect.x + bounds.offsetX + rect.width / 2,
+                y: rect.y + bounds.offsetY + rect.height / 2,
               })
             }
             setSearchOpen(false)
