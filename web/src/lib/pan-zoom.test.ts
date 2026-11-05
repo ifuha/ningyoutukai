@@ -6,7 +6,9 @@ import {
   fitView,
   isFiniteView,
   lerpView,
+  MAX_READABLE_SCALE,
   MAX_ZOOM,
+  maxScale,
   MIN_ZOOM,
   revealDelta,
   visibleCenter,
@@ -77,11 +79,22 @@ describe('zoomAt', () => {
     expect((p.x - next.x) / next.scale).toBeCloseTo((p.x - view.x) / view.scale)
     expect((p.y - next.y) / next.scale).toBeCloseTo((p.y - view.y) / view.scale)
   })
-  test('倍率は fit の 0.25 倍〜4 倍に収まる', () => {
+  test('倍率は fit の 0.25 倍〜4 倍(上限は、読める大きさ 2 倍以上)に収まる', () => {
     const p = { x: 400, y: 300 }
     expect(zoomAt(view, p, 100, size, 0.5).scale).toBeCloseTo(0.5 * MAX_ZOOM)
     expect(zoomAt(view, p, 0.0001, size, 0.5).scale).toBeCloseTo(0.5 * MIN_ZOOM)
     expect(clampScale(1, 0.5)).toBe(1)
+  })
+  test('全体が大きく fit がとても小さくても、読める大きさ(MAX_READABLE_SCALE)までは拡大できる', () => {
+    expect(maxScale(0.01)).toBe(MAX_READABLE_SCALE)
+    expect(clampScale(100, 0.01)).toBe(MAX_READABLE_SCALE)
+    expect(zoomAt({ x: 0, y: 0, scale: 0.01 }, { x: 400, y: 300 }, 100, size, 0.01).scale).toBe(MAX_READABLE_SCALE)
+    // 下限は fit の相対のまま
+    expect(clampScale(0.0000001, 0.01)).toBeCloseTo(0.01 * MIN_ZOOM)
+  })
+  test('fit が大きいときは、これまでどおり fit の 4 倍が上限(読める大きさの方が小さいとき)', () => {
+    expect(maxScale(1)).toBe(MAX_ZOOM)
+    expect(maxScale(0.5)).toBe(Math.max(0.5 * MAX_ZOOM, MAX_READABLE_SCALE))
   })
 })
 
