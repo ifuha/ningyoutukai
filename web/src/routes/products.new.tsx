@@ -73,7 +73,7 @@ function NewProduct() {
                 value={name}
                 readOnly={pending}
                 onChange={(e) => setName(e.target.value)}
-                className="h-12 w-full shadow-box bg-surface px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
+                className="h-12 w-full shadow-box bg-panel px-3 font-mono text-l focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink read-only:opacity-60"
               />
             </div>
             <div className="flex gap-3">
@@ -82,7 +82,8 @@ function NewProduct() {
                 label={pending ? '作成中…' : '作成'}
                 showLabel
                 type="submit"
-                variant="solid"
+                variant="outline"
+                className="bg-panel"
                 size="lg"
                 disabled={pending}
               />
@@ -91,6 +92,7 @@ function NewProduct() {
                 label="キャンセル"
                 showLabel
                 variant="outline"
+                className="bg-panel"
                 size="lg"
                 disabled={pending}
                 onClick={() => void navigate({ to: '/home' })}
