@@ -147,6 +147,7 @@ function Product() {
               showLabel
               variant="outline"
               size="xl"
+              className="bg-panel"
               side="bottom"
               onClick={() => setTaskForm({})}
             />
@@ -157,6 +158,7 @@ function Product() {
                 showLabel
                 variant="outline"
                 size="xl"
+                className="bg-panel"
                 side="bottom"
                 onClick={() => setReviewOpen(true)}
               />
@@ -168,6 +170,7 @@ function Product() {
         label="ホームへ戻る"
         variant="outline"
         size="xl"
+        className="bg-panel"
         side="bottom"
         onClick={() => void navigate({ to: '/home' })}
       />

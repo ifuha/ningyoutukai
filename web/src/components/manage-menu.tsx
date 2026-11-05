@@ -38,6 +38,7 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
         showLabel
         variant="outline"
         size="xl"
+        className="bg-panel"
         side="bottom"
         onClick={items[0].onSelect}
       />
@@ -57,6 +58,7 @@ export function ManageMenu({ items }: { items: ManageMenuItem[] }) {
           showLabel
           variant="outline"
           size="xl"
+          className="bg-panel"
           side="bottom"
           aria-haspopup="menu"
           aria-expanded={open}
