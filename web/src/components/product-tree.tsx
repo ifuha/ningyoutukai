@@ -538,7 +538,7 @@ export function ProductTree({
                             cardId={m.productMemberId}
                             onEditTask={editFor(m)}
                             onShowTasks={onShowTasks}
-                  onAddTask={onAddTask}
+                            onAddTask={onAddTask}
                           />
                         </DragSlot>
                       </li>
@@ -577,6 +577,7 @@ export function ProductTree({
               offsetX={bounds.offsetX}
               offsetY={bounds.offsetY}
               elementRef={cardDrag.ghostRef}
+              addTask={!!onAddTask}
             />
           )}
           {/* 各セクションの編集枠(B)。選択・大きさの変更・移動・名前・色・削除。リーダーだけ(リーダーでなければ、何も出さない)。
