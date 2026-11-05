@@ -197,10 +197,10 @@ describe("ほかのプロダクトの変更では、変わらない", () => {
 
 describe("computeProductRevision", () => {
   test("API と同じ値を返す", async () => {
-    expect(await computeProductRevision(a.productId)).toBe(await revisionOf(a.productId, a.leader.cookie));
+    expect(await computeProductRevision(a.productId, a.leader.userId)).toBe(await revisionOf(a.productId, a.leader.cookie));
   });
 
   test("メンバーもタスクもない(存在しない)プロダクトでも、例外を出さない", async () => {
-    expect(await computeProductRevision(crypto.randomUUID())).toMatch(/^[0-9a-f]{32}$/);
+    expect(await computeProductRevision(crypto.randomUUID(), a.leader.userId)).toMatch(/^[0-9a-f]{32}$/);
   });
 });
