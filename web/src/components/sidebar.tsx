@@ -80,7 +80,7 @@ export function Sidebar({
                   type="button"
                   onClick={() => onSelectProduct?.(p.id)}
                   aria-current={p.id === activeProductId ? 'page' : undefined}
-                  className="flex h-12 w-full items-center truncate border-b-2 border-transparent px-2 text-left text-l font-medium hover:bg-side-item aria-[current=page]:border-ink aria-[current=page]:bg-side-item"
+                  className="flex h-12 w-full items-center truncate border-b-2 border-transparent px-2 text-left text-l font-medium transition-[border-color,background-color] duration-200 ease-out motion-reduce:transition-none hover:bg-side-item aria-[current=page]:border-ink aria-[current=page]:bg-side-item"
                 >
                   <span className="truncate">{p.name}</span>
                 </button>
