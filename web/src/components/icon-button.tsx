@@ -11,7 +11,7 @@ import type { LucideIcon } from 'lucide-react'
 //   文字が見えているので、ツールチップは出さない(`tip` を渡したときだけ出す)。`block` で横幅いっぱいにする
 
 export type IconButtonVariant = 'plain' | 'outline' | 'solid'
-export type IconButtonSize = 'sm' | 'md' | 'lg' | 'xl'
+export type IconButtonSize = 'sm' | 'md' | 'lg'
 export type TipSide = 'top' | 'bottom' | 'left' | 'right'
 
 const variantClass: Record<IconButtonVariant, string> = {
@@ -30,8 +30,6 @@ const sizeClass: Record<IconButtonSize, { box: string; labeled: string; icon: nu
   sm: { box: 'size-8', labeled: 'h-8 gap-2 px-3', icon: 20 },
   md: { box: 'size-10', labeled: 'h-10 gap-2 px-4', icon: 24 },
   lg: { box: 'size-12', labeled: 'h-12 gap-3 px-5', icon: 28 },
-  // 画面の上のヘッダーのボタン(高さ 48px)
-  xl: { box: 'size-12', labeled: 'h-12 gap-3 px-5', icon: 28 },
 }
 
 const sideClass: Record<TipSide, string> = {

@@ -146,7 +146,6 @@ function Product() {
               label="タスクを追加"
               showLabel
               variant="outline"
-              size="xl"
               className="bg-panel"
               side="bottom"
               onClick={() => setTaskForm({})}
@@ -157,7 +156,6 @@ function Product() {
                 label={`確認待ち ${pendingReviews(tree.data).length} 件`}
                 showLabel
                 variant="outline"
-                size="xl"
                 className="bg-panel"
                 side="bottom"
                 onClick={() => setReviewOpen(true)}
@@ -169,7 +167,6 @@ function Product() {
         icon={ArrowLeft}
         label="ホームへ戻る"
         variant="outline"
-        size="xl"
         className="bg-panel"
         side="bottom"
         onClick={() => void navigate({ to: '/home' })}
