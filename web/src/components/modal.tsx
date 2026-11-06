@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
+import { ResizeBox } from '#/components/resize-box'
 
 // 共通のモーダル(`dialog`)。`open` の間だけ中身を置くので、閉じると入力の状態は消える。
 // 余白は中の div 側に持たせ、背景(dialog 自体)を押したときだけ閉じる。見た目は暫定(ターミナル風)
@@ -10,6 +11,7 @@ export function Modal({
   overflowVisible = false,
   size = 'md',
   closeOnBackdrop = true,
+  animateResize = false,
 }: {
   open: boolean
   onClose: () => void
@@ -20,6 +22,8 @@ export function Modal({
   size?: 'md' | 'full'
   /** 背景(外側)を押したときに閉じるか。入力の途中で、うっかり押して内容が消えるのを避けたいフォームでは false(Esc と「閉じる」では閉じられる) */
   closeOnBackdrop?: boolean
+  /** 中身の高さが変わったとき(詳細を開くなど)、モーダルの高さを、なめらかに動かす(`ResizeBox`)。`size="md"` のとき。`overflowVisible` とは、一緒に使わない(動いている間、はみ出しを隠すため) */
+  animateResize?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   // 開く直前にフォーカスされていた要素。閉じたら戻す(消えていたら何もしない)
@@ -68,7 +72,7 @@ export function Modal({
     >
       {open && (
         <div className={size === 'full' ? 'h-full' : 'space-y-4 p-6'}>
-          {children}
+          {animateResize && size === 'md' && !overflowVisible ? <ResizeBox>{children}</ResizeBox> : children}
         </div>
       )}
     </dialog>

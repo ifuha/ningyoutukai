@@ -19,7 +19,7 @@ export function TaskFormDialog({
   onClose: () => void
 }) {
   return (
-    <Modal open={target !== null} onClose={onClose} closeOnBackdrop={false}>
+    <Modal open={target !== null} onClose={onClose} closeOnBackdrop={false} animateResize>
       {target && (
         <TaskForm
           key={target.edit?.task.taskId ?? `new-${target.memberId ?? ''}`}
