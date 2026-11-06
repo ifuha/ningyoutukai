@@ -69,6 +69,13 @@ function contract(name: string, make: () => Promise<ReturnType<typeof createMemo
       expect(await text(got!.body)).toBe("新しい");
       expect(got!.contentType).toBeUndefined();
     });
+    test("Cache-Control を渡すと、取り出せる。渡さなければ undefined", async () => {
+      const s = await make();
+      await s.put("c", "x", { contentType: "text/plain", cacheControl: "public, max-age=60, immutable" });
+      expect((await s.get("c"))!.cacheControl).toBe("public, max-age=60, immutable");
+      await s.put("d", "x");
+      expect((await s.get("d"))!.cacheControl).toBeUndefined();
+    });
     test("ないキーは null。消すと取り出せなくなる。ないものを消してもエラーにならない", async () => {
       const s = await make();
       expect(await s.get("nothing")).toBeNull();
@@ -129,12 +136,16 @@ describe("R2(バインディング)", () => {
   // R2 のバケットの、使う分だけを真似た偽物
   const fakeBucket = () => {
     const calls: { put: unknown[][]; delete: string[] } = { put: [], delete: [] };
-    const items = new Map<string, { bytes: Uint8Array; contentType?: string }>();
+    const items = new Map<string, { bytes: Uint8Array; contentType?: string; cacheControl?: string }>();
     const bucket: R2BucketLike = {
       async put(key, value, options) {
         calls.put.push([key, options]);
         const bytes = value instanceof Uint8Array ? value : new Uint8Array(await new Response(value as BodyInit).arrayBuffer());
-        items.set(key, { bytes, contentType: options?.httpMetadata?.contentType });
+        items.set(key, {
+          bytes,
+          contentType: options?.httpMetadata?.contentType,
+          cacheControl: options?.httpMetadata?.cacheControl,
+        });
         return {};
       },
       async get(key) {
@@ -144,7 +155,7 @@ describe("R2(バインディング)", () => {
           body: new Response(item.bytes as BodyInit).body as ReadableStream<Uint8Array>,
           size: item.bytes.byteLength,
           httpEtag: '"etag-1"',
-          httpMetadata: { contentType: item.contentType },
+          httpMetadata: { contentType: item.contentType, cacheControl: item.cacheControl },
         };
       },
       async delete(key) {
@@ -154,6 +165,14 @@ describe("R2(バインディング)", () => {
     };
     return { bucket, calls };
   };
+
+  test("Cache-Control は httpMetadata.cacheControl に入れ、取り出せる", async () => {
+    const { bucket, calls } = fakeBucket();
+    const s = createR2Storage(bucket);
+    await s.put("a.png", new Uint8Array([1]), { contentType: "image/png", cacheControl: "public, max-age=1" });
+    expect(calls.put[0]).toEqual(["a.png", { httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=1" } }]);
+    expect((await s.get("a.png"))!.cacheControl).toBe("public, max-age=1");
+  });
 
   test("保存・取り出し・削除が、バケットに渡る。Content-Type は httpMetadata に入れる", async () => {
     const { bucket, calls } = fakeBucket();
