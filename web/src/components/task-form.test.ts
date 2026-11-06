@@ -48,6 +48,16 @@ describe('タスクの作成フォーム', () => {
     expect(html).toContain('for="task-assignee"')
     expect(html).toContain('<select id="task-assignee"')
   })
+  test('期限と種類は、横に 2 つ並ぶ(狭い画面では縦)。説明は 2 行', () => {
+    expect(html).toContain('grid grid-cols-1 gap-4 sm:grid-cols-2')
+    expect(html).toMatch(/id="task-time-limit"[\s\S]*id="task-kind"/)
+    expect(html).toMatch(/<textarea[^>]*rows="2"/)
+  })
+  test('「他のメンバーに公開する」は、フォームの途中ではなく、下のボタンの行の右にある(小さい文字)', () => {
+    const publish = html.indexOf('他のメンバーに公開する')
+    expect(publish).toBeGreaterThan(html.indexOf('aria-label="閉じる"'))
+    expect(html).toMatch(/<label class="ml-auto[^"]*text-s"/)
+  })
   test('initialMemberId があれば、その人が最初に選ばれている', () => {
     const picked = render({ initialMemberId: 'M1' })
     expect(picked).toMatch(/<option value="M1"[^>]*selected/)

@@ -198,7 +198,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
         </label>
         <textarea
           id="task-description"
-          rows={4}
+          rows={2}
           maxLength={5000}
           value={description}
           disabled={save.isPending}
@@ -207,58 +207,49 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
         />
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="task-time-limit" className="block text-m font-medium">
-          期限(日本時間)
-        </label>
-        <input
-          id="task-time-limit"
-          type="datetime-local"
-          min="2000-01-01T00:00"
-          max="2100-12-31T23:59"
-          value={timeLimit}
-          disabled={save.isPending}
-          onChange={(e) => setTimeLimit(e.target.value)}
-          className={`${fieldClass} h-10`}
-        />
-      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label htmlFor="task-time-limit" className="block text-m font-medium">
+            期限(日本時間)
+          </label>
+          <input
+            id="task-time-limit"
+            type="datetime-local"
+            min="2000-01-01T00:00"
+            max="2100-12-31T23:59"
+            value={timeLimit}
+            disabled={save.isPending}
+            onChange={(e) => setTimeLimit(e.target.value)}
+            className={`${fieldClass} h-10`}
+          />
+        </div>
 
-      <div className="space-y-1">
-        <label htmlFor="task-kind" className="block text-m font-medium">
-          種類
-        </label>
-        <select
-          id="task-kind"
-          value={kindId}
-          disabled={save.isPending || kinds.isPending}
-          onChange={(e) => setKindId(e.target.value)}
-          className={`${fieldClass} h-10`}
-        >
-          {/* 種類を外す api はないので、すでに種類があるタスクでは「なし」を出さない */}
-          {!hasKind && <option value="">なし</option>}
-          {kinds.data?.map((k) => (
-            <option key={k.taskTypeId} value={k.taskTypeId}>
-              {k.taskTypeName}
-            </option>
-          ))}
-        </select>
-        {kinds.isError && (
-          <p role="alert" className="border-l border-line pl-3 text-m">
-            ERR {kinds.error.message}
-          </p>
-        )}
+        <div className="space-y-1">
+          <label htmlFor="task-kind" className="block text-m font-medium">
+            種類
+          </label>
+          <select
+            id="task-kind"
+            value={kindId}
+            disabled={save.isPending || kinds.isPending}
+            onChange={(e) => setKindId(e.target.value)}
+            className={`${fieldClass} h-10`}
+          >
+            {/* 種類を外す api はないので、すでに種類があるタスクでは「なし」を出さない */}
+            {!hasKind && <option value="">なし</option>}
+            {kinds.data?.map((k) => (
+              <option key={k.taskTypeId} value={k.taskTypeId}>
+                {k.taskTypeName}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-
-      <label className="flex items-center gap-2 text-m font-medium">
-        <input
-          type="checkbox"
-          checked={isVisible}
-          disabled={save.isPending}
-          onChange={(e) => setIsVisible(e.target.checked)}
-          className="size-4 accent-ink"
-        />
-        他のメンバーに公開する
-      </label>
+      {kinds.isError && (
+        <p role="alert" className="border-l border-line pl-3 text-m">
+          ERR {kinds.error.message}
+        </p>
+      )}
 
       {save.isError && (
         <p role="alert" className="border-l border-line pl-3 text-m">
@@ -266,7 +257,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
         </p>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <IconButton
           type="submit"
           icon={initial ? Check : Plus}
@@ -283,6 +274,16 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
           disabled={save.isPending || remove.isPending}
           onClick={onDone}
         />
+        <label className="ml-auto flex items-center gap-2 text-s">
+          <input
+            type="checkbox"
+            checked={isVisible}
+            disabled={save.isPending}
+            onChange={(e) => setIsVisible(e.target.checked)}
+            className="size-4 accent-ink"
+          />
+          他のメンバーに公開する
+        </label>
       </div>
 
       {initial && (
