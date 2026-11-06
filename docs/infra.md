@@ -6,7 +6,8 @@
 | --- | --- |
 | アプリ(web / api) | Cloudflare Workers |
 | PostgreSQL | Neon(マネージド Postgres)。Workers からは Hyperdrive 経由で接続 |
-| DB のバックアップ | Cloudflare R2(`pg_dump` のダンプの保存のみ) |
+| DB のバックアップ | Cloudflare R2(`pg_dump` のダンプ。バックアップ用のバケット) |
+| アップロードされたファイル(プロダクトのアイコンなど) | Cloudflare R2(**別のバケット**。api の Worker にバインディングで付ける) |
 
 ```
 ブラウザ ─▶ web の Worker ──/api/* をサービスバインディングで転送──▶ api の Worker ──Hyperdrive──▶ Neon(Postgres)
@@ -22,7 +23,7 @@
 1. **アプリは Workers で動かす。** web は TanStack Start、api は Elysia(`api/src/worker.ts`)。コンテナには載せない。
 2. **Postgres は Neon。** 永続化・バックアップ・履歴の復元が付く。Workers からは **Hyperdrive** 経由でつなぎ、接続の再利用(プール)は Hyperdrive に任せる。マイグレーションは Hyperdrive を通さず、Neon の **direct** 接続で手元から実行する。
 3. **ブラウザから見えるオリジンは web の 1 つだけ(同一オリジン化)。** `*.workers.dev` どうしは別サイトで cookie を共有できないため、web の Worker が `/api/*` をサービスバインディングで api に転送する。cookie は同一サイト、CORS は不要、OAuth のコールバックは `https://<web>/api/auth/callback/...`。カスタムドメインを用意できる場合は、別サブドメイン(`COOKIE_DOMAIN`)にもできる(deploy.md の付録)。
-4. **R2 はダンプの保存だけに使う。** アプリのデータやファイルは R2 に置かない。ダンプは Neon の履歴とは別系統のコピー。
+4. **R2 は 2 つの用途に、別々のバケットで使う。** (a) `pg_dump` のダンプ(バックアップ用のバケット。GitHub Actions から S3 互換の API で書く。Neon の履歴とは別系統のコピー)、(b) アプリが受け取ったファイル(プロダクトのアイコンなど。アップロード用のバケット。api の Worker が、**R2 のバインディング `STORAGE`** で読み書きする)。ダンプ用の鍵(`R2_*`)は、アップロード用のバケットには付けない(権限を分ける)。アップロードの保存は、api の `storage`(`api/src/lib/storage.ts`)を、`.use(objectStorage)` して使う。
 
 ## 変更の理由(Containers の Postgres をやめた)
 
