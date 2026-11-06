@@ -6,6 +6,8 @@ import { IconButton } from '#/components/icon-button'
 import { Modal } from '#/components/modal'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
+import { avatarErrorMessage } from '#/lib/product-avatar'
+import { ApiError } from '#/lib/api'
 
 const buttonClass =
   'flex h-10 shrink-0 items-center justify-center shadow-box bg-panel px-3 text-m text-ink hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-panel'
@@ -76,6 +78,61 @@ function RenameBlock({
       {rename.isSuccess && <p className="text-m">変更しました</p>}
       {rename.isError && <ErrorText message={rename.error.message} />}
     </form>
+  )
+}
+
+// アイコンの削除(アイコンがあるときだけ出す)。確認の 2 段階は、プロダクトの削除と同じ流儀(押すと確認の文が出て、もう一度押すと消える)
+function AvatarBlock({ productId }: { productId: string }) {
+  const queryClient = useQueryClient()
+  const [confirming, setConfirming] = useState(false)
+  const remove = useMutation({
+    mutationFn: () => edenData(eden().api.product({ productId }).avatar.delete()),
+    onSuccess: () => {
+      setConfirming(false)
+      // `['products']` で始まるキーをすべて取り直す(一覧と、そのプロダクトのデータ・ツリー)
+      void queryClient.invalidateQueries({ queryKey: ['products'] })
+    },
+  })
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-m font-bold">アイコン</h3>
+      {confirming ? (
+        <div className="space-y-2">
+          <p className="text-m">アイコンを削除しますか?</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={remove.isPending}
+              onClick={() => remove.mutate()}
+              className={buttonClass}
+            >
+              削除する
+            </button>
+            <IconButton
+              icon={X}
+              label="やめる"
+              variant="outline"
+              className="bg-panel"
+              disabled={remove.isPending}
+              onClick={() => {
+                setConfirming(false)
+                remove.reset()
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setConfirming(true)} className={buttonClass}>
+          アイコンを削除
+        </button>
+      )}
+      {remove.isError && (
+        <ErrorText
+          message={avatarErrorMessage(remove.error instanceof ApiError ? remove.error.status : 0)}
+        />
+      )}
+    </div>
   )
 }
 
@@ -158,11 +215,12 @@ function DeleteBlock({
   )
 }
 
-// リーダー用。プロダクト名の変更と、プロダクトの削除。開閉は親が制御する
+// リーダー用。プロダクト名の変更と、アイコンの削除と、プロダクトの削除。開閉は親が制御する
 export function ProductManageDialog({
   productId,
   productName,
   memberCount,
+  avatarUrl,
   open,
   onClose,
 }: {
@@ -170,6 +228,8 @@ export function ProductManageDialog({
   productName: string
   /** 知っていれば、削除の確認文にメンバー数を出す */
   memberCount?: number
+  /** 現在のアイコンの URL。あるときだけ「アイコンを削除」を出す */
+  avatarUrl?: string | null
   open: boolean
   onClose: () => void
 }) {
@@ -177,6 +237,7 @@ export function ProductManageDialog({
     <Modal open={open} onClose={onClose}>
       <h2 className="text-l font-bold">プロダクトの管理</h2>
       <RenameBlock productId={productId} productName={productName} />
+      {avatarUrl && <AvatarBlock productId={productId} />}
       <DeleteBlock
         productId={productId}
         productName={productName}
