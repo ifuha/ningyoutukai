@@ -44,9 +44,13 @@ describe('タスクの作成フォーム', () => {
     expect(html).toMatch(/aria-label="追加"[^>]*class="[^"]*bg-ink/)
     expect(html).toMatch(/aria-label="閉じる"[^>]*class="[^"]*shadow-box/)
   })
-  test('担当者は、選べる(label と select が結びつく)', () => {
+  test('担当者は、選べる(label と、ドロップダウンのボタンが結びつく。標準の select は使わない)', () => {
     expect(html).toContain('for="task-assignee"')
-    expect(html).toContain('<select id="task-assignee"')
+    expect(html).toMatch(/<button id="task-assignee" type="button" role="combobox"/)
+    expect(html).toContain('aria-haspopup="listbox"')
+    expect(html).not.toContain('<select')
+    // 閉じているときは、一覧は描かない
+    expect(html).not.toContain('role="listbox"')
   })
   test('期限と種類は、横に 2 つ並ぶ(狭い画面では縦)。説明は 2 行', () => {
     expect(html).toContain('grid grid-cols-1 gap-4 sm:grid-cols-2')
@@ -70,7 +74,9 @@ describe('タスクの作成フォーム', () => {
   })
   test('initialMemberId があれば、その人が最初に選ばれている', () => {
     const picked = render({ initialMemberId: 'M1' })
-    expect(picked).toMatch(/<option value="M1"[^>]*selected/)
+    // ボタンに、選ばれている人の名前が出る(先頭のリーダーではなく)
+    expect(picked).toMatch(/id="task-assignee"[\s\S]*?<span class="min-w-0 flex-1 truncate">メンバーB<\/span>/)
+    expect(html).toMatch(/id="task-assignee"[\s\S]*?<span class="min-w-0 flex-1 truncate">リーダーA\(リーダー\)<\/span>/)
   })
 })
 

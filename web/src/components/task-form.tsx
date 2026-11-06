@@ -4,7 +4,7 @@ import { ApiError } from '#/lib/api'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
-import { CheckBox, SelectBox } from '#/components/form-controls'
+import { CheckBox, SelectMenu } from '#/components/form-controls'
 import { IconButton } from '#/components/icon-button'
 import { Check, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 
@@ -177,21 +177,17 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
             {assignee.userName}(変更できません)
           </p>
         ) : (
-          <SelectBox
+          <SelectMenu
             id="task-assignee"
-            required
             value={memberId}
             disabled={save.isPending}
-            onChange={(e) => setMemberId(e.target.value)}
+            onChange={setMemberId}
+            options={members.map((m) => ({
+              value: m.productMemberId,
+              label: `${m.userName}${m.role === 'leader' ? '(リーダー)' : ''}`,
+            }))}
             className={`${fieldClass} h-10`}
-          >
-            {members.map((m) => (
-              <option key={m.productMemberId} value={m.productMemberId}>
-                {m.userName}
-                {m.role === 'leader' ? '(リーダー)' : ''}
-              </option>
-            ))}
-          </SelectBox>
+          />
         )}
       </div>
 
@@ -250,21 +246,18 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
               <label htmlFor="task-kind" className="block text-m font-medium">
                 種類
               </label>
-              <SelectBox
+              <SelectMenu
                 id="task-kind"
                 value={kindId}
                 disabled={save.isPending || kinds.isPending}
-                onChange={(e) => setKindId(e.target.value)}
+                onChange={setKindId}
+                options={[
+                  // 種類を外す api はないので、すでに種類があるタスクでは「なし」を出さない
+                  ...(hasKind ? [] : [{ value: '', label: 'なし' }]),
+                  ...(kinds.data ?? []).map((k) => ({ value: k.taskTypeId, label: k.taskTypeName })),
+                ]}
                 className={`${fieldClass} h-10`}
-              >
-                {/* 種類を外す api はないので、すでに種類があるタスクでは「なし」を出さない */}
-                {!hasKind && <option value="">なし</option>}
-                {kinds.data?.map((k) => (
-                  <option key={k.taskTypeId} value={k.taskTypeId}>
-                    {k.taskTypeName}
-                  </option>
-                ))}
-              </SelectBox>
+              />
             </div>
           </div>
           {kinds.isError && (
