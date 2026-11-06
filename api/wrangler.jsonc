@@ -18,10 +18,10 @@
     "MAIL_FROM": "人形使い <noreply@mail.maars.dev>"
   },
 
-  // ファイル(プロダクトのアイコンなど)の保存先の R2 バケット。バックアップ用とは別のバケット。
-  // **バケットを作ってから**コメントを外す(`npx wrangler r2 bucket create ningyoutukai-uploads`)。先に書くとデプロイが失敗する。
-  // 書かない間も api は動き、ファイルを保存するルートだけが失敗する(src/worker.ts)。docs/deploy.md の「アップロード用のバケット」
-  // "r2_buckets": [{ "binding": "STORAGE", "bucket_name": "ningyoutukai-uploads" }],
+  // ファイル(プロダクトのアイコンなど)の保存先の R2 バケット。バックアップ用(ningyoutukai-backup)とは別のバケット。
+  // バケットは、先に作っておくこと(`npx wrangler r2 bucket create ningyoutukai-product-avatar`)。ないとデプロイが失敗する。
+  // `STORAGE` が無い環境でも api は動き、ファイルを保存するルートだけが失敗する(src/worker.ts)。docs/deploy.md の「アップロード用のバケット」
+  "r2_buckets": [{ "binding": "STORAGE", "bucket_name": "ningyoutukai-product-avatar" }],
 
   // Neon への接続は Hyperdrive 経由。id は `wrangler hyperdrive create` が出力する値に置き換える。
   // ローカルの `wrangler dev` では id は使われず、localConnectionString(dev 用コンテナの既定の値。秘密ではない)
