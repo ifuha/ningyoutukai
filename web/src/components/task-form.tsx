@@ -4,8 +4,9 @@ import { ApiError } from '#/lib/api'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
+import { CheckBox, SelectMenu } from '#/components/form-controls'
 import { IconButton } from '#/components/icon-button'
-import { Check, Plus, Trash2, X } from 'lucide-react'
+import { Check, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 
 // 期限は日本時間(+09:00)として扱う。`datetime-local` の値(`2026-12-01T09:00`)と ISO を行き来する
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
@@ -55,6 +56,8 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
   const [timeLimit, setTimeLimit] = useState(toInputValue(initial?.timeLimit ?? null))
   const [kindId, setKindId] = useState(initial?.taskType?.taskTypeId ?? '')
   const [isVisible, setIsVisible] = useState(initial?.isVisible ?? true)
+  // 詳細(説明・期限・種類)を開いているか。作成のときは閉じて、編集のときは開いておく
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(initial))
 
   const kinds = useQuery({
     queryKey: ['products', productId, 'task_kinds'],
@@ -134,11 +137,11 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <h2 className="text-m font-bold">{heading}</h2>
+      <h2 className="text-l font-bold">{heading}</h2>
 
       <div className="space-y-1">
-        <label htmlFor="task-name" className="block text-m font-bold">
-          タスク名
+        <label htmlFor="task-name" className="block text-m font-medium">
+          タスク名<span className="ml-1 text-s font-normal opacity-70">(必須)</span>
         </label>
         <input
           id="task-name"
@@ -160,99 +163,110 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="task-assignee" className="block text-m font-bold">
-          担当者
-        </label>
         {assignee ? (
-          <p id="task-assignee" className="text-m">
+          <span id="task-assignee-label" className="block text-m font-medium">
+            担当者
+          </span>
+        ) : (
+          <label htmlFor="task-assignee" className="block text-m font-medium">
+            担当者
+          </label>
+        )}
+        {assignee ? (
+          <p aria-labelledby="task-assignee-label" className="text-m">
             {assignee.userName}(変更できません)
           </p>
         ) : (
-          <select
+          <SelectMenu
             id="task-assignee"
-            required
             value={memberId}
             disabled={save.isPending}
-            onChange={(e) => setMemberId(e.target.value)}
+            onChange={setMemberId}
+            options={members.map((m) => ({
+              value: m.productMemberId,
+              label: `${m.userName}${m.role === 'leader' ? '(リーダー)' : ''}`,
+            }))}
             className={`${fieldClass} h-10`}
-          >
-            {members.map((m) => (
-              <option key={m.productMemberId} value={m.productMemberId}>
-                {m.userName}
-                {m.role === 'leader' ? '(リーダー)' : ''}
-              </option>
-            ))}
-          </select>
+          />
         )}
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="task-description" className="block text-m font-bold">
-          説明
-        </label>
-        <textarea
-          id="task-description"
-          rows={4}
-          maxLength={5000}
-          value={description}
-          disabled={save.isPending}
-          onChange={(e) => setDescription(e.target.value)}
-          className={`${fieldClass} py-2`}
-        />
-      </div>
+      {/* 詳細(説明・期限・種類)は畳む。作成のときは閉じて、タスク名と担当者だけを見せる。編集のときは、入っている内容が見えるよう、開いておく */}
+      <details
+        open={detailsOpen}
+        onToggle={(e) => setDetailsOpen(e.currentTarget.open)}
+        className="group"
+      >
+        <summary className="cursor-pointer list-none text-m font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="flex size-4 shrink-0 items-center justify-center">
+              <ChevronRight
+                size={16}
+                className="transition-transform group-open:rotate-90 motion-reduce:transition-none"
+              />
+            </span>
+            詳細
+            <span className="text-s font-normal opacity-70">(説明・期限・種類)</span>
+          </span>
+        </summary>
+        <div className="details-in mt-4 space-y-4">
+          <div className="space-y-1">
+            <label htmlFor="task-description" className="block text-m font-medium">
+              説明
+            </label>
+            <textarea
+              id="task-description"
+              rows={2}
+              maxLength={5000}
+              value={description}
+              disabled={save.isPending}
+              onChange={(e) => setDescription(e.target.value)}
+              className={`${fieldClass} py-2`}
+            />
+          </div>
 
-      <div className="space-y-1">
-        <label htmlFor="task-time-limit" className="block text-m font-bold">
-          期限(日本時間)
-        </label>
-        <input
-          id="task-time-limit"
-          type="datetime-local"
-          min="2000-01-01T00:00"
-          max="2100-12-31T23:59"
-          value={timeLimit}
-          disabled={save.isPending}
-          onChange={(e) => setTimeLimit(e.target.value)}
-          className={`${fieldClass} h-10`}
-        />
-      </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label htmlFor="task-time-limit" className="block text-m font-medium">
+                期限(日本時間)
+              </label>
+              <input
+                id="task-time-limit"
+                type="datetime-local"
+                min="2000-01-01T00:00"
+                max="2100-12-31T23:59"
+                value={timeLimit}
+                disabled={save.isPending}
+                onChange={(e) => setTimeLimit(e.target.value)}
+                className={`${fieldClass} h-10 min-w-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-date-and-time-value]:text-left`}
+              />
+            </div>
 
-      <div className="space-y-1">
-        <label htmlFor="task-kind" className="block text-m font-bold">
-          種類
-        </label>
-        <select
-          id="task-kind"
-          value={kindId}
-          disabled={save.isPending || kinds.isPending}
-          onChange={(e) => setKindId(e.target.value)}
-          className={`${fieldClass} h-10`}
-        >
-          {/* 種類を外す api はないので、すでに種類があるタスクでは「なし」を出さない */}
-          {!hasKind && <option value="">なし</option>}
-          {kinds.data?.map((k) => (
-            <option key={k.taskTypeId} value={k.taskTypeId}>
-              {k.taskTypeName}
-            </option>
-          ))}
-        </select>
-        {kinds.isError && (
-          <p role="alert" className="border-l border-line pl-3 text-m">
-            ERR {kinds.error.message}
-          </p>
-        )}
-      </div>
-
-      <label className="flex items-center gap-2 text-m font-bold">
-        <input
-          type="checkbox"
-          checked={isVisible}
-          disabled={save.isPending}
-          onChange={(e) => setIsVisible(e.target.checked)}
-          className="size-4 accent-ink"
-        />
-        他のメンバーに公開する
-      </label>
+            <div className="space-y-1">
+              <label htmlFor="task-kind" className="block text-m font-medium">
+                種類
+              </label>
+              <SelectMenu
+                id="task-kind"
+                value={kindId}
+                disabled={save.isPending || kinds.isPending}
+                onChange={setKindId}
+                options={[
+                  // 種類を外す api はないので、すでに種類があるタスクでは「なし」を出さない
+                  ...(hasKind ? [] : [{ value: '', label: 'なし' }]),
+                  ...(kinds.data ?? []).map((k) => ({ value: k.taskTypeId, label: k.taskTypeName })),
+                ]}
+                className={`${fieldClass} h-10`}
+              />
+            </div>
+          </div>
+          {kinds.isError && (
+            <p role="alert" className="border-l border-line pl-3 text-m">
+              ERR {kinds.error.message}
+            </p>
+          )}
+        </div>
+      </details>
 
       {save.isError && (
         <p role="alert" className="border-l border-line pl-3 text-m">
@@ -260,14 +274,13 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
         </p>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <IconButton
           type="submit"
           icon={initial ? Check : Plus}
-          label={save.isPending ? '送信中…' : initial ? '保存' : '追加'}
+          label={save.isPending ? (initial ? '保存中…' : '追加中…') : initial ? '保存' : '追加'}
           showLabel
-          variant="outline"
-          className="bg-panel"
+          variant="solid"
           disabled={save.isPending || remove.isPending}
         />
         <IconButton
@@ -278,6 +291,14 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
           disabled={save.isPending || remove.isPending}
           onClick={onDone}
         />
+        <label className="ml-auto flex items-center gap-2 text-s">
+          <CheckBox
+            checked={isVisible}
+            disabled={save.isPending}
+            onChange={(e) => setIsVisible(e.target.checked)}
+          />
+          他のメンバーに公開する
+        </label>
       </div>
 
       {initial && (

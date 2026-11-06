@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
+import { ResizeBox } from '#/components/resize-box'
 
 // 共通のモーダル(`dialog`)。`open` の間だけ中身を置くので、閉じると入力の状態は消える。
 // 余白は中の div 側に持たせ、背景(dialog 自体)を押したときだけ閉じる。見た目は暫定(ターミナル風)
@@ -9,6 +10,8 @@ export function Modal({
   children,
   overflowVisible = false,
   size = 'md',
+  closeOnBackdrop = true,
+  animateResize = false,
 }: {
   open: boolean
   onClose: () => void
@@ -17,6 +20,10 @@ export function Modal({
   overflowVisible?: boolean
   /** 'md': 幅 32rem までの、ふつうのモーダル(既定)。'full': 画面いっぱい気味(スマホ幅は全面、PC 幅は周りに 2rem の余白) */
   size?: 'md' | 'full'
+  /** 背景(外側)を押したときに閉じるか。入力の途中で、うっかり押して内容が消えるのを避けたいフォームでは false(Esc と「閉じる」では閉じられる) */
+  closeOnBackdrop?: boolean
+  /** 中身の高さが変わったとき(詳細を開くなど)、モーダルの高さを、なめらかに動かす(`ResizeBox`)。`size="md"` のとき。`overflowVisible` とは、一緒に使わない(動いている間、はみ出しを隠すため) */
+  animateResize?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   // 開く直前にフォーカスされていた要素。閉じたら戻す(消えていたら何もしない)
@@ -36,6 +43,18 @@ export function Modal({
     }
   }, [open])
 
+  // ダイアログに名前を付ける: 中の最初の見出し(h1 / h2)を、`aria-labelledby` で指す(スクリーンリーダーが、開いたときに見出しを読み上げる)
+  const titleId = useId()
+  useEffect(() => {
+    const dialog = ref.current
+    if (!open || !dialog) return
+    const heading = dialog.querySelector('h1, h2')
+    if (!heading) return
+    if (!heading.id) heading.id = titleId
+    dialog.setAttribute('aria-labelledby', heading.id)
+    return () => dialog.removeAttribute('aria-labelledby')
+  }, [open, titleId, children])
+
   const sizeClass =
     size === 'full'
       ? 'h-dvh max-h-none w-screen max-w-none overflow-hidden md:h-[calc(100dvh-4rem)] md:w-[calc(100vw-4rem)]'
@@ -47,13 +66,13 @@ export function Modal({
       onClose={onClose}
       // 外側(背景)を押したら閉じる。dialog 自体が押されたときだけ(余白は中の div 側なので、中身は押しても閉じない)
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (closeOnBackdrop && e.target === e.currentTarget) onClose()
       }}
       className={`m-auto ${sizeClass} shadow-box bg-panel text-ink backdrop:bg-black/40 ${overflowVisible ? 'overflow-visible' : ''}`}
     >
       {open && (
         <div className={size === 'full' ? 'h-full' : 'space-y-4 p-6'}>
-          {children}
+          {animateResize && size === 'md' && !overflowVisible ? <ResizeBox>{children}</ResizeBox> : children}
         </div>
       )}
     </dialog>
