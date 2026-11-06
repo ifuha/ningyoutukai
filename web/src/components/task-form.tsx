@@ -134,11 +134,11 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <h2 className="text-m font-bold">{heading}</h2>
+      <h2 className="text-l font-bold">{heading}</h2>
 
       <div className="space-y-1">
-        <label htmlFor="task-name" className="block text-m font-bold">
-          タスク名
+        <label htmlFor="task-name" className="block text-m font-medium">
+          タスク名<span className="ml-1 text-s font-normal opacity-70">(必須)</span>
         </label>
         <input
           id="task-name"
@@ -160,11 +160,17 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="task-assignee" className="block text-m font-bold">
-          担当者
-        </label>
         {assignee ? (
-          <p id="task-assignee" className="text-m">
+          <span id="task-assignee-label" className="block text-m font-medium">
+            担当者
+          </span>
+        ) : (
+          <label htmlFor="task-assignee" className="block text-m font-medium">
+            担当者
+          </label>
+        )}
+        {assignee ? (
+          <p aria-labelledby="task-assignee-label" className="text-m">
             {assignee.userName}(変更できません)
           </p>
         ) : (
@@ -187,7 +193,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="task-description" className="block text-m font-bold">
+        <label htmlFor="task-description" className="block text-m font-medium">
           説明
         </label>
         <textarea
@@ -202,7 +208,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="task-time-limit" className="block text-m font-bold">
+        <label htmlFor="task-time-limit" className="block text-m font-medium">
           期限(日本時間)
         </label>
         <input
@@ -218,7 +224,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="task-kind" className="block text-m font-bold">
+        <label htmlFor="task-kind" className="block text-m font-medium">
           種類
         </label>
         <select
@@ -243,7 +249,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
         )}
       </div>
 
-      <label className="flex items-center gap-2 text-m font-bold">
+      <label className="flex items-center gap-2 text-m font-medium">
         <input
           type="checkbox"
           checked={isVisible}
@@ -264,10 +270,9 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
         <IconButton
           type="submit"
           icon={initial ? Check : Plus}
-          label={save.isPending ? '送信中…' : initial ? '保存' : '追加'}
+          label={save.isPending ? (initial ? '保存中…' : '追加中…') : initial ? '保存' : '追加'}
           showLabel
-          variant="outline"
-          className="bg-panel"
+          variant="solid"
           disabled={save.isPending || remove.isPending}
         />
         <IconButton
