@@ -58,6 +58,16 @@ describe('タスクの作成フォーム', () => {
     expect(publish).toBeGreaterThan(html.indexOf('aria-label="閉じる"'))
     expect(html).toMatch(/<label class="ml-auto[^"]*text-s"/)
   })
+  test('詳細(説明・期限・種類)は、作成のときは畳んである(open が付かない)。タスク名と担当者は、畳まれない', () => {
+    expect(html).toMatch(/<details class="group"><summary[^>]*>[\s\S]*詳細/)
+    expect(html).not.toMatch(/<details[^>]*\sopen/)
+    // 畳まれるのは、説明・期限・種類だけ(タスク名と担当者は、details の外)
+    const detailsAt = html.indexOf('<details')
+    expect(html.indexOf('id="task-name"')).toBeLessThan(detailsAt)
+    expect(html.indexOf('id="task-assignee"')).toBeLessThan(detailsAt)
+    expect(html.indexOf('id="task-description"')).toBeGreaterThan(detailsAt)
+    expect(html.indexOf('id="task-kind"')).toBeGreaterThan(detailsAt)
+  })
   test('initialMemberId があれば、その人が最初に選ばれている', () => {
     const picked = render({ initialMemberId: 'M1' })
     expect(picked).toMatch(/<option value="M1"[^>]*selected/)
@@ -71,6 +81,9 @@ describe('タスクの編集フォーム(担当者は固定)', () => {
     expect(html).not.toContain('for="task-assignee"')
     expect(html).toContain('id="task-assignee-label"')
     expect(html).toContain('aria-labelledby="task-assignee-label"')
+  })
+  test('詳細は、編集のときは開いてある(入っている内容が見える)', () => {
+    expect(html).toMatch(/<details[^>]*\sopen/)
   })
   test('見出しは「タスクを編集」、ボタンは「保存」', () => {
     expect(html).toContain('タスクを編集')

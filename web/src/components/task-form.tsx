@@ -5,7 +5,7 @@ import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 import { IconButton } from '#/components/icon-button'
-import { Check, Plus, Trash2, X } from 'lucide-react'
+import { Check, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 
 // 期限は日本時間(+09:00)として扱う。`datetime-local` の値(`2026-12-01T09:00`)と ISO を行き来する
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
@@ -55,6 +55,8 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
   const [timeLimit, setTimeLimit] = useState(toInputValue(initial?.timeLimit ?? null))
   const [kindId, setKindId] = useState(initial?.taskType?.taskTypeId ?? '')
   const [isVisible, setIsVisible] = useState(initial?.isVisible ?? true)
+  // 詳細(説明・期限・種類)を開いているか。作成のときは閉じて、編集のときは開いておく
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(initial))
 
   const kinds = useQuery({
     queryKey: ['products', productId, 'task_kinds'],
@@ -192,64 +194,82 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
         )}
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="task-description" className="block text-m font-medium">
-          説明
-        </label>
-        <textarea
-          id="task-description"
-          rows={2}
-          maxLength={5000}
-          value={description}
-          disabled={save.isPending}
-          onChange={(e) => setDescription(e.target.value)}
-          className={`${fieldClass} py-2`}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label htmlFor="task-time-limit" className="block text-m font-medium">
-            期限(日本時間)
-          </label>
-          <input
-            id="task-time-limit"
-            type="datetime-local"
-            min="2000-01-01T00:00"
-            max="2100-12-31T23:59"
-            value={timeLimit}
-            disabled={save.isPending}
-            onChange={(e) => setTimeLimit(e.target.value)}
-            className={`${fieldClass} h-10`}
+      {/* 詳細(説明・期限・種類)は畳む。作成のときは閉じて、タスク名と担当者だけを見せる。編集のときは、入っている内容が見えるよう、開いておく */}
+      <details
+        open={detailsOpen}
+        onToggle={(e) => setDetailsOpen(e.currentTarget.open)}
+        className="group"
+      >
+        <summary className="flex cursor-pointer list-none items-center gap-1 text-m font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink [&::-webkit-details-marker]:hidden">
+          <ChevronRight
+            aria-hidden="true"
+            size={16}
+            className="shrink-0 transition-transform group-open:rotate-90 motion-reduce:transition-none"
           />
-        </div>
+          詳細
+          <span className="text-s font-normal opacity-70">(説明・期限・種類)</span>
+        </summary>
+        <div className="mt-4 space-y-4">
+          <div className="space-y-1">
+            <label htmlFor="task-description" className="block text-m font-medium">
+              説明
+            </label>
+            <textarea
+              id="task-description"
+              rows={2}
+              maxLength={5000}
+              value={description}
+              disabled={save.isPending}
+              onChange={(e) => setDescription(e.target.value)}
+              className={`${fieldClass} py-2`}
+            />
+          </div>
 
-        <div className="space-y-1">
-          <label htmlFor="task-kind" className="block text-m font-medium">
-            種類
-          </label>
-          <select
-            id="task-kind"
-            value={kindId}
-            disabled={save.isPending || kinds.isPending}
-            onChange={(e) => setKindId(e.target.value)}
-            className={`${fieldClass} h-10`}
-          >
-            {/* 種類を外す api はないので、すでに種類があるタスクでは「なし」を出さない */}
-            {!hasKind && <option value="">なし</option>}
-            {kinds.data?.map((k) => (
-              <option key={k.taskTypeId} value={k.taskTypeId}>
-                {k.taskTypeName}
-              </option>
-            ))}
-          </select>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label htmlFor="task-time-limit" className="block text-m font-medium">
+                期限(日本時間)
+              </label>
+              <input
+                id="task-time-limit"
+                type="datetime-local"
+                min="2000-01-01T00:00"
+                max="2100-12-31T23:59"
+                value={timeLimit}
+                disabled={save.isPending}
+                onChange={(e) => setTimeLimit(e.target.value)}
+                className={`${fieldClass} h-10`}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="task-kind" className="block text-m font-medium">
+                種類
+              </label>
+              <select
+                id="task-kind"
+                value={kindId}
+                disabled={save.isPending || kinds.isPending}
+                onChange={(e) => setKindId(e.target.value)}
+                className={`${fieldClass} h-10`}
+              >
+                {/* 種類を外す api はないので、すでに種類があるタスクでは「なし」を出さない */}
+                {!hasKind && <option value="">なし</option>}
+                {kinds.data?.map((k) => (
+                  <option key={k.taskTypeId} value={k.taskTypeId}>
+                    {k.taskTypeName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {kinds.isError && (
+            <p role="alert" className="border-l border-line pl-3 text-m">
+              ERR {kinds.error.message}
+            </p>
+          )}
         </div>
-      </div>
-      {kinds.isError && (
-        <p role="alert" className="border-l border-line pl-3 text-m">
-          ERR {kinds.error.message}
-        </p>
-      )}
+      </details>
 
       {save.isError && (
         <p role="alert" className="border-l border-line pl-3 text-m">
