@@ -27,3 +27,33 @@ export function withAvatarUrl<T extends { avatarKey: string | null }>(row: T): O
   const { avatarKey, ...rest } = row;
   return { ...rest, avatarUrl: avatarUrlOf(avatarKey) };
 }
+
+/** アイコンの大きさの上限(1MB) */
+export const AVATAR_MAX_BYTES = 1_048_576;
+
+/** アイコンに使える画像の種類。SVG は使えない(スクリプトを含められるため) */
+export type AvatarImageType = {
+  contentType: "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+  extension: "png" | "jpg" | "gif" | "webp";
+};
+
+const startsWith = (bytes: Uint8Array, head: number[], offset = 0) =>
+  bytes.length >= offset + head.length && head.every((b, i) => bytes[offset + i] === b);
+
+/**
+ * ファイルの先頭のバイト列(マジックナンバー)で、画像の種類を判定する。
+ * ブラウザが送る Content-Type は偽装できるので、信用しない。GIF・PNG・JPEG・WebP 以外は null。
+ */
+export function detectAvatarImageType(bytes: Uint8Array): AvatarImageType | null {
+  if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return { contentType: "image/png", extension: "png" };
+  if (startsWith(bytes, [0xff, 0xd8, 0xff])) return { contentType: "image/jpeg", extension: "jpg" };
+  // "GIF87a" / "GIF89a"
+  if (startsWith(bytes, [0x47, 0x49, 0x46, 0x38, 0x37, 0x61]) || startsWith(bytes, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61])) {
+    return { contentType: "image/gif", extension: "gif" };
+  }
+  // "RIFF" + (4 バイト) + "WEBP"
+  if (startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)) {
+    return { contentType: "image/webp", extension: "webp" };
+  }
+  return null;
+}
