@@ -35,7 +35,9 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
         return product;
       });
 
-      return status(201, { ...created, role: "leader" as const });
+      // avatarKey(R2 のキー)は応答に含めない。画面に渡す avatarUrl は、アイコンのルートで足す
+      const { avatarKey: _avatarKey, ...product } = created;
+      return status(201, { ...product, role: "leader" as const });
     },
     {
       requireUser: true,
