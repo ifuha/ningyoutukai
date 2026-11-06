@@ -172,8 +172,9 @@ export function SelectMenu({
           id={listId}
           role="listbox"
           // 画面基準の位置。ボタンの真下に、同じ幅で出す(モーダルの端で切れない)
+          // 枠は、内側の輪(shadow-box)ではなく、本物の枠(border)。強調した行の背景が、輪の上に重なって、枠が隠れるのを避ける
           style={{ left: rect.left, top: rect.top, width: rect.width }}
-          className="fixed z-50 max-h-60 overflow-y-auto shadow-box bg-panel py-1 text-m text-ink"
+          className="fixed z-50 max-h-60 overflow-y-auto border border-line bg-panel py-1 text-m text-ink"
         >
           {options.map((o, i) => (
             <li
