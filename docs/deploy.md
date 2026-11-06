@@ -208,7 +208,16 @@ curl -s -o /dev/null -w "%{http_code}\n" "$WEB/api/product"   # 401(未ログイ
 | Neon の履歴(ブランチの復元) | 直前の誤操作・誤削除の巻き戻し | プランで決まる(Launch で最大 7 日、Free は短い。Neon の現行の仕様を確認) |
 | R2 へのダンプ | Neon の外に持つ、長期・別系統のコピー(Neon の障害、アカウントの問題、履歴の期間外の復旧) | 保持日数は `RETENTION_DAYS`(既定 30 日) |
 
-### R2 の準備
+### アップロード用のバケット(プロダクトのアイコンなど)
+
+バックアップ用とは**別のバケット**を作り、api の Worker にバインディング `STORAGE` で付ける(鍵は要らない)。
+
+1. バケットを作る(公開設定はしない): `npx wrangler r2 bucket create ningyoutukai-uploads`
+2. `api/wrangler.jsonc` の `r2_buckets` のコメントを外して、`bucket_name` をそのバケット名にする。**バケットを作る前に書くと、デプロイが失敗する**(バインディングの先がないため)ので、順番を守る。
+3. デプロイする。`STORAGE` がない環境(バケットを作る前)でも、api は動く。ファイルを保存するルートだけが、「R2 のバインディング(STORAGE)が設定されていません」で失敗する。
+4. ローカル(Bun)とテストは、R2 を使わず、ローカルのフォルダ(`STORAGE_DIR`、既定は `api/.local-storage`。コミットしない)に保存する。
+
+### R2 の準備(バックアップ用)
 
 1. Cloudflare ダッシュボードの R2 でバケット(例: `ningyoutukai-backup`)を作る。公開設定はしない。CLI なら `npx wrangler r2 bucket create ningyoutukai-backup`。
 2. 「R2 API トークンを管理」から、そのバケットだけに「オブジェクトの読み取りと書き込み」を許可したトークンを作る。得られる Access Key ID / Secret Access Key を控える(`PRUNE=1` を使うなら削除できる権限も)。
