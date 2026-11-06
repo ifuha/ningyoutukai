@@ -61,17 +61,6 @@ export type UseCardDragOptions = {
   onDrop: (memberId: string, position: Point, sectionId: string | null) => void
 }
 
-/** C: カードのドラッグの戻り値 */
-export type UseCardDragResult = {
-  draggingId: string | null
-  /** 影のカードの基準の位置(ドラッグを始めたときのカードの左上)。以降の動きは、`ghostRef` の要素の transform に直接書かれる */
-  previewPosition: Point | null
-  hoverSectionId: string | null
-  getDragHandlers: (memberId: string) => CardDragHandlers
-  /** 影のカードの要素に付ける(React の状態を経由せず、動くたびに transform を書くため) */
-  ghostRef: (el: HTMLElement | null) => void
-}
-
 /**
  * ツリーの「変換された層」(パンとズームがかかる層)の中の部品が使う、キャンバスの見え方。
  * `CanvasViewContext`(`web/src/lib/canvas-view.ts`)で提供する。

@@ -23,8 +23,6 @@ type Success<R extends { data: unknown; error: unknown }> = NonNullable<
 export type SectionApiList = Json<Success<Awaited<ReturnType<SectionsRoute['get']>>>>
 /** セクション 1 件(一覧・作成・更新で共通の形)。`createdAt` は ISO 文字列、`memberIds` は所属する productMemberId */
 export type SectionApiSection = SectionApiList[number]
-/** セクションの色(api の `sectionColors`) */
-export type SectionApiColor = SectionApiSection['color']
 
 /** `POST .../section` の本文。`x` `y` `width` `height` は省略すると api の既定(0・0・300・400) */
 export type SectionApiCreateInput = Parameters<SectionsRoute['post']>[0]
@@ -36,10 +34,6 @@ export type SectionApiUpdatePatch = NonNullable<Parameters<SectionRoute['patch']
  * キーなし(または `undefined`)= 所属を変えない、`null` = 無所属にする、uuid = そのセクションへ入れる
  */
 export type SectionApiMoveInput = NonNullable<Parameters<MemberRoute['position']['patch']>[0]>
-/** カードの移動の応答 */
-export type SectionApiMoveResult = Json<
-  Success<Awaited<ReturnType<MemberRoute['position']['patch']>>>
->
 
 /** `GET /api/product/{productId}/section`(メンバーなら誰でも) */
 export function listSections(productId: string, client: Client = eden()) {
