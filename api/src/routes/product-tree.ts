@@ -36,6 +36,7 @@ export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
         .select({
           productId: products.productId,
           productName: products.productName,
+          avatarKey: products.avatarKey,
         })
         .from(products)
         .where(eq(products.productId, productId))

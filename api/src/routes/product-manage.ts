@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { products } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
+import { withAvatarUrl } from "../lib/avatar";
 import { getMembership } from "../lib/product-access";
 import { MessageSchema, ProductSchema } from "../lib/response-schema";
 import { NO_NUL } from "../lib/validation";
@@ -29,9 +30,8 @@ export const productManageRoutes = new Elysia({ name: "product-manage" })
         .returning();
       if (!updated) return status(404, { message: "プロダクトが見つかりません" });
 
-      // avatarKey(R2 のキー)は応答に含めない。画面に渡す avatarUrl は、アイコンのルートで足す
-      const { avatarKey: _avatarKey, ...product } = updated;
-      return status(200, { ...product, role: membership.role });
+      // avatarKey(R2 のキー)は応答に含めない。代わりに avatarUrl を返す
+      return status(200, { ...withAvatarUrl(updated), role: membership.role });
     },
     {
       requireUser: true,

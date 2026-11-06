@@ -301,7 +301,7 @@ describe("データの分離と応答の形", () => {
     const u = await createInvitee();
     const id = await idOf(await invite({ email: u.email }));
     const body = (await (await accept(id, u.cookie)).json()) as Record<string, unknown>;
-    expect(Object.keys(body).sort()).toEqual(["createdAt", "productId", "productName", "role"]);
+    expect(Object.keys(body).sort()).toEqual(["avatarUrl", "createdAt", "productId", "productName", "role"]);
   });
   it("拒否の応答には、招待先として入力した値が入る(本人宛ての応答なので問題ない)が、user_id は含まない", async () => {
     const u = await createInvitee();

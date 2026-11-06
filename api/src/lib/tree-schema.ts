@@ -35,7 +35,7 @@ export const TreeNodeSchema = t.Object({
 });
 
 export const ProductTreeSchema = t.Object({
-  product: t.Object({ productId: t.String(), productName: t.String() }),
+  product: t.Object({ productId: t.String(), productName: t.String(), avatarUrl: t.Union([t.String(), t.Null()]) }),
   leader: t.Union([TreeNodeSchema, t.Null()]),
   members: t.Array(TreeNodeSchema),
   // 呼び出したユーザー自身の productMemberId(自分のタスクかどうかを、画面が判断するために使う)

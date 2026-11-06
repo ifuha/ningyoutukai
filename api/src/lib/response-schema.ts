@@ -13,5 +13,7 @@ export const ProductSchema = t.Object({
   productId: t.String(),
   productName: t.String(),
   createdAt: t.Date(),
+  // アイコンの URL(なければ null)。R2 のキー(avatarKey)は出さない
+  avatarUrl: t.Union([t.String(), t.Null()]),
   role: t.Union([t.Literal("leader"), t.Literal("member")]),
 });

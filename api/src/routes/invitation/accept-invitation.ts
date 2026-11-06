@@ -4,6 +4,7 @@ import { db } from "../../db";
 import { products } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { MessageSchema, respondToInvitation } from "../../lib/invitation";
+import { avatarUrlOf } from "../../lib/avatar";
 
 // 招待承認 POST /api/invitation/:invitationId/accept
 // 自分宛ての保留中の招待を承認し、プロダクトのメンバー(member)になる。
@@ -30,6 +31,7 @@ export const acceptInvitation = new Elysia({ name: "invitation-accept-invitation
         productId: product.productId,
         productName: product.productName,
         createdAt: product.createdAt.toISOString(),
+        avatarUrl: avatarUrlOf(product.avatarKey),
         role: "member" as const,
       });
     },
@@ -41,6 +43,7 @@ export const acceptInvitation = new Elysia({ name: "invitation-accept-invitation
           productId: t.String(),
           productName: t.String(),
           createdAt: t.String(),
+          avatarUrl: t.Union([t.String(), t.Null()]),
           role: t.Literal("member"),
         }),
         404: MessageSchema,
