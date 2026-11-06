@@ -236,6 +236,21 @@ body {
   animation: stage-in 0.25s ease-out 0.2s backwards;
 }
 
+/*
+ * 開閉する詳細(`<details>`。タスクのフォームの「詳細」)を開いたとき、中身が、少し上から降りながら、ふわっと現れる(軽い動き)。
+ * 開いている間の中身にだけ付く(閉じると、中身は描かれない)。動きを減らす設定のときは、すぐ表示する
+ */
+@keyframes details-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.details-in {
+  animation: details-in 0.18s ease-out;
+}
+
 /* 404 ページの文字の縁取り。左右の幕の記号に重なっても読めるよう、周りを、紙の色でにじませて消す(窓を使わない代わり) */
 .not-found-halo {
   text-shadow:
@@ -246,6 +261,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .code-char,
+  .details-in,
   .stage-in {
     animation: none;
   }

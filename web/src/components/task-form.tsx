@@ -209,7 +209,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
             <span className="text-s font-normal opacity-70">(説明・期限・種類)</span>
           </span>
         </summary>
-        <div className="mt-4 space-y-4">
+        <div className="details-in mt-4 space-y-4">
           <div className="space-y-1">
             <label htmlFor="task-description" className="block text-m font-medium">
               説明

@@ -72,6 +72,9 @@ describe('タスクの作成フォーム', () => {
     expect(html.indexOf('id="task-description"')).toBeGreaterThan(detailsAt)
     expect(html.indexOf('id="task-kind"')).toBeGreaterThan(detailsAt)
   })
+  test('詳細の中身には、開いたときの軽い動き(details-in)が付く', () => {
+    expect(html).toContain('class="details-in mt-4 space-y-4"')
+  })
   test('initialMemberId があれば、その人が最初に選ばれている', () => {
     const picked = render({ initialMemberId: 'M1' })
     // ボタンに、選ばれている人の名前が出る(先頭のリーダーではなく)
