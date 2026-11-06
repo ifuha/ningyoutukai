@@ -4,6 +4,7 @@ import { ApiError } from '#/lib/api'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
+import { CheckBox, SelectBox } from '#/components/form-controls'
 import { IconButton } from '#/components/icon-button'
 import { Check, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 
@@ -176,7 +177,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
             {assignee.userName}(変更できません)
           </p>
         ) : (
-          <select
+          <SelectBox
             id="task-assignee"
             required
             value={memberId}
@@ -190,7 +191,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
                 {m.role === 'leader' ? '(リーダー)' : ''}
               </option>
             ))}
-          </select>
+          </SelectBox>
         )}
       </div>
 
@@ -200,14 +201,17 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
         onToggle={(e) => setDetailsOpen(e.currentTarget.open)}
         className="group"
       >
-        <summary className="flex cursor-pointer list-none items-center gap-1 text-m font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink [&::-webkit-details-marker]:hidden">
-          <ChevronRight
-            aria-hidden="true"
-            size={16}
-            className="shrink-0 transition-transform group-open:rotate-90 motion-reduce:transition-none"
-          />
-          詳細
-          <span className="text-s font-normal opacity-70">(説明・期限・種類)</span>
+        <summary className="cursor-pointer list-none text-m font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="flex size-4 shrink-0 items-center justify-center">
+              <ChevronRight
+                size={16}
+                className="transition-transform group-open:rotate-90 motion-reduce:transition-none"
+              />
+            </span>
+            詳細
+            <span className="text-s font-normal opacity-70">(説明・期限・種類)</span>
+          </span>
         </summary>
         <div className="mt-4 space-y-4">
           <div className="space-y-1">
@@ -238,7 +242,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
                 value={timeLimit}
                 disabled={save.isPending}
                 onChange={(e) => setTimeLimit(e.target.value)}
-                className={`${fieldClass} h-10`}
+                className={`${fieldClass} h-10 min-w-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-date-and-time-value]:text-left`}
               />
             </div>
 
@@ -246,7 +250,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
               <label htmlFor="task-kind" className="block text-m font-medium">
                 種類
               </label>
-              <select
+              <SelectBox
                 id="task-kind"
                 value={kindId}
                 disabled={save.isPending || kinds.isPending}
@@ -260,7 +264,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
                     {k.taskTypeName}
                   </option>
                 ))}
-              </select>
+              </SelectBox>
             </div>
           </div>
           {kinds.isError && (
@@ -295,12 +299,10 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
           onClick={onDone}
         />
         <label className="ml-auto flex items-center gap-2 text-s">
-          <input
-            type="checkbox"
+          <CheckBox
             checked={isVisible}
             disabled={save.isPending}
             onChange={(e) => setIsVisible(e.target.checked)}
-            className="size-4 accent-ink"
           />
           他のメンバーに公開する
         </label>
