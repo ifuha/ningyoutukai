@@ -3,6 +3,7 @@ export * from "./users";
 export * from "./products";
 export * from "./sections";
 export * from "./product_notes";
+export * from "./product_comments";
 export * from "./product_members";
 export * from "./product_invitations";
 export * from "./task_types";
