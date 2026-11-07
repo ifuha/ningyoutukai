@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Box, Check, ImagePlus, X } from 'lucide-react'
+import { Check, ImagePlus, X } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { Modal } from '#/components/modal'
 import { ProductAvatar } from '#/components/product-avatar'
@@ -21,7 +21,7 @@ function useObjectUrl(file: File | null): string | null {
 }
 
 // アイコンを変更するモーダル。メニューの「アイコンを変更」を押すと、**まずこのモーダルが開き**、中で画像を選ぶ。
-// - 開いた直後(画像を選ぶ前): 画像を選ぶよう促す表示と、いまのアイコン(なければ代わりの立方体)での、サイドバーでの見え方。「設定する」は、画像を選ぶまで押せない
+// - 開いた直後(画像を選ぶ前): 画像を選ぶよう促す表示と、いまのアイコン(なければ、何も入れない空き)での、サイドバーでの見え方。「設定する」は、画像を選ぶまで押せない
 // - 画像を選んだあと: 大きな表示(選んだ画像そのもの)と、サイドバーで実際に出る小さな表示(18×18 の角丸。名前の左)を並べる。「別の画像を選ぶ」で、選び直せる
 // - 選んだ画像が、種類や大きさの条件に合わないときは、`error` に理由を出す(送らない)。送信に失敗したときも、モーダルの中にエラーを出して、開いたままにする(やり直せる)
 // - 送信中は、閉じられない。背景を押しても閉じない(うっかり消さない)。Esc と「やめる」では閉じる
@@ -69,10 +69,8 @@ export function AvatarPreviewDialog({
             <div
               aria-hidden="true"
               data-avatar-preview-empty
-              className="flex size-28 shrink-0 items-center justify-center rounded-[4px] border border-dashed border-line bg-panel text-ink/60"
-            >
-              <Box size={32} />
-            </div>
+              className="size-28 shrink-0 rounded-[4px] border border-dashed border-line bg-panel"
+            />
           )}
           <div className="min-w-0 space-y-1">
             {file ? (

@@ -56,7 +56,7 @@ describe('AvatarPreviewDialog: 開いた直後(画像を選ぶ前)', () => {
     expect(html).toMatch(/aria-label="設定する"[^>]*disabled=""/)
     expect(html).not.toMatch(/aria-label="やめる"[^>]*disabled=""/)
   })
-  test('サイドバーでの見え方は、いまのアイコン(なければ代わりの立方体)と、名前で出る', () => {
+  test('サイドバーでの見え方は、いまのアイコン(なければ、何も入れない空き)と、名前で出る', () => {
     expect(html).toContain('サイドバーでの見え方')
     expect(html).toMatch(/data-avatar-preview-row[^>]*class="[^"]*relative h-12 w-60/)
     expect(html).toContain('left-[3px]')
