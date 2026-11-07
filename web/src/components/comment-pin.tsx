@@ -10,11 +10,11 @@ import { useLongPress } from '#/lib/use-long-press'
 
 // コメントのピン(画面の座標に置く)。見られるのは参加者全員
 // - **ホバー(とキーボードのフォーカス)で、本文のカードが開く**(ふわっと出る。`.comment-card-in`)。押すと開いたままにする(もう一度押すと閉じる。タッチの操作はこちら)
-// - **メニュー**: リーダーは、カードの右上の「…」ボタン、またはピン(とカード)の右クリック(スマホは長押し)で、「編集」「移動」「削除」のメニューを出す(`comment-menu.ts`)。誰ができるかは API が決める(`comment.canEdit`)
+// - **メニュー**: リーダーは、カードの右上の「…」ボタン、またはピン(とカード)の右クリック(スマホは長押し)で、「編集」「削除」のメニューを出す(`comment-menu.ts`)。誰ができるかは API が決める(`comment.canEdit`)
 //   - 編集: カードの本文を入力欄にする(保存・やめる)
-//   - 移動: ピンがポインタに付いてくる。置きたい所でクリックして確定、Esc でやめる。ピンのドラッグでも動かせる(押しただけ = 動いていないときは、開閉)
 //   - 削除: カードに確認(「削除する」「やめる」)を出す。2 段階
-// - 編集・移動の間は、親に伝える。編集中は、セクションなど他の操作を止める(メモと同じ)
+// - **動かす**: リーダーは、ピンをマウスで掴んでドラッグする(メニューには「移動」を置かない)。離したら座標を保存する。押しただけ(動いていない)ときは、開閉
+// - 編集の間は、親に伝える。編集中は、セクションなど他の操作を止める(メモと同じ)
 // ピンは、作成者のアバター(なければ名前の頭文字、名前もなければコメントのアイコン)の丸。ボタンは、アイコンだけ(名前は、ホバーのツールチップと `aria-label`)
 // メモ(付箋、黒)とは見た目を変える: 丸いピン(`bg-panel` + 枠)と、本文のカード(`bg-panel`)
 export function CommentPin({
@@ -35,21 +35,19 @@ export function CommentPin({
   defaultOpen?: boolean
 }) {
   const { scale } = useCanvasView()
-  // 押して開いたままにしているか(`pinned`)、ホバー・フォーカスしているか(`hover`)。どちらかなら、カードを出す。編集・削除の確認の途中は、閉じない。移動の間は、カードを隠す
+  // 押して開いたままにしているか(`pinned`)、ホバー・フォーカスしているか(`hover`)。どちらかなら、カードを出す。編集・削除の確認の途中は、閉じない
   const [pinned, setPinned] = useState(defaultOpen)
   const [hover, setHover] = useState(false)
   const [editing, setEditing] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [draft, setDraft] = useState(comment.content)
-  // 移動モード(メニューの「移動」)。始めた位置(ポインタ)と、そのときのピンの位置を持つ
-  const [moving, setMoving] = useState<{ anchorX: number; anchorY: number; fromX: number; fromY: number } | null>(null)
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const drag = useRef<{ x: number; y: number; startX: number; startY: number; moved: boolean } | null>(null)
   // ドラッグで動かした直後の click は、開閉にしない
   const justDragged = useRef(false)
   const [position, setPosition] = useState({ x: comment.x, y: comment.y })
   const canEdit = comment.canEdit
-  const open = !moving && (pinned || hover || editing || confirmingDelete)
+  const open = pinned || hover || editing || confirmingDelete
 
   // 長押し(タッチで 500ms。指が 8px 動いたら取り消す)。成立したら、ドラッグを止めてメニューを開く
   const longPress = useLongPress(({ x, y }) => {
@@ -57,8 +55,8 @@ export function CommentPin({
     setMenu({ x, y })
   })
 
-  // 編集か移動を始めた・終えたときだけ、親に伝える(していないピンが、他のメモの編集中の状態を、上書きしないように)
-  const busy = editing || moving !== null
+  // 編集を始めた・終えたときだけ、親に伝える(していないピンが、他のメモの編集中の状態を、上書きしないように)
+  const busy = editing
   const editingRef = useRef(onEditingChange)
   editingRef.current = onEditingChange
   const wasBusy = useRef(false)
@@ -69,46 +67,6 @@ export function CommentPin({
   useEffect(() => () => {
     if (wasBusy.current) editingRef.current?.(false)
   }, [])
-
-  // 移動モード: ポインタに付いてくる。クリックで確定、Esc でやめる(元の位置に戻す)。クリックは、下の要素(キャンバス)に渡さない
-  const onUpdateRef = useRef(onUpdate)
-  onUpdateRef.current = onUpdate
-  useEffect(() => {
-    if (!moving) return
-    const at = (e: { clientX: number; clientY: number }) => ({
-      x: moving.fromX + (e.clientX - moving.anchorX) / scale,
-      y: moving.fromY + (e.clientY - moving.anchorY) / scale,
-    })
-    const onMove = (e: PointerEvent) => setPosition(at(e))
-    const swallowClick = (e: MouseEvent) => {
-      e.stopPropagation()
-      e.preventDefault()
-    }
-    const onDown = (e: PointerEvent) => {
-      e.stopPropagation()
-      e.preventDefault()
-      const next = at(e)
-      setPosition(next)
-      setMoving(null)
-      onUpdateRef.current(comment.commentId, next)
-      // このクリックが、キャンバスの選択解除などに伝わらないよう、直後の click を一度だけ止める
-      window.addEventListener('click', swallowClick, { capture: true, once: true })
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.stopPropagation()
-      setPosition({ x: moving.fromX, y: moving.fromY })
-      setMoving(null)
-    }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerdown', onDown, true)
-    window.addEventListener('keydown', onKey, true)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerdown', onDown, true)
-      window.removeEventListener('keydown', onKey, true)
-    }
-  }, [moving, scale, comment.commentId])
 
   const positionAt = (e: { clientX: number; clientY: number }) => {
     const d = drag.current
@@ -127,7 +85,7 @@ export function CommentPin({
       data-no-deselect
       data-comment-pin=""
       aria-label="コメント"
-      className={`absolute z-20 ${moving ? 'cursor-move' : ''}`}
+      className="absolute z-20"
       style={{ left: position.x + offsetX, top: position.y + offsetY }}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerEnter={() => setHover(true)}
@@ -279,7 +237,6 @@ export function CommentPin({
               setDraft(comment.content)
               setEditing(true)
             },
-            onMove: () => setMoving({ anchorX: menu.x, anchorY: menu.y, fromX: position.x, fromY: position.y }),
             onDelete: () => setConfirmingDelete(true),
           })}
         />
