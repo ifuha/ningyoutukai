@@ -5,7 +5,7 @@ import { sidebarMenuItems } from '#/lib/sidebar-menu'
 import { useLongPress } from '#/lib/use-long-press'
 
 // サイドバーのプロダクトの 1 行(`li`)。
-// - アイコンは、行の左から 3px、上下中央に重ねる(押せない表示。行の大きさは変わらない)。名前は、その分(18px + 余白 8px)だけ右にずらす
+// - アイコンは、行の左から 8px、上下中央に重ねる(押せない表示。行の大きさは変わらない)。名前は、その分(24px + 余白 8px)だけ右にずらす
 // - リーダーの行だけ、右クリック(スマホは長押し)でメニューを出す: 「プロダクト設定」の 1 つだけ(押すと、そのプロダクトへ移動して、設定のモーダルを開く。アイコンの変更・削除も、そのモーダルの中)。メンバーの行は、何も出さない(ブラウザ標準のメニューもそのまま)
 //   - 長押しが成立したあとの click(プロダクトを選ぶ)は、無視する。指が 8px 動いたら取り消す(サイドバーのスクロールとぶつからない)
 export function SidebarProductRow({
@@ -33,7 +33,7 @@ export function SidebarProductRow({
 
   return (
     <li className="relative">
-      <span className="pointer-events-none absolute top-0 left-[3px] flex h-12 items-center">
+      <span className="pointer-events-none absolute top-0 left-2 flex h-12 items-center">
         <ProductAvatar src={avatarUrl} name={name} />
       </span>
       <button
@@ -62,7 +62,7 @@ export function SidebarProductRow({
         onPointerMove={isLeader ? longPress.move : undefined}
         onPointerUp={isLeader ? longPress.cancel : undefined}
         onPointerCancel={isLeader ? longPress.cancel : undefined}
-        className={`flex h-12 w-full items-center truncate border-b-2 border-transparent pr-2 pl-[29px] text-left text-l font-medium transition-[border-color,background-color] duration-200 ease-out motion-reduce:transition-none hover:bg-side-item aria-[current=page]:border-ink aria-[current=page]:bg-surface aria-[current=page]:hover:bg-surface${isLeader ? ' select-none [-webkit-touch-callout:none]' : ''}`}
+        className={`flex h-12 w-full items-center truncate border-b-2 border-transparent pr-2 pl-[40px] text-left text-l font-medium transition-[border-color,background-color] duration-200 ease-out motion-reduce:transition-none hover:bg-side-item aria-[current=page]:border-ink aria-[current=page]:bg-surface aria-[current=page]:hover:bg-surface${isLeader ? ' select-none [-webkit-touch-callout:none]' : ''}`}
       >
         <span className="truncate">{name}</span>
       </button>
