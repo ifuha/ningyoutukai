@@ -29,7 +29,9 @@ export const productManageRoutes = new Elysia({ name: "product-manage" })
         .returning();
       if (!updated) return status(404, { message: "プロダクトが見つかりません" });
 
-      return status(200, { ...updated, role: membership.role });
+      // avatarKey(R2 のキー)は応答に含めない。画面に渡す avatarUrl は、アイコンのルートで足す
+      const { avatarKey: _avatarKey, ...product } = updated;
+      return status(200, { ...product, role: membership.role });
     },
     {
       requireUser: true,
