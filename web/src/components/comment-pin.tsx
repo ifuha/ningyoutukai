@@ -112,6 +112,8 @@ export function CommentPin({
         aria-expanded={open}
         aria-haspopup={canEdit ? 'menu' : undefined}
         className={`flex size-8 touch-none select-none items-center justify-center overflow-hidden rounded-full shadow-box bg-panel text-ink outline-none [-webkit-touch-callout:none] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+        // ブラウザ標準のドラッグ(画像・リンクの持ち出し)は始めない
+        onDragStart={(e) => e.preventDefault()}
         onClick={() => {
           if (justDragged.current) {
             justDragged.current = false
@@ -247,7 +249,8 @@ export function CommentPin({
 
 /** 作成者のアバター。画像があれば画像、なければ名前の頭文字、名前もなければ代わりの表示(親の丸の中いっぱいに出す) */
 function CommentAvatar({ name, src, fallback }: { name: string | null; src: string | null; fallback: ReactNode }) {
-  if (src) return <img src={src} alt="" className="size-full object-cover" />
+  // 画像は、ブラウザの標準で「ドラッグして持ち出せる」。ピンを掴んで動かすとき、画像のドラッグが始まって、ピンの操作が打ち切られるので、画像はドラッグさせない
+  if (src) return <img src={src} alt="" draggable={false} className="pointer-events-none size-full object-cover select-none" />
   const initial = name ? ([...name][0] ?? null) : null
   return initial ? (
     <span aria-hidden="true" data-comment-initial="" className="text-s font-bold">

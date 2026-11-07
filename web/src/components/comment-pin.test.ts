@@ -31,6 +31,9 @@ describe('CommentPin', () => {
   test('ピンは作成者のアバター。画像があれば画像、なければ名前の頭文字、名前もなければコメントのアイコン', () => {
     const withImage = renderPin({ comment: comment({ authorAvatarUrl: 'https://example.com/a.png' }) })
     expect(withImage).toContain('src="https://example.com/a.png"')
+    // 画像のドラッグ(ブラウザ標準)が、ピンを掴んで動かす操作を打ち切らないよう、画像はドラッグさせない
+    expect(withImage).toContain('draggable="false"')
+    expect(withImage).toContain('pointer-events-none')
     expect(withImage).not.toContain('data-comment-initial')
     expect(renderPin()).toMatch(/data-comment-initial[^>]*>リ</)
     const none = renderPin({ comment: comment({ authorName: null }) })
