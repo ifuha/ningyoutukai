@@ -1,16 +1,21 @@
-import { Check, MessageSquare, Pencil, Trash2, X } from 'lucide-react'
+import { Check, MessageSquare, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { ContextMenu } from '#/components/context-menu'
 import { IconButton } from '#/components/icon-button'
 import type { ProductComment, ProductCommentPatch } from '#/lib/comment-api'
+import { commentMenuItems } from '#/lib/comment-menu'
 import { useCanvasView } from '#/lib/canvas-view'
+import { useLongPress } from '#/lib/use-long-press'
 
-// コメントのピン(画面の座標に置く)。**ホバー(とキーボードのフォーカス)で、コメントの本文のカードが開く**。押すと開いたままにする(もう一度押すと閉じる。タッチの操作はこちら)。見られるのは参加者全員
-// - 動かす: リーダーだけ。ピンをドラッグする(押しただけ = 動いていないときは、開閉)。動かしたら座標を保存する
-// - 編集・削除: リーダーだけ(API の `canEdit`)。カードの「編集」「削除」から。削除は 2 段階(「削除」→「削除する」)
-// - 編集中(文字入力欄にフォーカスがある間)は、親に伝える。編集中は、セクションなど他の操作を止める(メモと同じ)
-// ピンは、作成者のアバター(なければ名前の頭文字、名前もなければコメントのアイコン)の丸。本文のカードにも、アバターと名前を出す
-// ボタンは、アイコンだけ(名前は、ホバーのツールチップと `aria-label`)
+// コメントのピン(画面の座標に置く)。見られるのは参加者全員
+// - **ホバー(とキーボードのフォーカス)で、本文のカードが開く**(ふわっと出る。`.comment-card-in`)。押すと開いたままにする(もう一度押すと閉じる。タッチの操作はこちら)
+// - **メニュー**: リーダーは、ピン(とカード)の右クリック(スマホは長押し)で、「編集」「移動」「削除」のメニューを出す(`comment-menu.ts`)。誰ができるかは API が決める(`comment.canEdit`)
+//   - 編集: カードの本文を入力欄にする(保存・やめる)
+//   - 移動: ピンがポインタに付いてくる。置きたい所でクリックして確定、Esc でやめる。ピンのドラッグでも動かせる(押しただけ = 動いていないときは、開閉)
+//   - 削除: カードに確認(「削除する」「やめる」)を出す。2 段階
+// - 編集・移動の間は、親に伝える。編集中は、セクションなど他の操作を止める(メモと同じ)
+// ピンは、作成者のアバター(なければ名前の頭文字、名前もなければコメントのアイコン)の丸。ボタンは、アイコンだけ(名前は、ホバーのツールチップと `aria-label`)
 // メモ(付箋、黒)とは見た目を変える: 丸いピン(`bg-panel` + 枠)と、本文のカード(`bg-panel`)
 export function CommentPin({
   comment,
@@ -30,30 +35,80 @@ export function CommentPin({
   defaultOpen?: boolean
 }) {
   const { scale } = useCanvasView()
-  // 押して開いたままにしているか(`pinned`)、ホバー・フォーカスしているか(`hover`)。どちらかなら、カードを出す。編集・削除の確認の途中は、閉じない
+  // 押して開いたままにしているか(`pinned`)、ホバー・フォーカスしているか(`hover`)。どちらかなら、カードを出す。編集・削除の確認の途中は、閉じない。移動の間は、カードを隠す
   const [pinned, setPinned] = useState(defaultOpen)
   const [hover, setHover] = useState(false)
   const [editing, setEditing] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [draft, setDraft] = useState(comment.content)
+  // 移動モード(メニューの「移動」)。始めた位置(ポインタ)と、そのときのピンの位置を持つ
+  const [moving, setMoving] = useState<{ anchorX: number; anchorY: number; fromX: number; fromY: number } | null>(null)
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const drag = useRef<{ x: number; y: number; startX: number; startY: number; moved: boolean } | null>(null)
   // ドラッグで動かした直後の click は、開閉にしない
   const justDragged = useRef(false)
   const [position, setPosition] = useState({ x: comment.x, y: comment.y })
   const canEdit = comment.canEdit
-  const open = pinned || hover || editing || confirmingDelete
+  const open = !moving && (pinned || hover || editing || confirmingDelete)
 
+  // 長押し(タッチで 500ms。指が 8px 動いたら取り消す)。成立したら、ドラッグを止めてメニューを開く
+  const longPress = useLongPress(({ x, y }) => {
+    drag.current = null
+    setMenu({ x, y })
+  })
+
+  // 編集か移動を始めた・終えたときだけ、親に伝える(していないピンが、他のメモの編集中の状態を、上書きしないように)
+  const busy = editing || moving !== null
   const editingRef = useRef(onEditingChange)
   editingRef.current = onEditingChange
-  // 編集を始めた・終えたときだけ伝える(編集していないピンが、他のメモの編集中の状態を、上書きしないように)
-  const wasEditing = useRef(false)
+  const wasBusy = useRef(false)
   useEffect(() => {
-    if (editing || wasEditing.current) editingRef.current?.(editing)
-    wasEditing.current = editing
-  }, [editing])
+    if (busy || wasBusy.current) editingRef.current?.(busy)
+    wasBusy.current = busy
+  }, [busy])
   useEffect(() => () => {
-    if (wasEditing.current) editingRef.current?.(false)
+    if (wasBusy.current) editingRef.current?.(false)
   }, [])
+
+  // 移動モード: ポインタに付いてくる。クリックで確定、Esc でやめる(元の位置に戻す)。クリックは、下の要素(キャンバス)に渡さない
+  const onUpdateRef = useRef(onUpdate)
+  onUpdateRef.current = onUpdate
+  useEffect(() => {
+    if (!moving) return
+    const at = (e: { clientX: number; clientY: number }) => ({
+      x: moving.fromX + (e.clientX - moving.anchorX) / scale,
+      y: moving.fromY + (e.clientY - moving.anchorY) / scale,
+    })
+    const onMove = (e: PointerEvent) => setPosition(at(e))
+    const swallowClick = (e: MouseEvent) => {
+      e.stopPropagation()
+      e.preventDefault()
+    }
+    const onDown = (e: PointerEvent) => {
+      e.stopPropagation()
+      e.preventDefault()
+      const next = at(e)
+      setPosition(next)
+      setMoving(null)
+      onUpdateRef.current(comment.commentId, next)
+      // このクリックが、キャンバスの選択解除などに伝わらないよう、直後の click を一度だけ止める
+      window.addEventListener('click', swallowClick, { capture: true, once: true })
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.stopPropagation()
+      setPosition({ x: moving.fromX, y: moving.fromY })
+      setMoving(null)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerdown', onDown, true)
+    window.addEventListener('keydown', onKey, true)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerdown', onDown, true)
+      window.removeEventListener('keydown', onKey, true)
+    }
+  }, [moving, scale, comment.commentId])
 
   const positionAt = (e: { clientX: number; clientY: number }) => {
     const d = drag.current
@@ -72,7 +127,7 @@ export function CommentPin({
       data-no-deselect
       data-comment-pin=""
       aria-label="コメント"
-      className="absolute z-20"
+      className={`absolute z-20 ${moving ? 'cursor-move' : ''}`}
       style={{ left: position.x + offsetX, top: position.y + offsetY }}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerEnter={() => setHover(true)}
@@ -81,12 +136,24 @@ export function CommentPin({
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) setHover(false)
       }}
+      onContextMenu={(e) => {
+        // ブラウザ標準のメニューは出さない。リーダーには、コメントのメニューを出す
+        e.preventDefault()
+        e.stopPropagation()
+        longPress.cancel()
+        if (!canEdit) return
+        // キーボード(メニューキー・Shift + F10)では座標が 0 になるので、ピンの左上にする
+        const rect = e.currentTarget.getBoundingClientRect()
+        const keyboard = e.clientX === 0 && e.clientY === 0
+        setMenu({ x: keyboard ? rect.left : e.clientX, y: keyboard ? rect.top : e.clientY })
+      }}
     >
       <button
         type="button"
         aria-label={pinned ? 'コメントを閉じる' : 'コメントを開く'}
         aria-expanded={open}
-        className={`flex size-8 touch-none select-none items-center justify-center overflow-hidden rounded-full shadow-box bg-panel text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+        aria-haspopup={canEdit ? 'menu' : undefined}
+        className={`flex size-8 touch-none select-none items-center justify-center overflow-hidden rounded-full shadow-box bg-panel text-ink outline-none [-webkit-touch-callout:none] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
         onClick={() => {
           if (justDragged.current) {
             justDragged.current = false
@@ -99,14 +166,18 @@ export function CommentPin({
           if (!canEdit || e.button !== 0) return
           e.currentTarget.setPointerCapture(e.pointerId)
           drag.current = { x: position.x, y: position.y, startX: e.clientX, startY: e.clientY, moved: false }
+          // タッチは、長押しでメニューを開く(指が動いたら取り消す)
+          longPress.start(e)
         }}
         onPointerMove={(e) => {
+          longPress.move(e)
           const next = positionAt(e)
           if (!next || !drag.current) return
           if (Math.hypot(next.x - drag.current.x, next.y - drag.current.y) * scale >= 3) drag.current.moved = true
           if (drag.current.moved) setPosition(next)
         }}
         onPointerUp={(e) => {
+          longPress.cancel()
           const start = drag.current
           const next = positionAt(e)
           drag.current = null
@@ -116,6 +187,7 @@ export function CommentPin({
           onUpdate(comment.commentId, next)
         }}
         onPointerCancel={() => {
+          longPress.cancel()
           drag.current = null
         }}
       >
@@ -125,7 +197,7 @@ export function CommentPin({
         <div
           role="group"
           aria-label="コメントの内容"
-          className="absolute top-full left-0 z-10 mt-1 w-64 cursor-default shadow-box bg-panel p-3 text-ink"
+          className="comment-card-in absolute top-full left-0 z-10 mt-1 w-64 cursor-default shadow-box bg-panel p-3 text-ink"
         >
           <div className="mb-2 flex items-center gap-2">
             <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-box">
@@ -157,7 +229,7 @@ export function CommentPin({
               {comment.content}
             </p>
           )}
-          {canEdit && (
+          {canEdit && (editing || confirmingDelete) && (
             <div className="mt-2 flex items-center justify-end gap-1.5">
               {editing ? (
                 <>
@@ -173,20 +245,31 @@ export function CommentPin({
                     }}
                   />
                 </>
-              ) : confirmingDelete ? (
+              ) : (
                 <>
                   <IconButton icon={Trash2} label="削除する" size="sm" variant="danger-solid" onClick={() => onDelete(comment.commentId)} />
                   <IconButton icon={X} label="やめる" size="sm" variant="outline" onClick={() => setConfirmingDelete(false)} />
-                </>
-              ) : (
-                <>
-                  <IconButton icon={Pencil} label="編集" size="sm" onClick={() => setEditing(true)} />
-                  <IconButton icon={Trash2} label="削除" size="sm" variant="danger" onClick={() => setConfirmingDelete(true)} />
                 </>
               )}
             </div>
           )}
         </div>
+      )}
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          label="コメントのメニュー"
+          onClose={() => setMenu(null)}
+          items={commentMenuItems({
+            onEdit: () => {
+              setDraft(comment.content)
+              setEditing(true)
+            },
+            onMove: () => setMoving({ anchorX: menu.x, anchorY: menu.y, fromX: position.x, fromY: position.y }),
+            onDelete: () => setConfirmingDelete(true),
+          })}
+        />
       )}
     </article>
   )

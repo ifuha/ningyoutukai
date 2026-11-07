@@ -56,18 +56,21 @@ describe('CommentPin', () => {
     expect(html).toContain('ここを見てください')
     expect(renderPin({ defaultOpen: true, comment: comment({ authorName: null }) })).toContain('退会したユーザー')
   })
-  test('編集できる人(canEdit)には、「編集」「削除」と、動かせる見た目(grab)。削除は赤(danger)', () => {
+  test('編集できる人(canEdit)には、動かせる見た目(grab)と、メニューがあることの印(aria-haspopup)。編集・削除のボタンは、カードに常には置かない(メニューから出す)', () => {
     const html = renderPin({ defaultOpen: true })
-    expect(html).toContain('aria-label="編集"')
-    expect(html).toContain('aria-label="削除"')
-    expect(html).toContain('border-danger')
     expect(html).toContain('cursor-grab')
+    expect(html).toContain('aria-haspopup="menu"')
+    expect(html).not.toContain('aria-label="編集"')
+    expect(html).not.toContain('aria-label="削除"')
+  })
+  test('開いたカードは、ふわっと現れる動き(comment-card-in)つき', () => {
+    expect(renderPin({ defaultOpen: true })).toContain('comment-card-in')
+    expect(renderPin()).not.toContain('comment-card-in')
   })
   test('編集できない人(メンバー)には、「編集」「削除」を出さず、動かせない(pointer)', () => {
     const html = renderPin({ defaultOpen: true, comment: comment({ canEdit: false }) })
     expect(html).toContain('ここを見てください')
-    expect(html).not.toContain('aria-label="編集"')
-    expect(html).not.toContain('aria-label="削除"')
+    expect(html).not.toContain('aria-haspopup')
     expect(html).not.toContain('cursor-grab')
   })
   test('本文は改行を残し、長い語でも折り返す', () => {
@@ -90,6 +93,10 @@ describe('CommentDraft', () => {
   test('入力欄と送信のボタンは、横に並べる(flex)。ボタンはアイコンだけで、文字は出さない(名前はツールチップ)', () => {
     const html = renderDraft()
     expect(html).toContain('flex items-end gap-2')
+    // 入力欄の高さは、1 行のとき、ボタン(sm = 32px = size-8)と同じ(min-h-8)
+    expect(html).toContain('min-h-8')
+    expect(html).toContain('rows="1"')
+    expect(html).toContain('size-8')
     expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('type="submit"'))
     expect(html).not.toMatch(/<span class="text-m font-medium">コメントする<\/span>/)
   })
