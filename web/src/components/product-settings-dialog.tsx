@@ -1,16 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Trash2, X } from 'lucide-react'
+import { ImageIcon, Pencil, Settings, Trash2, X } from 'lucide-react'
+import { AvatarSettings } from '#/components/avatar-settings'
 import { IconButton } from '#/components/icon-button'
-import { Modal } from '#/components/modal'
+import { SettingsShell, type SettingsShellSection } from '#/components/settings-shell'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
-import { avatarErrorMessage } from '#/lib/product-avatar'
-import { ApiError } from '#/lib/api'
 
-const buttonClass =
-  'flex h-10 shrink-0 items-center justify-center shadow-box bg-panel px-3 text-m text-ink hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-panel'
 const inputClass =
   'h-10 min-w-0 flex-1 shadow-box bg-panel px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
@@ -81,61 +78,6 @@ function RenameBlock({
   )
 }
 
-// アイコンの削除(アイコンがあるときだけ出す)。確認の 2 段階は、プロダクトの削除と同じ流儀(押すと確認の文が出て、もう一度押すと消える)
-function AvatarBlock({ productId }: { productId: string }) {
-  const queryClient = useQueryClient()
-  const [confirming, setConfirming] = useState(false)
-  const remove = useMutation({
-    mutationFn: () => edenData(eden().api.product({ productId }).avatar.delete()),
-    onSuccess: () => {
-      setConfirming(false)
-      // `['products']` で始まるキーをすべて取り直す(一覧と、そのプロダクトのデータ・ツリー)
-      void queryClient.invalidateQueries({ queryKey: ['products'] })
-    },
-  })
-
-  return (
-    <div className="space-y-2">
-      <h3 className="text-m font-bold">アイコン</h3>
-      {confirming ? (
-        <div className="space-y-2">
-          <p className="text-m">アイコンを削除しますか?</p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={remove.isPending}
-              onClick={() => remove.mutate()}
-              className={buttonClass}
-            >
-              削除する
-            </button>
-            <IconButton
-              icon={X}
-              label="やめる"
-              variant="outline"
-              className="bg-panel"
-              disabled={remove.isPending}
-              onClick={() => {
-                setConfirming(false)
-                remove.reset()
-              }}
-            />
-          </div>
-        </div>
-      ) : (
-        <button type="button" onClick={() => setConfirming(true)} className={buttonClass}>
-          アイコンを削除
-        </button>
-      )}
-      {remove.isError && (
-        <ErrorText
-          message={avatarErrorMessage(remove.error instanceof ApiError ? remove.error.status : 0)}
-        />
-      )}
-    </div>
-  )
-}
-
 function DeleteBlock({
   productId,
   productName,
@@ -158,17 +100,16 @@ function DeleteBlock({
   })
 
   return (
-    <div className="space-y-2 border-t border-line pt-4">
-      <h3 className="text-m font-bold">危険な操作</h3>
+    <div className="space-y-3">
+      <p className="text-m">
+        このプロダクトを削除すると、
+        {memberCount === undefined ? 'メンバー' : `メンバー(${memberCount} 人)`}
+        、タスク、招待、タスクの種類が、すべて消えます。<strong className="font-bold">元に戻せません。</strong>
+      </p>
       {confirming ? (
         <div className="space-y-2">
-          <p className="break-words text-m">
-            「{productName}」を削除しますか?{' '}
-            {memberCount === undefined ? 'メンバー' : `メンバー(${memberCount} 人)`}
-            、タスク、招待、タスクの種類が、すべて消えます。元に戻せません
-          </p>
-          <label htmlFor="delete-confirm" className="block text-m">
-            確認のため、プロダクト名を入力してください
+          <label htmlFor="delete-confirm" className="block break-words text-m">
+            確認のため、「{productName}」と入力してください
           </label>
           <input
             id="delete-confirm"
@@ -179,14 +120,15 @@ function DeleteBlock({
             className={`${inputClass} w-full`}
           />
           <div className="flex gap-2">
-            <button
+            <IconButton
               type="button"
+              icon={Trash2}
+              label={remove.isPending ? '削除中…' : '削除する'}
+              showLabel
+              variant="danger-solid"
               disabled={remove.isPending || typed !== productName}
               onClick={() => remove.mutate()}
-              className={buttonClass}
-            >
-              削除する
-            </button>
+            />
             <IconButton
               icon={X}
               label="やめる"
@@ -205,8 +147,8 @@ function DeleteBlock({
         <IconButton
           icon={Trash2}
           label="このプロダクトを削除"
-          variant="outline"
-          className="bg-panel"
+          showLabel
+          variant="danger"
           onClick={() => setConfirming(true)}
         />
       )}
@@ -215,8 +157,48 @@ function DeleteBlock({
   )
 }
 
-// リーダー用。プロダクト名の変更と、アイコンの削除と、プロダクトの削除。開閉は親が制御する
-export function ProductManageDialog({
+/** プロダクト設定のカテゴリ(左の並び順)。最初は「一般」 */
+export function productSettingsSections({
+  productId,
+  productName,
+  memberCount,
+  avatarUrl,
+}: {
+  productId: string
+  productName: string
+  memberCount?: number
+  avatarUrl?: string | null
+}): SettingsShellSection[] {
+  return [
+    {
+      id: 'general',
+      label: '一般',
+      icon: Settings,
+      render: () => <RenameBlock productId={productId} productName={productName} />,
+    },
+    {
+      id: 'icon',
+      label: 'アイコン',
+      icon: ImageIcon,
+      render: () => (
+        <AvatarSettings productId={productId} productName={productName} avatarUrl={avatarUrl} />
+      ),
+    },
+    {
+      id: 'delete',
+      label: 'プロダクトの削除',
+      icon: Trash2,
+      danger: true,
+      render: () => (
+        <DeleteBlock productId={productId} productName={productName} memberCount={memberCount} />
+      ),
+    },
+  ]
+}
+
+// プロダクト設定のモーダル(リーダー用)。左にカテゴリ(一般・アイコン・プロダクトの削除)、右に中身。枠は `settings-shell.tsx`。
+// 一般: プロダクト名の変更 / アイコン: アイコンの設定のすべて(選ぶ・設定する・削除) / プロダクトの削除(危険な操作なので、赤で示す)。開閉は親が制御する
+export function ProductSettingsDialog({
   productId,
   productName,
   memberCount,
@@ -228,28 +210,18 @@ export function ProductManageDialog({
   productName: string
   /** 知っていれば、削除の確認文にメンバー数を出す */
   memberCount?: number
-  /** 現在のアイコンの URL。あるときだけ「アイコンを削除」を出す */
+  /** 現在のアイコンの URL。なければ null */
   avatarUrl?: string | null
   open: boolean
   onClose: () => void
 }) {
   return (
-    <Modal open={open} onClose={onClose}>
-      <h2 className="text-l font-bold">プロダクトの管理</h2>
-      <RenameBlock productId={productId} productName={productName} />
-      {avatarUrl && <AvatarBlock productId={productId} />}
-      <DeleteBlock
-        productId={productId}
-        productName={productName}
-        memberCount={memberCount}
-      />
-      <IconButton
-        icon={X}
-        label="閉じる"
-        variant="outline"
-        className="bg-panel"
-        onClick={onClose}
-      />
-    </Modal>
+    <SettingsShell
+      open={open}
+      onClose={onClose}
+      title="プロダクト設定"
+      ariaLabel="プロダクト設定の項目"
+      sections={productSettingsSections({ productId, productName, memberCount, avatarUrl })}
+    />
   )
 }

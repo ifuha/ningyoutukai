@@ -10,7 +10,7 @@ import type { LucideIcon } from 'lucide-react'
 // - `showLabel` を付けると、アイコンの右に文字(`label`)も出す(「プロダクト作成」など、主役の動作向け)。
 //   文字が見えているので、ツールチップは出さない(`tip` を渡したときだけ出す)。`block` で横幅いっぱいにする
 
-export type IconButtonVariant = 'plain' | 'outline' | 'solid'
+export type IconButtonVariant = 'plain' | 'outline' | 'solid' | 'danger' | 'danger-solid'
 export type IconButtonSize = 'sm' | 'md' | 'lg'
 export type TipSide = 'top' | 'bottom' | 'left' | 'right'
 
@@ -21,6 +21,10 @@ const variantClass: Record<IconButtonVariant, string> = {
   outline: 'shadow-box hover:bg-side-item',
   // 主役。文字色の塗り
   solid: 'border border-ink bg-ink text-surface hover:opacity-80',
+  // 危険な操作(削除など)。赤い枠と文字。ホバーで赤く塗る
+  danger: 'border border-danger bg-panel text-danger hover:bg-danger hover:text-surface',
+  // 危険な操作の、最後の確定(「削除する」など)。赤の塗り
+  'danger-solid': 'border border-danger bg-danger text-surface hover:opacity-80',
 }
 
 // 押された状態(切り替えのボタン)。見た目は変えない(状態は `aria-pressed` で示す)

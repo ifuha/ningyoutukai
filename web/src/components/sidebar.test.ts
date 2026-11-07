@@ -17,11 +17,11 @@ describe('Sidebar のプロダクトの行とアイコン', () => {
   const leader = { id: 'a', name: 'リーダーの', isLeader: true, avatarUrl: 'https://x/a.png' }
   const member = { id: 'b', name: 'メンバーの', isLeader: false, avatarUrl: null }
 
-  test('リーダーの行にだけ、メニューを開く目印(aria-haspopup)と、隠しの input がある', () => {
+  test('リーダーの行にだけ、メニューを開く目印(aria-haspopup)がある。ファイル選択は行ではなく、モーダルの中にある(閉じている間は描かない)', () => {
     const html = render([leader, member])
     expect(html.match(/aria-haspopup="menu"/g)).toHaveLength(1)
-    expect(html.match(/type="file"/g)).toHaveLength(1)
-    expect(html).toContain('accept="image/png,image/jpeg,image/gif,image/webp"')
+    // 画像は、メニューの「アイコンを変更」で開くモーダルの中で選ぶので、行には、input がない
+    expect(html).not.toContain('type="file"')
     // 行を押してアイコンを変える動きはなくなった
     expect(html).not.toContain('のアイコンを変更')
   })

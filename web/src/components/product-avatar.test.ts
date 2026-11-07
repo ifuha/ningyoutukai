@@ -15,10 +15,12 @@ describe('ProductAvatar', () => {
     expect(html).toContain('rounded-[4px]')
     expect(html).toContain('object-cover')
   })
-  test('なければ、代わりのアイコン(img は出ない)', () => {
-    const html = render(null)
-    expect(html).not.toContain('<img')
-    expect(html).toContain('<svg')
-    expect(html).toContain('size-[18px]')
+  test('なければ、何も入れない(img も、アイコンの svg も出ない)。同じ 18×18 の空きだけを残す(名前の位置が、行ごとにそろう)', () => {
+    for (const none of [null, undefined, '']) {
+      const html = renderToStaticMarkup(createElement(ProductAvatar, { src: none, name: 'A' }))
+      expect(html).not.toContain('<img')
+      expect(html).not.toContain('<svg')
+      expect(html).toMatch(/^<span aria-hidden="true" data-avatar-fallback="true" class="size-\[18px\] shrink-0"><\/span>$/)
+    }
   })
 })

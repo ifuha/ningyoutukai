@@ -7,7 +7,7 @@ import { SidebarProductRow } from '#/components/sidebar-product-row'
 import { SidebarInvitation } from '#/components/sidebar-invitation'
 import type { Invitation } from '#/lib/invitation'
 
-// `avatarUrl`: アイコンの画像の URL(なければ代わりの表示)。`isLeader` の行だけ、右クリック(スマホは長押し)でメニューを出す(アイコンの変更・削除、プロダクト管理)
+// `avatarUrl`: アイコンの画像の URL(なければ代わりの表示)。`isLeader` の行だけ、右クリック(スマホは長押し)でメニューを出す(プロダクト設定)
 export type SidebarProduct = { id: string; name: string; avatarUrl?: string | null; isLeader?: boolean }
 
 // サイドバー(Figma `side-light` / `side-dark`、幅 240px)。角丸は使わない(ユーザーの指定。Figma は 10px)。
@@ -18,7 +18,7 @@ export function Sidebar({
   invitations = [],
   activeProductId,
   onSelectProduct,
-  onManageProduct,
+  onOpenProductSettings,
   onCreateProduct,
   onCollapse,
   isLoading = false,
@@ -28,8 +28,8 @@ export function Sidebar({
   invitations?: Invitation[]
   activeProductId?: string
   onSelectProduct?: (productId: string) => void
-  // 行のメニューの「プロダクト管理」(そのプロダクトへ移動して、管理のダイアログを開く)
-  onManageProduct?: (productId: string) => void
+  // 行のメニューの「プロダクト設定」(そのプロダクトへ移動して、設定のモーダルを開く)
+  onOpenProductSettings?: (productId: string) => void
   onCreateProduct?: () => void
   // PC 幅でサイドバーをたたむ(渡したときだけ、ロゴの右にボタンを出す。スマホ幅では出さない)
   onCollapse?: () => void
@@ -88,7 +88,7 @@ export function Sidebar({
                 isLeader={p.isLeader}
                 active={p.id === activeProductId}
                 onSelect={onSelectProduct}
-                onManage={onManageProduct}
+                onOpenSettings={onOpenProductSettings}
               />
             ))
           )}
