@@ -51,7 +51,7 @@ export function CommentDraft({
       data-no-deselect
       data-comment-draft=""
       aria-label="コメントを書く"
-      className="absolute z-30 w-64 shadow-box bg-panel p-3 text-ink"
+      className="absolute z-30 w-72 shadow-box bg-panel p-3 text-ink"
       style={{ left: x + offsetX, top: y + offsetY }}
       onPointerDown={(e) => e.stopPropagation()}
       onSubmit={(e) => {
@@ -65,40 +65,40 @@ export function CommentDraft({
         }
       }}
     >
-      <textarea
-        aria-label="コメントの内容"
-        autoFocus
-        rows={4}
-        maxLength={2000}
-        placeholder="コメントを書く…"
-        value={content}
-        disabled={pending}
-        onChange={(e) => setContent(e.target.value)}
-        onKeyDown={(e) => {
-          // 日本語の変換中(isComposing)の Enter は、変換の確定。送らない
-          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-            e.preventDefault()
-            void submit()
-          }
-        }}
-        className="block w-full resize-none bg-transparent p-1 text-m outline-none shadow-box placeholder:text-ink/45"
-      />
-      {error && (
-        <p role="alert" className="mt-2 text-s text-danger">
-          {error}
-        </p>
-      )}
-      <div className="mt-2 flex items-center justify-end gap-1.5">
+      {/* 入力欄と送信のボタンを、横に並べる(ボタンはアイコンだけ)。入力欄の高さは、1 行のとき、ボタン(sm = 32px)と同じ(`min-h-8`)。行が増えると、入力欄だけ伸びる(ボタンは下端にそろえる) */}
+      <div className="flex items-end gap-2">
+        <textarea
+          aria-label="コメントの内容"
+          autoFocus
+          rows={1}
+          maxLength={2000}
+          placeholder="コメントを書く…"
+          value={content}
+          disabled={pending}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={(e) => {
+            // 日本語の変換中(isComposing)の Enter は、変換の確定。送らない
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault()
+              void submit()
+            }
+          }}
+          className="block max-h-32 min-h-8 min-w-0 flex-1 resize-none bg-transparent px-2 py-1.5 text-m [field-sizing:content] outline-none shadow-box placeholder:text-ink/45"
+        />
         <IconButton
           icon={Send}
           label={pending ? '送信中…' : 'コメントする'}
-          showLabel
           size="sm"
           variant="solid"
           type="submit"
           disabled={pending || !content.trim()}
         />
       </div>
+      {error && (
+        <p role="alert" className="mt-2 text-s text-danger">
+          {error}
+        </p>
+      )}
     </form>
   )
 }

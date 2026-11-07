@@ -255,6 +255,19 @@ body {
   animation: details-in 0.18s ease-out;
 }
 
+/* コメントのカードがホバーで開くとき: ポンと出さず、少し上から降りながら、ふわっと現れる(ピンの左上を軸に、わずかに広がる) */
+@keyframes comment-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+.comment-card-in {
+  transform-origin: top left;
+  animation: comment-card-in 0.16s ease-out;
+}
+
 /* 404 ページの文字の縁取り。左右の幕の記号に重なっても読めるよう、周りを、紙の色でにじませて消す(窓を使わない代わり) */
 .not-found-halo {
   text-shadow:
@@ -266,6 +279,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .code-char,
   .details-in,
+  .comment-card-in,
   .stage-in {
     animation: none;
   }
