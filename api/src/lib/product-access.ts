@@ -49,6 +49,15 @@ export async function getMemberContactsExcept(productId: string, exceptUserId: s
     .where(and(eq(productMembers.productId, productId), ne(productMembers.userId, exceptUserId)));
 }
 
+/** プロダクトのメンバー権限(role が member)の人の連絡先。リーダーは含まない。コメントの通知先 */
+export async function getMemberRoleContacts(productId: string) {
+  return await db
+    .select({ email: users.email, userName: users.userName })
+    .from(productMembers)
+    .innerJoin(users, eq(productMembers.userId, users.userId))
+    .where(and(eq(productMembers.productId, productId), eq(productMembers.role, "member")));
+}
+
 /** プロダクトのリーダーの連絡先の一覧(完了報告の通知先) */
 export async function getLeaderContacts(productId: string) {
   return await db
