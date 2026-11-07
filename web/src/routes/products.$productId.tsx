@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, ClipboardCheck } from 'lucide-react'
@@ -30,11 +30,14 @@ import { eden, edenData } from '#/lib/eden'
 import { canEditSections } from '#/lib/section-permissions'
 import { useSectionActions } from '#/lib/use-section-actions'
 import { treeQueryKey, useSections } from '#/lib/use-sections'
+import { parseProductSearch } from '#/lib/product-search'
 import { useProductNoteActions, useProductNotes } from '#/lib/use-product-notes'
 
 // プロダクトの画面(`/products/$productId`)。ログイン必須。見出しと、ツリー(リーダーとメンバー、タスク)
 // 見た目は暫定(ターミナル風)。Figma の `tree` の設計ができたら入れ替える
+// 検索パラメータ `?manage=product`: 開いたら「プロダクト管理」のダイアログを開く(サイドバーの行のメニューから)
 export const Route = createFileRoute('/products/$productId')({
+  validateSearch: parseProductSearch,
   component: Product,
 })
 
@@ -42,6 +45,7 @@ const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
 
 function Product() {
   const { productId } = Route.useParams()
+  const { manage } = Route.useSearch()
   const navigate = useNavigate()
   const [taskForm, setTaskForm] = useState<TaskFormTarget | null>(null)
   // 自分のタスクの詳細(完了報告)を開いているタスク。再取得で最新になるよう、id で持つ
@@ -88,6 +92,15 @@ function Product() {
   const sectionActions = useSectionActions(productId)
 
   const isLeader = product.data?.role === 'leader'
+
+  // `?manage=product` で開いたら、リーダーならダイアログを開き、パラメータを消す(履歴は置き換えるので、戻るボタンで再び開かない)。
+  // プロダクトの情報が届くまでは待つ(リーダーかどうかが分からない)。取得に失敗したときは、開かずに消す
+  useEffect(() => {
+    if (manage !== 'product') return
+    if (product.data === undefined && !product.isError) return
+    if (isLeader) setProductManageOpen(true)
+    void navigate({ to: '/products/$productId', params: { productId }, search: {}, replace: true })
+  }, [manage, product.data, product.isError, isLeader, navigate, productId])
   // 「管理」メニューの項目。足すときは 1 行足す(リーダーだけなら isLeader の側に)
   const manageItems: ManageMenuItem[] = [
     { label: 'メンバー', onSelect: () => setMembersOpen(true) },
