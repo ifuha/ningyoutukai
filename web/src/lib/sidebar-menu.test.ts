@@ -2,28 +2,15 @@ import { describe, expect, test } from 'bun:test'
 import { visibleMenuItems } from './context-menu-items'
 import { sidebarMenuItems } from './sidebar-menu'
 
-const noop = () => {}
-const labels = (hasAvatar: boolean) =>
-  visibleMenuItems(
-    sidebarMenuItems({ hasAvatar, onChangeAvatar: noop, onDeleteAvatar: noop, onManage: noop }),
-  ).map((i) => i.label)
-
 describe('sidebarMenuItems', () => {
-  test('アイコンがあるとき: 変更・削除・プロダクト管理', () => {
-    expect(labels(true)).toEqual(['アイコンを変更', 'アイコンを削除', 'プロダクト管理'])
+  test('項目は「プロダクト設定」の 1 つだけ(アイコンの変更・削除は、メニューに出さない)', () => {
+    const items = visibleMenuItems(sidebarMenuItems({ onOpenSettings: () => {} }))
+    expect(items.map((i) => i.label)).toEqual(['プロダクト設定'])
   })
-  test('アイコンがないとき: 「アイコンを削除」は出ない', () => {
-    expect(labels(false)).toEqual(['アイコンを変更', 'プロダクト管理'])
-  })
-  test('項目を選ぶと、対応する操作が呼ばれる', () => {
+  test('項目を選ぶと、設定を開く操作が呼ばれる', () => {
     const calls: string[] = []
-    const items = sidebarMenuItems({
-      hasAvatar: true,
-      onChangeAvatar: () => calls.push('change'),
-      onDeleteAvatar: () => calls.push('delete'),
-      onManage: () => calls.push('manage'),
-    })
+    const items = sidebarMenuItems({ onOpenSettings: () => calls.push('settings') })
     for (const i of items) i.onSelect()
-    expect(calls).toEqual(['change', 'delete', 'manage'])
+    expect(calls).toEqual(['settings'])
   })
 })
