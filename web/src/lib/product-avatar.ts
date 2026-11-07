@@ -46,3 +46,11 @@ export function avatarErrorMessage(status: number): string {
       return 'アイコンを更新できませんでした。時間をおいて、もう一度お試しください'
   }
 }
+
+/** ファイルの大きさを、人が読める形にする(1,024 バイト未満は B、1MB 未満は KB、それ以上は MB。KB は小数点なし、MB は小数点 1 桁) */
+export function formatFileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return '0 B'
+  if (bytes < 1024) return `${Math.round(bytes)} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
