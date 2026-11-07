@@ -2,15 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { NoteContextMenu } from '#/components/note-context-menu'
 import type { ProductNote, ProductNotePatch } from '#/lib/memo-api'
 import { useCanvasView } from '#/lib/canvas-view'
+import { useLongPress } from '#/lib/use-long-press'
 import { labelTextRect, labelTypography, titleFactor } from '#/lib/section-label'
 
 // メモ(付箋)。見た目は黒: 背景は黒(不透明。後ろが透けない)、文字は白、枠は実線(1px、白の 25%)。タイトルの帯や、ゴミ箱のボタンは持たない
 // - 動かす: 入力欄のまわりの余白をつかんでドラッグ(編集中の入力欄の中は、文字の選択になる)
 // - 右クリック(スマホは長押し)でメニュー: 編集・削除・公開 / 非公開の切り替え(`NoteContextMenu`)。誰ができるかは API が決める(`note.canEdit`)。変更できないメモ(他の人のメモ)は、メニューを出さず、動かせない
 // - 内容の入力欄は、ふだんは読み取り専用。メニューの「編集」で編集できる状態にする(追加したばかりのメモ = `autoEdit` は、すぐ編集できる)。フォーカスが外れると、読み取り専用に戻る
-/** 長押しと見なす時間(ms)と、指がこの距離(px)以上動いたら取り消す */
-const LONG_PRESS_MS = 500
-const LONG_PRESS_MOVE_PX = 8
 /** メモの幅(px。`w-56`)と、枠線の太さ(px。`border`)。作成者の名前の位置に使う */
 const NOTE_WIDTH_PX = 224
 const NOTE_BORDER_PX = 1
@@ -37,12 +35,11 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete,
   // メニュー(押した位置 = 画面の座標)。右クリックと、長押しで開く
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
-  const longPress = useRef<{ timer: number; x: number; y: number } | null>(null)
-  const cancelLongPress = () => {
-    if (longPress.current) window.clearTimeout(longPress.current.timer)
-    longPress.current = null
-  }
-  useEffect(() => cancelLongPress, [])
+  // 長押し(タッチで 500ms。指が 8px 動いたら取り消す)。成立したら、ドラッグを止めてメニューを開く
+  const longPress = useLongPress(({ x, y }) => {
+    drag.current = null
+    setMenu({ x, y })
+  })
   const isPublic = note.isPublic ?? false
   // 見ている人が、変更・削除・公開の切り替えをできるか(API の `canEdit`)。できないメモは、メニューを出さず、動かせない
   const canEdit = note.canEdit
@@ -71,7 +68,7 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete,
           // ブラウザ標準のメニューは出さない
           e.preventDefault()
           e.stopPropagation()
-          cancelLongPress()
+          longPress.cancel()
           if (!canEdit) return
           // キーボード(メニューキー・Shift + F10)では座標が 0 になるので、メモの左上にする
           const rect = e.currentTarget.getBoundingClientRect()
@@ -89,28 +86,15 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete,
           e.currentTarget.setPointerCapture(e.pointerId)
           drag.current = { x: position.x, y: position.y, startX: e.clientX, startY: e.clientY }
           // タッチは、長押しでメニューを開く(指が動いたら取り消す)
-          if (e.pointerType === 'touch') {
-            const { clientX: x, clientY: y } = e
-            cancelLongPress()
-            longPress.current = {
-              x,
-              y,
-              timer: window.setTimeout(() => {
-                longPress.current = null
-                drag.current = null
-                setMenu({ x, y })
-              }, LONG_PRESS_MS),
-            }
-          }
+          longPress.start(e)
         }}
         onPointerMove={(e) => {
-          const lp = longPress.current
-          if (lp && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) >= LONG_PRESS_MOVE_PX) cancelLongPress()
+          longPress.move(e)
           const next = positionAt(e)
           if (next) setPosition(next)
         }}
         onPointerUp={(e) => {
-          cancelLongPress()
+          longPress.cancel()
           const next = positionAt(e)
           const start = drag.current
           if (!next || !start) return
@@ -120,7 +104,7 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete,
           if (Math.hypot(next.x - start.x, next.y - start.y) >= 1) onUpdate(note.noteId, next)
         }}
         onPointerCancel={() => {
-          cancelLongPress()
+          longPress.cancel()
           drag.current = null
         }}
       >
