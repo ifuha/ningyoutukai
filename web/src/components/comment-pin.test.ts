@@ -63,6 +63,12 @@ describe('CommentPin', () => {
     expect(html).not.toContain('aria-label="編集"')
     expect(html).not.toContain('aria-label="削除"')
   })
+  test('編集できる人のカードには、右上に「…」のメニューボタンがある。編集できない人には出ない', () => {
+    expect(renderPin({ defaultOpen: true })).toContain('aria-label="メニュー"')
+    expect(renderPin({ defaultOpen: true, comment: comment({ canEdit: false }) })).not.toContain('aria-label="メニュー"')
+    // 閉じているときは、カードごと出ない
+    expect(renderPin()).not.toContain('aria-label="メニュー"')
+  })
   test('開いたカードは、ふわっと現れる動き(comment-card-in)つき', () => {
     expect(renderPin({ defaultOpen: true })).toContain('comment-card-in')
     expect(renderPin()).not.toContain('comment-card-in')

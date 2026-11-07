@@ -1,4 +1,4 @@
-import { Check, MessageSquare, Trash2, X } from 'lucide-react'
+import { Check, Ellipsis, MessageSquare, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ContextMenu } from '#/components/context-menu'
@@ -10,7 +10,7 @@ import { useLongPress } from '#/lib/use-long-press'
 
 // コメントのピン(画面の座標に置く)。見られるのは参加者全員
 // - **ホバー(とキーボードのフォーカス)で、本文のカードが開く**(ふわっと出る。`.comment-card-in`)。押すと開いたままにする(もう一度押すと閉じる。タッチの操作はこちら)
-// - **メニュー**: リーダーは、ピン(とカード)の右クリック(スマホは長押し)で、「編集」「移動」「削除」のメニューを出す(`comment-menu.ts`)。誰ができるかは API が決める(`comment.canEdit`)
+// - **メニュー**: リーダーは、カードの右上の「…」ボタン、またはピン(とカード)の右クリック(スマホは長押し)で、「編集」「移動」「削除」のメニューを出す(`comment-menu.ts`)。誰ができるかは API が決める(`comment.canEdit`)
 //   - 編集: カードの本文を入力欄にする(保存・やめる)
 //   - 移動: ピンがポインタに付いてくる。置きたい所でクリックして確定、Esc でやめる。ピンのドラッグでも動かせる(押しただけ = 動いていないときは、開閉)
 //   - 削除: カードに確認(「削除する」「やめる」)を出す。2 段階
@@ -203,9 +203,22 @@ export function CommentPin({
             <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-box">
               <CommentAvatar name={comment.authorName} src={comment.authorAvatarUrl} fallback={<MessageSquare size={14} aria-hidden="true" />} />
             </span>
-            <p data-comment-author="" className="min-w-0 truncate text-s font-medium">
+            <p data-comment-author="" className="min-w-0 flex-1 truncate text-s font-medium">
               {comment.authorName ?? '退会したユーザー'}
             </p>
+            {canEdit && (
+              <IconButton
+                icon={Ellipsis}
+                label="メニュー"
+                size="sm"
+                aria-haspopup="menu"
+                // ボタンの左下に出す(右クリックと同じメニュー)
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  setMenu({ x: rect.left, y: rect.bottom })
+                }}
+              />
+            )}
           </div>
           {editing ? (
             <textarea
