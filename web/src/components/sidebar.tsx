@@ -3,12 +3,11 @@ import { PanelLeftClose, Plus, SlidersHorizontal } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { Loading } from '#/components/loading'
 import { SettingsDialog } from '#/components/settings-dialog'
-import { ProductAvatar } from '#/components/product-avatar'
-import { ProductAvatarButton } from '#/components/product-avatar-button'
+import { SidebarProductRow } from '#/components/sidebar-product-row'
 import { SidebarInvitation } from '#/components/sidebar-invitation'
 import type { Invitation } from '#/lib/invitation'
 
-// `avatarUrl`: アイコンの画像の URL(なければ代わりの表示)。`isLeader` のときだけ、アイコンを押して変更できる
+// `avatarUrl`: アイコンの画像の URL(なければ代わりの表示)。`isLeader` の行だけ、右クリック(スマホは長押し)でメニューを出す(アイコンの変更・削除、プロダクト管理)
 export type SidebarProduct = { id: string; name: string; avatarUrl?: string | null; isLeader?: boolean }
 
 // サイドバー(Figma `side-light` / `side-dark`、幅 240px)。角丸は使わない(ユーザーの指定。Figma は 10px)。
@@ -19,6 +18,7 @@ export function Sidebar({
   invitations = [],
   activeProductId,
   onSelectProduct,
+  onManageProduct,
   onCreateProduct,
   onCollapse,
   isLoading = false,
@@ -28,6 +28,8 @@ export function Sidebar({
   invitations?: Invitation[]
   activeProductId?: string
   onSelectProduct?: (productId: string) => void
+  // 行のメニューの「プロダクト管理」(そのプロダクトへ移動して、管理のダイアログを開く)
+  onManageProduct?: (productId: string) => void
   onCreateProduct?: () => void
   // PC 幅でサイドバーをたたむ(渡したときだけ、ロゴの右にボタンを出す。スマホ幅では出さない)
   onCollapse?: () => void
@@ -78,24 +80,16 @@ export function Sidebar({
             </li>
           ) : (
             products.map((p) => (
-              <li key={p.id} className="relative">
-                {/* アイコンは、行の左から 3px、上下中央に重ねる(行の大きさは変わらない)。名前は、その分(18px + 余白 8px)だけ右にずらす */}
-                {p.isLeader ? (
-                  <ProductAvatarButton productId={p.id} name={p.name} src={p.avatarUrl} />
-                ) : (
-                  <span className="pointer-events-none absolute top-0 left-[3px] flex h-12 items-center">
-                    <ProductAvatar src={p.avatarUrl} name={p.name} />
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onSelectProduct?.(p.id)}
-                  aria-current={p.id === activeProductId ? 'page' : undefined}
-                  className="flex h-12 w-full items-center truncate border-b-2 border-transparent pr-2 pl-[29px] text-left text-l font-medium transition-[border-color,background-color] duration-200 ease-out motion-reduce:transition-none hover:bg-side-item aria-[current=page]:border-ink aria-[current=page]:bg-surface aria-[current=page]:hover:bg-surface"
-                >
-                  <span className="truncate">{p.name}</span>
-                </button>
-              </li>
+              <SidebarProductRow
+                key={p.id}
+                productId={p.id}
+                name={p.name}
+                avatarUrl={p.avatarUrl}
+                isLeader={p.isLeader}
+                active={p.id === activeProductId}
+                onSelect={onSelectProduct}
+                onManage={onManageProduct}
+              />
             ))
           )}
         </ul>
