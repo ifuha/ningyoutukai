@@ -133,6 +133,11 @@ export function AppShell({
             drawer.close()
             void navigate({ to: '/products/$productId', params: { productId } })
           }}
+          onManageProduct={(productId) => {
+            drawer.close()
+            // 移動して、ページが開いたら「プロダクト管理」を開く(すでに開いているプロダクトでも同じ)
+            void navigate({ to: '/products/$productId', params: { productId }, search: { manage: 'product' } })
+          }}
           onCreateProduct={() => {
             drawer.close()
             void navigate({ to: '/products/new' })
