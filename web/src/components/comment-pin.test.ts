@@ -13,6 +13,7 @@ const comment = (patch: Partial<ProductComment> = {}): ProductComment => ({
   x: 100,
   y: 200,
   authorName: 'リーダー',
+  authorAvatarUrl: null,
   createdBy: 'u1',
   canEdit: true,
   createdAt: '2026-11-07T00:00:00.000Z',
@@ -27,6 +28,20 @@ const renderPin = (props: Partial<Parameters<typeof CommentPin>[0]> = {}) =>
   )
 
 describe('CommentPin', () => {
+  test('ピンは作成者のアバター。画像があれば画像、なければ名前の頭文字、名前もなければコメントのアイコン', () => {
+    const withImage = renderPin({ comment: comment({ authorAvatarUrl: 'https://example.com/a.png' }) })
+    expect(withImage).toContain('src="https://example.com/a.png"')
+    expect(withImage).not.toContain('data-comment-initial')
+    expect(renderPin()).toMatch(/data-comment-initial[^>]*>リ</)
+    const none = renderPin({ comment: comment({ authorName: null }) })
+    expect(none).not.toContain('data-comment-initial')
+    expect(none).toContain('lucide-message-square')
+  })
+  test('開いたカードにも、作成者のアバターと名前が出る', () => {
+    const html = renderPin({ defaultOpen: true, comment: comment({ authorAvatarUrl: 'https://example.com/a.png' }) })
+    expect(html.match(/src="https:\/\/example\.com\/a\.png"/g)?.length).toBe(2)
+    expect(html).toContain('data-comment-author')
+  })
   test('座標の位置に置く(offset を足す)。閉じているときは、ピンだけで、本文は出ない', () => {
     const html = renderPin({ offsetX: 10, offsetY: 20 })
     expect(html).toContain('left:110px;top:220px')
@@ -71,6 +86,12 @@ describe('CommentDraft', () => {
     expect(html).toContain('maxLength="2000"')
     expect(html).toContain('コメントする')
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-label="コメントする"|<button[^>]*aria-label="コメントする"[^>]*disabled=""/)
+  })
+  test('入力欄と送信のボタンは、横に並べる(flex)。ボタンはアイコンだけで、文字は出さない(名前はツールチップ)', () => {
+    const html = renderDraft()
+    expect(html).toContain('flex items-end gap-2')
+    expect(html.indexOf('<textarea')).toBeLessThan(html.indexOf('type="submit"'))
+    expect(html).not.toMatch(/<span class="text-m font-medium">コメントする<\/span>/)
   })
   test('「やめる」のボタンと、メールの案内の文は置かない(キャンセルは Esc)', () => {
     const html = renderDraft()
