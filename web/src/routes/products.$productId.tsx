@@ -31,6 +31,7 @@ import { canEditSections } from '#/lib/section-permissions'
 import { useSectionActions } from '#/lib/use-section-actions'
 import { treeQueryKey, useSections } from '#/lib/use-sections'
 import { parseProductSearch } from '#/lib/product-search'
+import { useProductCommentActions, useProductComments } from '#/lib/use-product-comments'
 import { useProductNoteActions, useProductNotes } from '#/lib/use-product-notes'
 
 // プロダクトの画面(`/products/$productId`)。ログイン必須。見出しと、ツリー(リーダーとメンバー、タスク)
@@ -88,6 +89,8 @@ function Product() {
   const sections = useSections(productId)
   const notes = useProductNotes(productId)
   const noteActions = useProductNoteActions(productId)
+  const comments = useProductComments(productId)
+  const commentActions = useProductCommentActions(productId)
   // セクションの操作(作成・更新・削除・カードの移動)。画面の値を先に更新し、失敗したら元に戻して、通知する
   const sectionActions = useSectionActions(productId)
 
@@ -206,6 +209,10 @@ function Product() {
                 onAddMemo={async (position) => { await noteActions.add(position.x, position.y) }}
                 onUpdateMemo={async (id, patch) => { await noteActions.update(id, patch) }}
                 onDeleteMemo={async (id) => { await noteActions.remove(id) }}
+                comments={comments.data}
+                onAddComment={isLeader ? async (comment) => { await commentActions.add(comment) } : undefined}
+                onUpdateComment={async (id, patch) => { await commentActions.update(id, patch) }}
+                onDeleteComment={async (id) => { await commentActions.remove(id) }}
                 canEditSections={canEditSections(product.data?.role)}
                 sectionActions={sectionActions}
                 onEditTask={openTask}

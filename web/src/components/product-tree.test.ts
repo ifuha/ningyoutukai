@@ -162,6 +162,23 @@ describe('TreeToolbar', () => {
   const bar = (props: Record<string, unknown>) =>
     renderToStaticMarkup(createElement(TreeToolbar, { mode: 'select', onModeChange: () => {}, onOpenSearch: () => {}, ...props } as never))
 
+  test('「コメント」は、リーダー(onPlaceComment を渡したとき)だけに出る。メモと検索の間に並ぶ', () => {
+    expect(bar({ onOpenMembers: () => {} })).not.toContain('aria-label="コメント"')
+    const html = bar({ onOpenMembers: () => {}, onPlaceComment: () => {}, onAddMemo: () => {} })
+    const memo = html.indexOf('aria-label="メモ"')
+    const comment = html.indexOf('aria-label="コメント"')
+    const search = html.indexOf('aria-label="検索"')
+    expect(memo).toBeGreaterThan(-1)
+    expect(comment).toBeGreaterThan(memo)
+    expect(search).toBeGreaterThan(comment)
+  })
+  test('メモの編集中・セクションを置く間・検索を開いている間は、「コメント」も押せない(道具は同時に使えない)', () => {
+    for (const busy of [{ memoEditing: true }, { searchOpen: true }, { mode: 'section' }]) {
+      const html = bar({ onPlaceComment: () => {}, ...busy })
+      expect(html.match(/<button[^>]*aria-label="コメント"[^>]*>/)?.[0]).toContain('disabled=""')
+    }
+  })
+
   test('並びと寸法(高さ 56、ボタン 40×40)で、5 つのボタンと 2 つの区切りがある。「移動」はない', () => {
     const html = bar({ onOpenMembers: () => {} })
     const labels = ['選択', 'メンバー', 'セクション', 'メモ', '検索']
