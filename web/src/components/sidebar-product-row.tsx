@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { AvatarPreviewDialog } from '#/components/avatar-preview-dialog'
 import { ContextMenu } from '#/components/context-menu'
 import { ProductAvatar } from '#/components/product-avatar'
 import { ApiError } from '#/lib/api'
@@ -14,7 +15,9 @@ const ERROR_MS = 5000
 // サイドバーのプロダクトの 1 行(`li`)。
 // - アイコンは、行の左から 3px、上下中央に重ねる(押せない表示。行の大きさは変わらない)。名前は、その分(18px + 余白 8px)だけ右にずらす
 // - リーダーの行だけ、右クリック(スマホは長押し)でメニューを出す: アイコンを変更・アイコンを削除・プロダクト管理。メンバーの行は、何も出さない(ブラウザ標準のメニューもそのまま)
-//   - 画像の確認・送信・エラーは、アイコンを変更するときの処理。エラーは、行の下に小さく出し(`role="alert"`)、約 5 秒で消える。次の操作でも消える
+//   - アイコンの変更: 画像を選ぶ → ブラウザ側の確認(種類・大きさ。合わなければ、送らずに、行の下に理由を出す) → **プレビューのモーダル**(大きな表示と、サイドバーでの見え方)→「設定する」で送る。
+//     送信に失敗したら、モーダルの中にエラーを出して、開いたままにする(やり直せる)。成功したら、モーダルを閉じる
+//   - 行の下のエラー(`role="alert"`)は、約 5 秒で消える。次の操作でも消える
 //   - 長押しが成立したあとの click(プロダクトを選ぶ)は、無視する。指が 8px 動いたら取り消す(サイドバーのスクロールとぶつからない)
 export function SidebarProductRow({
   productId,
@@ -37,6 +40,8 @@ export function SidebarProductRow({
   const queryClient = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  // プレビューのモーダルに出している、選んだ画像(送る前)。null = モーダルを閉じている
+  const [previewFile, setPreviewFile] = useState<File | null>(null)
   // メニュー(押した位置 = 画面の座標)。右クリックと、長押しで開く
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
@@ -50,7 +55,10 @@ export function SidebarProductRow({
   const upload = useMutation({
     // Eden の `file` は `File`(multipart で送られる)
     mutationFn: (file: File) => edenData(eden().api.product({ productId }).avatar.put({ file })),
-    onSuccess,
+    onSuccess: () => {
+      setPreviewFile(null)
+      onSuccess()
+    },
     onError,
   })
   const remove = useMutation({
@@ -59,12 +67,12 @@ export function SidebarProductRow({
     onError,
   })
 
-  // エラーは約 5 秒で消す
+  // エラーは約 5 秒で消す(モーダルを開いている間は、消さない。やり直す人が、見落とさないように)
   useEffect(() => {
-    if (error === null) return
+    if (error === null || previewFile !== null) return
     const timer = setTimeout(() => setError(null), ERROR_MS)
     return () => clearTimeout(timer)
-  }, [error])
+  }, [error, previewFile])
 
   const busy = upload.isPending || remove.isPending
 
@@ -124,15 +132,35 @@ export function SidebarProductRow({
               setError(problem)
               return
             }
+            // すぐには送らず、プレビューのモーダルで確かめてもらう
             setError(null)
-            upload.mutate(file)
+            upload.reset()
+            setPreviewFile(file)
           }}
         />
       )}
-      {error !== null && (
+      {error !== null && previewFile === null && (
         <p role="alert" className="px-2 pb-1 text-s break-words">
           {error}
         </p>
+      )}
+      {isLeader && (
+        <AvatarPreviewDialog
+          file={previewFile}
+          productName={name}
+          pending={upload.isPending}
+          error={error}
+          onConfirm={() => {
+            if (!previewFile) return
+            setError(null)
+            upload.mutate(previewFile)
+          }}
+          onCancel={() => {
+            setPreviewFile(null)
+            setError(null)
+            upload.reset()
+          }}
+        />
       )}
       {isLeader && menu && (
         <ContextMenu
