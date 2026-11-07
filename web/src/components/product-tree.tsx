@@ -11,7 +11,11 @@ import { TreeConnectors } from '#/components/tree-connectors'
 import { TreeSearchPanel } from '#/components/tree-search-panel'
 import type { TreeSearchResult } from '#/components/tree-search-panel'
 import { TreeToolbar } from '#/components/tree-toolbar'
+import { CommentDraft } from '#/components/comment-draft'
+import { CommentPin } from '#/components/comment-pin'
 import { StickyNote } from '#/components/sticky-note'
+import type { CommentPlacement } from '#/components/comment-tool-button'
+import type { NewProductComment, ProductComment, ProductCommentPatch } from '#/lib/comment-api'
 import type { ProductNote, ProductNotePatch } from '#/lib/memo-api'
 import { boxToCanvasRect, CanvasViewContext, clientToCanvas } from '#/lib/canvas-view'
 import type { CanvasView } from '#/lib/section-interaction-types'
@@ -48,6 +52,8 @@ const NO_SECTIONS: Section[] = []
 // (拡大縮小は、ホイール・ピンチ・キー(+ -)、全体表示は、キー(0))
 const BOTTOM_INSET = 70
 const ABOVE_TOOLBAR = 'bottom-[74px]'
+/** コメントのピンの大きさ(px。`CommentPin` の `size-8`)。置いた位置が、ピンの中心になるよう、左上をずらすのに使う */
+const COMMENT_PIN_PX = 32
 
 // リーダーを一番上、その下にメンバーを横に並べる木構造。線は破線(CSS だけ)、矢印は子から親へ向く
 // 領域は、親(メイン領域)いっぱいの、自由にパン(移動)とズームができるキャンバス(スクロールバーは出さない)。初期表示は、全体が収まる倍率
@@ -84,6 +90,10 @@ export function ProductTree({
   onAddMemo,
   onUpdateMemo,
   onDeleteMemo,
+  comments = [],
+  onAddComment,
+  onUpdateComment,
+  onDeleteComment,
 }: {
   header?: ReactNode
   tree: ProductTreeData
@@ -100,11 +110,19 @@ export function ProductTree({
   onAddMemo?: (position: { x: number; y: number }) => void | Promise<void>
   onUpdateMemo?: (id: string, patch: ProductNotePatch) => void | Promise<void>
   onDeleteMemo?: (id: string) => void | Promise<void>
+  /** コメント(画面の座標に置く。参加者全員が見られる)。`onAddComment` を渡す(リーダー)と、ツールバーに「コメント」が出る */
+  comments?: ProductComment[]
+  onAddComment?: (comment: NewProductComment) => void | Promise<void>
+  onUpdateComment?: (id: number, patch: ProductCommentPatch) => void | Promise<void>
+  onDeleteComment?: (id: number) => void | Promise<void>
 }) {
   const { leader, members } = tree
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [memoError, setMemoError] = useState<string | null>(null)
+  // コメントを置いた位置(キャンバス座標)。入力欄を出している間だけ持つ。保存か、やめるで閉じる
+  const [commentDraft, setCommentDraft] = useState<{ x: number; y: number } | null>(null)
+  const [commentError, setCommentError] = useState<string | null>(null)
   // メモの内容を編集中か。編集中は、セクションやカードなど他の操作を止める(道具は同時に使えない)
   const [memoEditing, setMemoEditing] = useState(false)
   const memoEditingRef = useRef(false)
@@ -229,6 +247,20 @@ export function ProductTree({
     [contentRef, scale, bounds.offsetX, bounds.offsetY],
   )
   const canvasView = useMemo<CanvasView>(() => ({ scale, toCanvas }), [scale, toCanvas])
+  // コメントを置く: ツールバーのボタンをドラッグして離した位置(画面の座標)か、中央。ピンの中心が、その位置に来るようにして、入力欄を出す
+  const placeComment = (placement: CommentPlacement) => {
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const client = placement === 'center' ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : placement
+    // 画面(ツリー)の外で離したときは、置かない
+    if (client.x < rect.left || client.x > rect.right || client.y < rect.top || client.y > rect.bottom) return
+    const at = toCanvas(client)
+    setCommentError(null)
+    setCommentDraft({ x: at.x - COMMENT_PIN_PX / 2 / scale, y: at.y - COMMENT_PIN_PX / 2 / scale })
+  }
+  const showCommentError = (error: unknown) => {
+    setCommentError(error instanceof Error ? error.message : '保存できませんでした。時間をおいて再度お試しください')
+  }
   // カードの実際の位置と大きさ(キャンバス座標)。カードのドラッグが、どのカードでも(自動配置のカードも)測れるようにする
   const getCardRect = useCallback(
     (memberId: string) => {
@@ -437,6 +469,21 @@ export function ProductTree({
             scale={scale}
           />
           {notes.map((note) => <StickyNote key={note.noteId} note={note} autoEdit={note.noteId === autoEditNoteId} onEditingChange={setMemoEditing} offsetX={bounds.offsetX} offsetY={bounds.offsetY} onUpdate={(id, patch) => { void Promise.resolve(onUpdateMemo?.(id, patch)).catch(showMemoError) }} onDelete={(id) => { void Promise.resolve(onDeleteMemo?.(id)).catch(showMemoError) }} />)}
+          {comments.map((comment) => <CommentPin key={comment.commentId} comment={comment} offsetX={bounds.offsetX} offsetY={bounds.offsetY} onEditingChange={setMemoEditing} onUpdate={(id, patch) => { void Promise.resolve(onUpdateComment?.(id, patch)).catch(showCommentError) }} onDelete={(id) => { void Promise.resolve(onDeleteComment?.(id)).catch(showCommentError) }} />)}
+          {commentDraft && (
+            <CommentDraft
+              x={commentDraft.x}
+              y={commentDraft.y}
+              offsetX={bounds.offsetX}
+              offsetY={bounds.offsetY}
+              onEditingChange={setMemoEditing}
+              onCancel={() => setCommentDraft(null)}
+              onSubmit={async (content) => {
+                await onAddComment?.({ content, x: commentDraft.x, y: commentDraft.y })
+                setCommentDraft(null)
+              }}
+            />
+          )}
           {/* 内側の「動かす面」(カードの下)。カードのない空いた場所のドラッグで、セクションを動かす(カードのように)。
               リーダーだけ。面積の大きい順に並べるので、重なるときは、小さい(内側の)セクションが手前になる */}
           {moveSurfacesOn &&
@@ -629,6 +676,7 @@ export function ProductTree({
               showMemoError(error)
             })
           }}
+          onPlaceComment={onAddComment ? placeComment : undefined}
           canEditSections={canEditSections}
         />
       </div>
@@ -646,6 +694,12 @@ export function ProductTree({
         <div role="alert" className="absolute bottom-[74px] left-1/2 z-40 -translate-x-1/2 border border-line bg-panel px-4 py-2 text-m shadow-box">
           メモ: {memoError}
           <button type="button" className="ml-3 underline" onClick={() => setMemoError(null)}>閉じる</button>
+        </div>
+      )}
+      {commentError && (
+        <div role="alert" className="absolute bottom-[74px] left-1/2 z-40 -translate-x-1/2 border border-line bg-panel px-4 py-2 text-m shadow-box">
+          コメント: {commentError}
+          <button type="button" className="ml-3 underline" onClick={() => setCommentError(null)}>閉じる</button>
         </div>
       )}
       {sectionActions.notice && (
