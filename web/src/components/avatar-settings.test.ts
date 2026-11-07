@@ -52,8 +52,8 @@ describe('AvatarSettingsView: 画像を選ぶ前', () => {
   test('サイドバーでの見え方は、行と同じ寸法で、名前が出る', () => {
     expect(html).toContain('サイドバーでの見え方')
     expect(html).toMatch(/data-avatar-preview-row[^>]*class="[^"]*relative h-12 w-60/)
-    expect(html).toContain('left-[3px]')
-    expect(html).toContain('pl-[29px]')
+    expect(html).toContain('left-2')
+    expect(html).toContain('pl-[40px]')
     expect(html).toContain('社内ツール')
     expect(html).toContain('data-avatar-fallback')
   })

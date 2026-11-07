@@ -24,7 +24,7 @@ function useObjectUrl(file: File | null): string | null {
 
 // 見た目だけの部品(状態は持たない。`AvatarSettings` が状態をつなぐ)。
 // - 画像を選ぶ前: 画像を選ぶよう促す表示(大きな表示は破線の枠だけ)と、いまのアイコン(なければ、何も入れない空き)での、サイドバーでの見え方。「設定する」は、画像を選ぶまで押せない
-// - 画像を選んだあと: 大きな表示(選んだ画像そのもの)と、サイドバーで実際に出る小さな表示(18×18 の角丸。名前の左)を並べる。「別の画像を選ぶ」で選び直せる。「選んだ画像を取り消す」で、選ぶ前に戻る
+// - 画像を選んだあと: 大きな表示(選んだ画像そのもの)と、サイドバーで実際に出る小さな表示(24×24 の角丸。名前の左)を並べる。「別の画像を選ぶ」で選び直せる。「選んだ画像を取り消す」で、選ぶ前に戻る
 // - 送信中は、すべてのボタンが押せない
 // - アイコンを削除: いまのアイコンがあるときだけ出す。押すと確認(「アイコンを削除しますか?」→「削除する」/「やめる」)
 export function AvatarSettingsView({
@@ -99,10 +99,10 @@ export function AvatarSettingsView({
       <div className="space-y-1">
         <p className="text-s opacity-70">サイドバーでの見え方</p>
         <div data-avatar-preview-row className="relative h-12 w-60 max-w-full bg-side">
-          <span className="absolute top-0 left-[3px] flex h-12 items-center">
+          <span className="absolute top-0 left-2 flex h-12 items-center">
             <ProductAvatar src={shownUrl} name={productName} />
           </span>
-          <span className="flex h-12 items-center truncate pr-2 pl-[29px] text-l font-medium">
+          <span className="flex h-12 items-center truncate pr-2 pl-[40px] text-l font-medium">
             {productName}
           </span>
         </div>

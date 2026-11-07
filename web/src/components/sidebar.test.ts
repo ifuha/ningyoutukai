@@ -50,12 +50,12 @@ describe('Sidebar のプロダクトの行とアイコン', () => {
     expect(row.indexOf('<img')).toBeLessThan(row.indexOf('<button'))
   })
 
-  test('行の高さ h-12 は残り、li は relative。アイコンは左 3px・上下中央', () => {
+  test('行の高さ h-12 は残り、li は relative。アイコンは左 8px・上下中央', () => {
     for (const html of [render([leader]), render([member])]) {
       expect(html).toContain('<li class="relative">')
       expect(html).toContain('flex h-12 w-full items-center truncate')
-      expect(html).toContain('pl-[29px]')
-      expect(html).toContain('pointer-events-none absolute top-0 left-[3px] flex h-12 items-center')
+      expect(html).toContain('pl-[40px]')
+      expect(html).toContain('pointer-events-none absolute top-0 left-2 flex h-12 items-center')
     }
   })
 
