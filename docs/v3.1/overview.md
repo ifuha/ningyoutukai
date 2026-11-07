@@ -1,6 +1,6 @@
 # v3.1
 
-状態: **下書き(コメント機能の方針が決まった。残りは「決めること」)**。v3.0 のリリースノートは [../v3.0/release-notes.md](../v3.0/release-notes.md)。
+状態: **コメント機能を実装済み**([release-notes.md](release-notes.md))。v3.0 のリリースノートは [../v3.0/release-notes.md](../v3.0/release-notes.md)。
 
 ## 1. 目的
 
