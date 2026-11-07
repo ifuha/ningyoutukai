@@ -107,7 +107,7 @@ Figma のログイン画面のデザインが、まだ完成していない。�
 
 ## プロダクト設定のモーダル(`web/`)
 
-- `ProductSettingsDialog`(リーダー用。`open` / `onClose` は親が制御。枠は `SettingsShell`、ユーザー設定と共通)。左のカテゴリは、一般(プロダクト名の変更)・アイコン(`AvatarSettings`: 選ぶ・プレビュー・設定する・2 段階の確認つきの削除)・危険な操作(プロダクトの削除)。サイドバーの行のメニューは「プロダクト設定」だけで、`?settings=product` で、そのプロダクトのページへ移動して開く。プロダクト名の変更(`PATCH /api/product/:id`。保存は、変更があり空白だけでないときだけ押せる)と、プロダクトの削除(`DELETE`、204)ができる。
+- `ProductSettingsDialog`(リーダー用。`open` / `onClose` は親が制御。枠は `SettingsShell`、ユーザー設定と共通)。左のカテゴリは、一般(プロダクト名の変更)・アイコン(`AvatarSettings`: 選ぶ・プレビュー・設定する・2 段階の確認つきの削除)・プロダクトの削除(危険な操作なので、左の項目・見出し・ボタンを赤(`--color-danger`)で示す。`SettingsShellSection` の `danger: true`、`IconButton` の `variant="danger"` / `"danger-solid"`)。サイドバーの行のメニューは「プロダクト設定」だけで、`?settings=product` で、そのプロダクトのページへ移動して開く。プロダクト名の変更(`PATCH /api/product/:id`。保存は、変更があり空白だけでないときだけ押せる)と、プロダクトの削除(`DELETE`、204)ができる。
 - 名前の変更が成功したら `['products']` と `['products', productId]` を取り直す(モーダルは閉じない)。削除は 2 段階で、プロダクト名をそのまま入力すると「削除する」が押せる。成功したら `['products']` を取り直して `/home` へ移る。
 - 削除で一緒に消えるもの(外部キーの cascade): メンバー、招待、タスクの種類、メンバーに紐づくタスク。メンバー数は `memberCount` を渡したときだけ確認文に出す。
 

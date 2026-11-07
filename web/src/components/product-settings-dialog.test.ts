@@ -18,9 +18,12 @@ const render = (extra: Record<string, unknown> = {}) =>
 
 describe('productSettingsSections', () => {
   const sections = productSettingsSections(props)
-  test('一般・アイコン・危険な操作の 3 つ。この順', () => {
-    expect(sections.map((s) => s.label)).toEqual(['一般', 'アイコン', '危険な操作'])
+  test('一般・アイコン・プロダクトの削除の 3 つ。この順(「危険な操作」ではなく、中身が分かる名前)', () => {
+    expect(sections.map((s) => s.label)).toEqual(['一般', 'アイコン', 'プロダクトの削除'])
     expect(new Set(sections.map((s) => s.id)).size).toBe(3)
+  })
+  test('危険なのは「プロダクトの削除」だけ(赤で示す)', () => {
+    expect(sections.map((s) => Boolean(s.danger))).toEqual([false, false, true])
   })
 })
 
@@ -32,7 +35,8 @@ describe('ProductSettingsDialog', () => {
   test('左上の見出し「プロダクト設定」と、3 つのカテゴリ', () => {
     expect(html).toContain('>プロダクト設定</p>')
     expect(html).toContain('aria-label="プロダクト設定の項目"')
-    for (const label of ['一般', 'アイコン', '危険な操作']) expect(html).toContain(label)
+    for (const label of ['一般', 'アイコン', 'プロダクトの削除']) expect(html).toContain(label)
+    expect(html).not.toContain('危険な操作')
   })
   test('最初は「一般」: 選ばれているのは 1 つで、見出しと中身(プロダクト名の変更)が出る', () => {
     expect(html.match(/aria-current="page"/g)?.length).toBe(1)
@@ -42,5 +46,9 @@ describe('ProductSettingsDialog', () => {
     expect(html).toContain('名前の変更')
     expect(html).not.toContain('画像を選んでください')
     expect(html).not.toContain('このプロダクトを削除')
+  })
+  test('「プロダクトの削除」の項目だけ、赤(text-danger)で示す', () => {
+    expect(html.match(/text-danger/g)?.length).toBe(1)
+    expect(html).toMatch(/text-danger[^>]*>[\s\S]*?プロダクトの削除/)
   })
 })

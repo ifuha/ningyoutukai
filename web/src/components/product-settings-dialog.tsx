@@ -1,15 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ImageIcon, Pencil, Settings, Trash2, TriangleAlert, X } from 'lucide-react'
+import { ImageIcon, Pencil, Settings, Trash2, X } from 'lucide-react'
 import { AvatarSettings } from '#/components/avatar-settings'
 import { IconButton } from '#/components/icon-button'
 import { SettingsShell, type SettingsShellSection } from '#/components/settings-shell'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 
-const buttonClass =
-  'flex h-10 shrink-0 items-center justify-center shadow-box bg-panel px-3 text-m text-ink hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-panel'
 const inputClass =
   'h-10 min-w-0 flex-1 shadow-box bg-panel px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
@@ -102,16 +100,16 @@ function DeleteBlock({
   })
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      <p className="text-m">
+        このプロダクトを削除すると、
+        {memberCount === undefined ? 'メンバー' : `メンバー(${memberCount} 人)`}
+        、タスク、招待、タスクの種類が、すべて消えます。<strong className="font-bold">元に戻せません。</strong>
+      </p>
       {confirming ? (
         <div className="space-y-2">
-          <p className="break-words text-m">
-            「{productName}」を削除しますか?{' '}
-            {memberCount === undefined ? 'メンバー' : `メンバー(${memberCount} 人)`}
-            、タスク、招待、タスクの種類が、すべて消えます。元に戻せません
-          </p>
-          <label htmlFor="delete-confirm" className="block text-m">
-            確認のため、プロダクト名を入力してください
+          <label htmlFor="delete-confirm" className="block break-words text-m">
+            確認のため、「{productName}」と入力してください
           </label>
           <input
             id="delete-confirm"
@@ -122,14 +120,15 @@ function DeleteBlock({
             className={`${inputClass} w-full`}
           />
           <div className="flex gap-2">
-            <button
+            <IconButton
               type="button"
+              icon={Trash2}
+              label={remove.isPending ? '削除中…' : '削除する'}
+              showLabel
+              variant="danger-solid"
               disabled={remove.isPending || typed !== productName}
               onClick={() => remove.mutate()}
-              className={buttonClass}
-            >
-              削除する
-            </button>
+            />
             <IconButton
               icon={X}
               label="やめる"
@@ -148,8 +147,8 @@ function DeleteBlock({
         <IconButton
           icon={Trash2}
           label="このプロダクトを削除"
-          variant="outline"
-          className="bg-panel"
+          showLabel
+          variant="danger"
           onClick={() => setConfirming(true)}
         />
       )}
@@ -186,9 +185,10 @@ export function productSettingsSections({
       ),
     },
     {
-      id: 'danger',
-      label: '危険な操作',
-      icon: TriangleAlert,
+      id: 'delete',
+      label: 'プロダクトの削除',
+      icon: Trash2,
+      danger: true,
       render: () => (
         <DeleteBlock productId={productId} productName={productName} memberCount={memberCount} />
       ),
@@ -196,8 +196,8 @@ export function productSettingsSections({
   ]
 }
 
-// プロダクト設定のモーダル(リーダー用)。左にカテゴリ(一般・アイコン・危険な操作)、右に中身。枠は `settings-shell.tsx`。
-// 一般: プロダクト名の変更 / アイコン: アイコンの設定のすべて(選ぶ・設定する・削除) / 危険な操作: プロダクトの削除。開閉は親が制御する
+// プロダクト設定のモーダル(リーダー用)。左にカテゴリ(一般・アイコン・プロダクトの削除)、右に中身。枠は `settings-shell.tsx`。
+// 一般: プロダクト名の変更 / アイコン: アイコンの設定のすべて(選ぶ・設定する・削除) / プロダクトの削除(危険な操作なので、赤で示す)。開閉は親が制御する
 export function ProductSettingsDialog({
   productId,
   productName,
