@@ -1,12 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { Elysia } from "elysia";
 import { app } from "./app";
+import { devStorageRoutes } from "./routes/dev-storage";
 
 // 登録の追加・消失が意図的でないと失敗させるための、期待するルート一覧(メソッド + パス)
 const EXPECTED_ROUTES = [
   "ALL /api/auth/*",
   "DELETE /api/product/:productId",
+  "DELETE /api/product/:productId/avatar",
   "DELETE /api/product/:productId/member/:memberId",
   "DELETE /api/product/:productId/note/:noteId",
   "DELETE /api/product/:productId/section/:sectionId",
@@ -15,6 +18,7 @@ const EXPECTED_ROUTES = [
   "DELETE /api/product/:productId/task/:taskId/message/:messageId",
   "GET /",
   "GET /api/calendar/status",
+  "GET /api/_dev-storage/*",
   "GET /api/invitation",
   "GET /api/me/task",
   "GET /api/product/",
@@ -35,6 +39,7 @@ const EXPECTED_ROUTES = [
   "GET /swagger/json",
   "OPTIONS /",
   "OPTIONS /*",
+  "PUT /api/product/:productId/avatar",
   "PATCH /api/product/:productId",
   "PATCH /api/product/:productId/member/:memberId/position",
   "PATCH /api/product/:productId/note/:noteId",
@@ -68,6 +73,37 @@ describe("app のルート登録", () => {
   test("同じメソッド + パスが、重複して登録されていない", () => {
     const duplicated = registered.filter((r, i) => registered.indexOf(r) !== i);
     expect(duplicated).toEqual([]);
+  });
+
+  test("開発用の配信ルートは、AVATAR_BASE_URL が未設定のときだけ登録される(設定されている本番では登録されない)", () => {
+    const saved = process.env.AVATAR_BASE_URL;
+    const routesOf = () => devStorageRoutes(new Elysia()).routes.map((r) => `${r.method} ${r.path}`);
+    try {
+      delete process.env.AVATAR_BASE_URL;
+      expect(routesOf()).toEqual(["GET /api/_dev-storage/*"]);
+      process.env.AVATAR_BASE_URL = "https://pub-example.r2.dev";
+      expect(routesOf()).toEqual([]);
+      process.env.AVATAR_BASE_URL = "";
+      expect(routesOf()).toEqual(["GET /api/_dev-storage/*"]);
+    } finally {
+      if (saved === undefined) delete process.env.AVATAR_BASE_URL;
+      else process.env.AVATAR_BASE_URL = saved;
+    }
+  });
+
+  test("AVATAR_BASE_URL を設定して app.ts を読み込み直すと、開発用の配信ルートがない", async () => {
+    const saved = process.env.AVATAR_BASE_URL;
+    process.env.AVATAR_BASE_URL = "https://pub-example.r2.dev";
+    try {
+      const { app: prodApp } = await import(`./app?prod=${Date.now()}`);
+      const paths = prodApp.routes.map((r: { method: string; path: string }) => `${r.method} ${r.path}`);
+      expect(paths).not.toContain("GET /api/_dev-storage/*");
+      expect(paths).toContain("PUT /api/product/:productId/avatar");
+      expect(paths).toContain("DELETE /api/product/:productId/avatar");
+    } finally {
+      if (saved === undefined) delete process.env.AVATAR_BASE_URL;
+      else process.env.AVATAR_BASE_URL = saved;
+    }
   });
 
   test("routes/ の各プラグイン(xxxRoutes)が、app.ts で使われている", () => {

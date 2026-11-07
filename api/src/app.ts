@@ -7,6 +7,8 @@ import { calendarRoutes } from "./routes/calendar";
 import { invitationRoutes } from "./routes/invitation";
 import { meRoutes } from "./routes/me";
 import { memberRoutes } from "./routes/member";
+import { devStorageRoutes } from "./routes/dev-storage";
+import { productAvatarRoutes } from "./routes/product-avatar";
 import { productRoutes } from "./routes/product";
 import { productRevisionRoutes } from "./routes/product-revision";
 import { productManageRoutes } from "./routes/product-manage";
@@ -39,6 +41,9 @@ export const app = new Elysia()
   .use(taskRoutes)
   .use(meRoutes)
   .use(productManageRoutes)
+  .use(productAvatarRoutes)
+  // ローカル開発用の配信ルート。AVATAR_BASE_URL が設定されている環境(本番)では登録されない
+  .use(devStorageRoutes)
   .use(invitationRoutes)
   .use(memberRoutes)
   .use(taskKindRoutes)

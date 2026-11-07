@@ -15,6 +15,8 @@ export type StoredObject = {
   body: ReadableStream<Uint8Array>;
   /** 保存したときの Content-Type(なければ undefined) */
   contentType: string | undefined;
+  /** 保存したときの Cache-Control(なければ undefined) */
+  cacheControl: string | undefined;
   /** バイト数 */
   size: number;
   /** 中身が変わると変わる印(`ETag`。キャッシュの判定に使う)。ない実装では undefined */
@@ -23,7 +25,7 @@ export type StoredObject = {
 
 export interface ObjectStorage {
   /** 保存する。同じキーがあれば、上書きする */
-  put(key: string, body: StorageBody, options?: { contentType?: string }): Promise<void>;
+  put(key: string, body: StorageBody, options?: { contentType?: string; cacheControl?: string }): Promise<void>;
   /** 取り出す。なければ null */
   get(key: string): Promise<StoredObject | null>;
   /** 消す。なくても、エラーにしない(何度呼んでも同じ) */
@@ -74,13 +76,13 @@ export interface R2BucketLike {
   put(
     key: string,
     value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null,
-    options?: { httpMetadata?: { contentType?: string } },
+    options?: { httpMetadata?: { contentType?: string; cacheControl?: string } },
   ): Promise<unknown>;
   get(key: string): Promise<{
     body: ReadableStream<Uint8Array>;
     size: number;
     httpEtag?: string;
-    httpMetadata?: { contentType?: string };
+    httpMetadata?: { contentType?: string; cacheControl?: string };
   } | null>;
   delete(key: string): Promise<void>;
 }
@@ -89,8 +91,12 @@ export function createR2Storage(bucket: R2BucketLike): ObjectStorage {
   return {
     async put(key, body, options) {
       assertValidKey(key);
+      const httpMetadata = {
+        ...(options?.contentType ? { contentType: options.contentType } : {}),
+        ...(options?.cacheControl ? { cacheControl: options.cacheControl } : {}),
+      };
       await bucket.put(key, toBytes(body), {
-        httpMetadata: options?.contentType ? { contentType: options.contentType } : undefined,
+        httpMetadata: Object.keys(httpMetadata).length > 0 ? httpMetadata : undefined,
       });
     },
     async get(key) {
@@ -100,6 +106,7 @@ export function createR2Storage(bucket: R2BucketLike): ObjectStorage {
       return {
         body: object.body,
         contentType: object.httpMetadata?.contentType,
+        cacheControl: object.httpMetadata?.cacheControl,
         size: object.size,
         etag: object.httpEtag,
       };
@@ -130,7 +137,7 @@ export function createLocalStorage(dir: string): ObjectStorage {
       const file = await pathOf(key);
       await fs.mkdir(path.dirname(file), { recursive: true });
       await fs.writeFile(file, await readAll(toBytes(body)));
-      await fs.writeFile(file + metaSuffix, JSON.stringify({ contentType: options?.contentType ?? null }));
+      await fs.writeFile(file + metaSuffix, JSON.stringify({ contentType: options?.contentType ?? null, cacheControl: options?.cacheControl ?? null }));
     },
     async get(key) {
       const fs = await import("node:fs/promises");
@@ -143,15 +150,21 @@ export function createLocalStorage(dir: string): ObjectStorage {
         throw e;
       }
       let contentType: string | undefined;
+      let cacheControl: string | undefined;
       try {
-        const meta = JSON.parse(await fs.readFile(file + metaSuffix, "utf8")) as { contentType?: string | null };
+        const meta = JSON.parse(await fs.readFile(file + metaSuffix, "utf8")) as {
+          contentType?: string | null;
+          cacheControl?: string | null;
+        };
         contentType = meta.contentType ?? undefined;
+        cacheControl = meta.cacheControl ?? undefined;
       } catch {
         contentType = undefined;
+        cacheControl = undefined;
       }
       const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes as BufferSource));
       const etag = `"${Array.from(hash.slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("")}"`;
-      return { body: streamOf(bytes), contentType, size: bytes.byteLength, etag };
+      return { body: streamOf(bytes), contentType, cacheControl, size: bytes.byteLength, etag };
     },
     async delete(key) {
       const fs = await import("node:fs/promises");
@@ -165,17 +178,21 @@ export function createLocalStorage(dir: string): ObjectStorage {
 // ---- メモリ(テスト用) ----
 
 export function createMemoryStorage(): ObjectStorage & { keys(): string[] } {
-  const items = new Map<string, { bytes: Uint8Array; contentType: string | undefined }>();
+  const items = new Map<string, { bytes: Uint8Array; contentType: string | undefined; cacheControl: string | undefined }>();
   return {
     async put(key, body, options) {
       assertValidKey(key);
-      items.set(key, { bytes: await readAll(toBytes(body)), contentType: options?.contentType });
+      items.set(key, {
+        bytes: await readAll(toBytes(body)),
+        contentType: options?.contentType,
+        cacheControl: options?.cacheControl,
+      });
     },
     async get(key) {
       assertValidKey(key);
       const item = items.get(key);
       if (!item) return null;
-      return { body: streamOf(item.bytes), contentType: item.contentType, size: item.bytes.byteLength, etag: undefined };
+      return { body: streamOf(item.bytes), contentType: item.contentType, cacheControl: item.cacheControl, size: item.bytes.byteLength, etag: undefined };
     },
     async delete(key) {
       assertValidKey(key);
