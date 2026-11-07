@@ -1,6 +1,4 @@
-import { MousePointer2, Search, SquareDashed, StickyNote, User } from 'lucide-react'
-import { CommentToolButton } from '#/components/comment-tool-button'
-import type { CommentPlacement } from '#/components/comment-tool-button'
+import { MessageSquare, MousePointer2, Search, SquareDashed, StickyNote, User } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import type { CanvasTool } from '#/lib/section-interaction-types'
 
@@ -14,7 +12,7 @@ import type { CanvasTool } from '#/lib/section-interaction-types'
 //   セクションは、リーダーだけが使える(リーダーでなければ、押せない見た目。ツールチップで理由を示す)。選ぶと、キャンバスでドラッグして、セクションを置く(Esc か「選択」で戻る)
 // 道具は同時に使えない(セクションを置く間・検索を開く間・メモを編集する間は、他の道具が押せない)
 //   メンバーは、メンバーの管理を開く(リーダーのみ)。検索は、プロダクト内の名前検索を開く。
-//   コメントは、リーダーだけに出す(`onPlaceComment` を渡したときだけ)。ボタンを画面へドラッグして置く(`CommentToolButton`)
+//   コメントは、リーダーだけに出す(`onToggleComment` を渡したときだけ)。押すと配置モード(カーソルがコメントのアイコンになる)。ツリーをクリックして置く。ほかの道具を押すと、やめる
 
 export type TreeMode = CanvasTool
 
@@ -33,7 +31,8 @@ export function TreeToolbar({
   onOpenMembers,
   onOpenSearch,
   onAddMemo,
-  onPlaceComment,
+  onToggleComment,
+  commentActive = false,
   canEditSections = false,
   searchOpen = false,
   memoEditing = false,
@@ -46,8 +45,10 @@ export function TreeToolbar({
   onOpenSearch?: () => void
   /** キャンバス中央に付箋を追加 */
   onAddMemo?: () => void
-  /** コメントを置く(リーダーだけ。渡さなければ、「コメント」は出さない)。位置は、画面の座標か、中央 */
-  onPlaceComment?: (placement: CommentPlacement) => void
+  /** コメントの配置モードの入り・切り(リーダーだけ。渡さなければ、「コメント」は出さない) */
+  onToggleComment?: () => void
+  /** コメントの配置モード中か(押された見た目にする) */
+  commentActive?: boolean
   /** セクションを置ける(リーダー)か。false のときは、「セクション」が押せない見た目 */
   canEditSections?: boolean
   /** 検索を開いているか。開いている間は、検索以外の道具を使えない */
@@ -100,7 +101,16 @@ export function TreeToolbar({
         onClick={onAddMemo}
         disabled={!onAddMemo || busy}
       />
-      {onPlaceComment && <CommentToolButton disabled={busy} tip={busy ? busyTip : undefined} onPlace={onPlaceComment} />}
+      {onToggleComment && (
+        <IconButton
+          icon={MessageSquare}
+          label="コメント"
+          tip={busy ? busyTip : commentActive ? 'コメントを置く(ツリーをクリック。ほかの道具を押すとやめる)' : 'コメントを置く'}
+          pressed={commentActive}
+          disabled={busy}
+          onClick={onToggleComment}
+        />
+      )}
       <Divider />
       <IconButton
         icon={Search}
