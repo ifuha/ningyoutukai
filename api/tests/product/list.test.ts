@@ -20,7 +20,7 @@ describe("GET /api/product", () => {
     const listA = await (await listProducts(a.cookie)).json();
     expect(listA).toHaveLength(1);
     expect(listA[0]).toMatchObject({ productId: aId, productName: "A", role: "leader" });
-    expect(Object.keys(listA[0]).sort()).toEqual(["createdAt", "productId", "productName", "role"]);
+    expect(Object.keys(listA[0]).sort()).toEqual(["avatarUrl", "createdAt", "productId", "productName", "role"]);
 
     const listB = await (await listProducts(b.cookie)).json();
     expect(listB.map((p: { productId: string }) => p.productId)).toEqual([bId]);

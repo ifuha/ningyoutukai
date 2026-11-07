@@ -55,6 +55,17 @@ describe('IconButton', () => {
     expect(render({ variant: 'outline' })).toContain('shadow-box')
   })
 
+  test('危険な操作のバリアント: danger は赤い枠と文字(ホバーで赤く塗る)、danger-solid は赤の塗り', () => {
+    const danger = render({ variant: 'danger' })
+    expect(danger).toContain('border-danger')
+    expect(danger).toContain('text-danger')
+    expect(danger).toContain('hover:bg-danger')
+    const solid = render({ variant: 'danger-solid' })
+    expect(solid).toContain('bg-danger')
+    expect(solid).toContain('text-surface')
+    expect(solid).not.toContain('text-danger')
+  })
+
   test('onClick や data- などの属性を、ボタンに渡す', () => {
     const html = render({ 'data-row': true, form: 'f1' })
     expect(html).toContain('data-row="true"')

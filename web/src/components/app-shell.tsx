@@ -122,6 +122,8 @@ export function AppShell({
           products={(products.data ?? []).map((p) => ({
             id: p.productId,
             name: p.productName,
+            avatarUrl: p.avatarUrl,
+            isLeader: p.role === 'leader',
           }))}
           invitations={invitations.data}
           onCollapse={() => sidebar.set(true)}
@@ -130,6 +132,11 @@ export function AppShell({
           onSelectProduct={(productId) => {
             drawer.close()
             void navigate({ to: '/products/$productId', params: { productId } })
+          }}
+          onOpenProductSettings={(productId) => {
+            drawer.close()
+            // 移動して、ページが開いたら「プロダクト設定」を開く(すでに開いているプロダクトでも同じ)
+            void navigate({ to: '/products/$productId', params: { productId }, search: { settings: 'product' } })
           }}
           onCreateProduct={() => {
             drawer.close()

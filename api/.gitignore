@@ -5,6 +5,9 @@
 /.pnp
 .pnp.js
 
+# ローカルのファイル保存(ストレージ。`STORAGE_DIR` で変えられる)
+/.local-storage
+
 # testing
 /coverage
 

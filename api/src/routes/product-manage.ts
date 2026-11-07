@@ -3,12 +3,15 @@ import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { products } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
+import { withAvatarUrl } from "../lib/avatar";
 import { getMembership } from "../lib/product-access";
 import { MessageSchema, ProductSchema } from "../lib/response-schema";
+import { objectStorage } from "../lib/storage-plugin";
 import { NO_NUL } from "../lib/validation";
 
 export const productManageRoutes = new Elysia({ name: "product-manage" })
   .use(authGuard)
+  .use(objectStorage)
   // プロダクト情報変更(リーダーのみ): 所属していないプロダクトは存在を漏らさないよう 404
   .patch(
     "/api/product/:productId",
@@ -29,7 +32,8 @@ export const productManageRoutes = new Elysia({ name: "product-manage" })
         .returning();
       if (!updated) return status(404, { message: "プロダクトが見つかりません" });
 
-      return status(200, { ...updated, role: membership.role });
+      // avatarKey(R2 のキー)は応答に含めない。代わりに avatarUrl を返す
+      return status(200, { ...withAvatarUrl(updated), role: membership.role });
     },
     {
       requireUser: true,
@@ -43,18 +47,33 @@ export const productManageRoutes = new Elysia({ name: "product-manage" })
   // プロダクト削除(リーダーのみ): メンバー・招待・タスク種類・タスクは外部キーの cascade で一緒に消える
   .delete(
     "/api/product/:productId",
-    async ({ params, user, status }) => {
+    async ({ params, user, storage, status }) => {
       const membership = await getMembership(params.productId, user.userId);
       if (!membership) return status(404, { message: "プロダクトが見つかりません" });
       if (membership.role !== "leader") {
         return status(403, { message: "プロダクトリーダーのみ実行できます" });
       }
 
+      // 行が消えると avatarKey が読めなくなるので、削除の前に読んでおく
+      const [before] = await db
+        .select({ avatarKey: products.avatarKey })
+        .from(products)
+        .where(eq(products.productId, params.productId));
+
       const deleted = await db
         .delete(products)
         .where(eq(products.productId, params.productId))
         .returning({ productId: products.productId });
       if (deleted.length === 0) return status(404, { message: "プロダクトが見つかりません" });
+
+      // DB の削除が成功したあとで、R2 のアイコンも消す(消せなくても、削除は成功させる)
+      if (before?.avatarKey) {
+        try {
+          await storage.delete(before.avatarKey);
+        } catch (e) {
+          console.warn(`[product-manage] アイコンの画像を消せませんでした: ${before.avatarKey}`, e);
+        }
+      }
 
       return status(204, undefined);
     },

@@ -3,10 +3,12 @@ import { PanelLeftClose, Plus, SlidersHorizontal } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { Loading } from '#/components/loading'
 import { SettingsDialog } from '#/components/settings-dialog'
+import { SidebarProductRow } from '#/components/sidebar-product-row'
 import { SidebarInvitation } from '#/components/sidebar-invitation'
 import type { Invitation } from '#/lib/invitation'
 
-export type SidebarProduct = { id: string; name: string }
+// `avatarUrl`: アイコンの画像の URL(なければ代わりの表示)。`isLeader` の行だけ、右クリック(スマホは長押し)でメニューを出す(プロダクト設定)
+export type SidebarProduct = { id: string; name: string; avatarUrl?: string | null; isLeader?: boolean }
 
 // サイドバー(Figma `side-light` / `side-dark`、幅 240px)。角丸は使わない(ユーザーの指定。Figma は 10px)。
 // データは、呼び出し側から渡す(api は、ここでは呼ばない)。
@@ -16,6 +18,7 @@ export function Sidebar({
   invitations = [],
   activeProductId,
   onSelectProduct,
+  onOpenProductSettings,
   onCreateProduct,
   onCollapse,
   isLoading = false,
@@ -25,6 +28,8 @@ export function Sidebar({
   invitations?: Invitation[]
   activeProductId?: string
   onSelectProduct?: (productId: string) => void
+  // 行のメニューの「プロダクト設定」(そのプロダクトへ移動して、設定のモーダルを開く)
+  onOpenProductSettings?: (productId: string) => void
   onCreateProduct?: () => void
   // PC 幅でサイドバーをたたむ(渡したときだけ、ロゴの右にボタンを出す。スマホ幅では出さない)
   onCollapse?: () => void
@@ -75,16 +80,16 @@ export function Sidebar({
             </li>
           ) : (
             products.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelectProduct?.(p.id)}
-                  aria-current={p.id === activeProductId ? 'page' : undefined}
-                  className="flex h-12 w-full items-center truncate border-b-2 border-transparent px-2 text-left text-l font-medium transition-[border-color,background-color] duration-200 ease-out motion-reduce:transition-none hover:bg-side-item aria-[current=page]:border-ink aria-[current=page]:bg-surface aria-[current=page]:hover:bg-surface"
-                >
-                  <span className="truncate">{p.name}</span>
-                </button>
-              </li>
+              <SidebarProductRow
+                key={p.id}
+                productId={p.id}
+                name={p.name}
+                avatarUrl={p.avatarUrl}
+                isLeader={p.isLeader}
+                active={p.id === activeProductId}
+                onSelect={onSelectProduct}
+                onOpenSettings={onOpenProductSettings}
+              />
             ))
           )}
         </ul>

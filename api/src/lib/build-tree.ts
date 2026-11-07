@@ -1,6 +1,7 @@
 // ツリー表示用データの組み立て。DB には触らない純粋関数。
 import type { productMembers, products, taskTypes, tasks, users } from "../db/schema";
-import type { ProductTree, TreeNode, TreeTask } from "./tree-schema";
+import { avatarUrlOf } from "./avatar";
+import type { ProductTree,TreeNode, TreeTask } from "./tree-schema";
 
 // 入力(DB から取ってきた行)の型は、drizzle のテーブルの型から作る
 type Member = typeof productMembers.$inferSelect;
@@ -29,7 +30,7 @@ export type TaskRow = Pick<
 > & { taskTypeName: TaskType["taskTypeName"] | null };
 
 export function buildTree(
-  product: Pick<Product, "productId" | "productName">,
+  product: Pick<Product, "productId" | "productName" | "avatarKey">,
   memberRows: MemberRow[],
   taskRows: TaskRow[],
   viewerProductMemberId: string,
@@ -71,5 +72,10 @@ export function buildTree(
   const leader = leaderIndex >= 0 ? nodes[leaderIndex] : null;
   const members = nodes.filter((_, i) => i !== leaderIndex);
 
-  return { product, leader, members, viewerProductMemberId };
+  const productView = {
+    productId: product.productId,
+    productName: product.productName,
+    avatarUrl: avatarUrlOf(product.avatarKey),
+  };
+  return { product: productView, leader, members, viewerProductMemberId };
 }

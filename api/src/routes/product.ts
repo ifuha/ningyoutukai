@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { productMembers, products } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
+import { withAvatarUrl } from "../lib/avatar";
 import { MessageSchema, ProductSchema } from "../lib/response-schema";
 import { NO_NUL } from "../lib/validation";
 
@@ -10,6 +11,7 @@ const productColumns = {
   productId: products.productId,
   productName: products.productName,
   createdAt: products.createdAt,
+  avatarKey: products.avatarKey,
   role: productMembers.role,
 };
 
@@ -35,7 +37,8 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
         return product;
       });
 
-      return status(201, { ...created, role: "leader" as const });
+      // avatarKey(R2 のキー)は応答に含めない。代わりに avatarUrl を返す
+      return status(201, { ...withAvatarUrl(created), role: "leader" as const });
     },
     {
       requireUser: true,
@@ -47,12 +50,14 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
   // プロダクト一覧: ログイン中のユーザーが所属するもの
   .get(
     "/",
-    ({ user }) =>
-      db
+    async ({ user }) => {
+      const rows = await db
         .select(productColumns)
         .from(productMembers)
         .innerJoin(products, eq(productMembers.productId, products.productId))
-        .where(eq(productMembers.userId, user.userId)),
+        .where(eq(productMembers.userId, user.userId));
+      return rows.map(withAvatarUrl);
+    },
     {
       requireUser: true,
       response: { 200: t.Array(ProductSchema) },
@@ -73,7 +78,7 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
             eq(productMembers.userId, user.userId)
           )
         );
-      return row ?? status(404, { message: "プロダクトが見つかりません" });
+      return row ? withAvatarUrl(row) : status(404, { message: "プロダクトが見つかりません" });
     },
     {
       requireUser: true,

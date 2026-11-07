@@ -20,6 +20,8 @@
   --color-side-item: #e2dfd4;
   /* キャンバスの上に浮かぶパネル(検索・ツールバー・メニュー・メンバーのカードなど)の背景。ライトは紙の色、ダークは #0E1015(サイドバーと同じ暗い色)で、背景(ダークは #1b1f2a)と区別する */
   --color-panel: var(--color-surface);
+  /* 危険な操作(削除など)の色。ライトは濃い赤、ダークは明るい赤(どちらも、背景の上で、文字として読める) */
+  --color-danger: #d32f2f;
   /* 線の色(区切り線・内側の輪)。文字色を紙の色に混ぜる。濃さは、この割合で変える */
   --color-line: color-mix(in srgb, var(--color-ink) 30%, var(--color-surface));
   /* 文字の大きさは、小・中・大の 3 つだけ(text-s / text-m / text-l) */
@@ -64,6 +66,7 @@
     --color-side: #0e1015;
     --color-side-item: #2a2e39;
     --color-panel: #0e1015;
+    --color-danger: #ff5252;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -77,6 +80,7 @@
     --color-side: #0e1015;
     --color-side-item: #2a2e39;
     --color-panel: #0e1015;
+    --color-danger: #ff5252;
   }
 }
 
@@ -236,6 +240,21 @@ body {
   animation: stage-in 0.25s ease-out 0.2s backwards;
 }
 
+/*
+ * 開閉する詳細(`<details>`。タスクのフォームの「詳細」)を開いたとき、中身が、少し上から降りながら、ふわっと現れる(軽い動き)。
+ * 開いている間の中身にだけ付く(閉じると、中身は描かれない)。動きを減らす設定のときは、すぐ表示する
+ */
+@keyframes details-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.details-in {
+  animation: details-in 0.18s ease-out;
+}
+
 /* 404 ページの文字の縁取り。左右の幕の記号に重なっても読めるよう、周りを、紙の色でにじませて消す(窓を使わない代わり) */
 .not-found-halo {
   text-shadow:
@@ -246,6 +265,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .code-char,
+  .details-in,
   .stage-in {
     animation: none;
   }
