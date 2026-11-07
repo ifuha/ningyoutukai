@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, spyOn, test } from "b
 import { eq } from "drizzle-orm";
 import { app } from "../../src/app";
 import { db } from "../../src/db";
-import { productComments } from "../../src/db/schema";
+import { productComments, users } from "../../src/db/schema";
 import { mailer } from "../../src/lib/mailer";
 import { cleanup, createOutsider, setupProduct } from "../task/helpers";
 
@@ -128,10 +128,20 @@ describe("取得(参加者全員)", () => {
     expect(asLeader.every((c) => c.canEdit === true)).toBe(true);
   });
 
-  test("作成者が退会していても見える(authorName は null)", async () => {
+  test("作成者が退会していても見える(authorName と authorAvatarUrl は null)", async () => {
     const orphan = await insertComment(a.productId, { createdBy: null });
-    const list = (await (await call("GET", url(a.productId), a.members[1]!.cookie)).json()) as { commentId: number; authorName: string | null }[];
-    expect(list.find((c) => c.commentId === orphan.commentId)?.authorName).toBeNull();
+    const list = (await (await call("GET", url(a.productId), a.members[1]!.cookie)).json()) as { commentId: number; authorName: string | null; authorAvatarUrl: string | null }[];
+    const found = list.find((c) => c.commentId === orphan.commentId);
+    expect(found?.authorName).toBeNull();
+    expect(found?.authorAvatarUrl).toBeNull();
+  });
+
+  test("作成者のアバター(users.avatarUrl)が返る。設定していなければ null", async () => {
+    const c = await insertComment(a.productId, { createdBy: a.leader.userId });
+    const list = async () => ((await (await call("GET", url(a.productId), a.members[0]!.cookie)).json()) as { commentId: number; authorAvatarUrl: string | null }[]).find((x) => x.commentId === c.commentId);
+    expect((await list())?.authorAvatarUrl).toBeNull();
+    await db.update(users).set({ avatarUrl: "https://example.com/leader.png" }).where(eq(users.userId, a.leader.userId));
+    expect((await list())?.authorAvatarUrl).toBe("https://example.com/leader.png");
   });
 
   test("参加者でなければ 404", async () => {

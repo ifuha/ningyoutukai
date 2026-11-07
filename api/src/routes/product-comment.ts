@@ -15,7 +15,7 @@ const commentParams = t.Object({ productId: t.String({ format: "uuid" }), commen
 const contentSchema = t.String({ minLength: 1, maxLength: 2000, pattern: "^[^\\u0000]*$" });
 const commentSchema = t.Object({
   commentId: t.Number(), productId: t.String(), content: t.String(), x: t.Number(), y: t.Number(),
-  authorName: t.Union([t.String(), t.Null()]), createdBy: t.Union([t.String(), t.Null()]),
+  authorName: t.Union([t.String(), t.Null()]), authorAvatarUrl: t.Union([t.String(), t.Null()]), createdBy: t.Union([t.String(), t.Null()]),
   // 見ている人が、編集・削除できるか(リーダーだけ。画面が、操作を出し分けるのに使う)
   canEdit: t.Boolean(),
   createdAt: t.Date(), updatedAt: t.Date(),
@@ -23,10 +23,10 @@ const commentSchema = t.Object({
 const notFound = { message: "プロダクトまたはコメントが見つかりません" };
 const forbidden = { message: "コメントを作成・編集・削除できるのはリーダーだけです" };
 
-// 返す列。作成者の名前は users と LEFT JOIN で引く(作成者が NULL = 退会した人は null)
+// 返す列。作成者の名前とアバターは users と LEFT JOIN で引く(作成者が NULL = 退会した人は、どちらも null)
 const commentColumns = {
   commentId: productComments.commentId, productId: productComments.productId, content: productComments.content,
-  x: productComments.x, y: productComments.y, authorName: users.userName, createdBy: productComments.createdBy,
+  x: productComments.x, y: productComments.y, authorName: users.userName, authorAvatarUrl: users.avatarUrl, createdBy: productComments.createdBy,
   createdAt: productComments.createdAt, updatedAt: productComments.updatedAt,
 };
 
