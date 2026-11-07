@@ -1,0 +1,104 @@
+import { Send } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { IconButton } from '#/components/icon-button'
+
+// コメントを書く入力欄。ツールバーからコメントを画面に置いた(ドロップした)位置に出る。
+// Enter か「コメントする」で保存する(Shift + Enter は改行。日本語の変換中の Enter は、確定なので送らない)。Esc で、保存せずに閉じる(「やめる」のボタンは置かない)
+// 保存に失敗したら、理由を出して、書いた内容は残す(やり直せる)
+// 書いている間(開いている間)は、親に伝える。編集中は、セクションなど他の操作を止める(メモと同じ)
+export function CommentDraft({
+  x,
+  y,
+  offsetX = 0,
+  offsetY = 0,
+  onSubmit,
+  onCancel,
+  onEditingChange,
+}: {
+  x: number
+  y: number
+  offsetX?: number
+  offsetY?: number
+  onSubmit: (content: string) => Promise<void>
+  onCancel: () => void
+  onEditingChange?: (editing: boolean) => void
+}) {
+  const [content, setContent] = useState('')
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const editingRef = useRef(onEditingChange)
+  editingRef.current = onEditingChange
+  useEffect(() => {
+    editingRef.current?.(true)
+    return () => editingRef.current?.(false)
+  }, [])
+
+  const submit = async () => {
+    const text = content.trim()
+    if (!text || pending) return
+    setPending(true)
+    setError(null)
+    try {
+      await onSubmit(text)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '保存できませんでした。時間をおいて再度お試しください')
+      setPending(false)
+    }
+  }
+
+  return (
+    <form
+      data-no-deselect
+      data-comment-draft=""
+      aria-label="コメントを書く"
+      className="absolute z-30 w-72 shadow-box bg-panel p-3 text-ink"
+      style={{ left: x + offsetX, top: y + offsetY }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onSubmit={(e) => {
+        e.preventDefault()
+        void submit()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation()
+          onCancel()
+        }
+      }}
+    >
+      {/* 入力欄と送信のボタンを、横に並べる(ボタンはアイコンだけ)。入力欄の高さは、1 行のとき、ボタン(sm = 32px)と同じ(`min-h-8`)。行が増えると、入力欄だけ伸びる(ボタンは下端にそろえる) */}
+      <div className="flex items-end gap-2">
+        <textarea
+          aria-label="コメントの内容"
+          autoFocus
+          rows={1}
+          maxLength={2000}
+          placeholder="コメントを書く…"
+          value={content}
+          disabled={pending}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={(e) => {
+            // 日本語の変換中(isComposing)の Enter は、変換の確定。送らない
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault()
+              void submit()
+            }
+          }}
+          className="block max-h-32 min-h-8 min-w-0 flex-1 resize-none bg-transparent px-2 py-1.5 text-m [field-sizing:content] outline-none shadow-box placeholder:text-ink/45"
+        />
+        <IconButton
+          icon={Send}
+          label={pending ? '送信中…' : 'コメントする'}
+          size="sm"
+          variant="solid"
+          type="submit"
+          disabled={pending || !content.trim()}
+        />
+      </div>
+      {error && (
+        <p role="alert" className="mt-2 text-s text-danger">
+          {error}
+        </p>
+      )}
+    </form>
+  )
+}

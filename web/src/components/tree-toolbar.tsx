@@ -1,17 +1,18 @@
-import { MousePointer2, Search, SquareDashed, StickyNote, User } from 'lucide-react'
+import { MessageSquare, MousePointer2, Search, SquareDashed, StickyNote, User } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import type { CanvasTool } from '#/lib/section-interaction-types'
 
 // ツリーの画面の下の中央に置く、道具のバー(Figma の `nav` を、ユーザーの指示で小さく、アイコンだけにした)
 // 寸法: 高さ 56(枠線 1px)、ボタン 40 × 40(アイコン 24px)、ボタンと区切り線の間隔 6px、左右の余白 6px、区切り線 2 × 24
-//   幅は中身で決まる(ボタン 5 × 40 + 区切り線 2 × 2 + 間隔 6 × 6 + 余白 12 + 枠線 2 = 254)
+//   幅は中身で決まる(ボタン 5 × 40 + 区切り線 2 × 2 + 間隔 6 × 6 + 余白 12 + 枠線 2 = 254。リーダーは「コメント」が増えて、ボタン 6 × 40、間隔 6 × 7 で 300)
 //   文字(ラベル)は出さない。名前は、ホバー(とキーボードのフォーカス)のツールチップと、`aria-label` で示す
 //   ツールチップが切れないよう、このバーには `overflow` を付けない
 // 並びは「選択 | メンバー・セクション・メモ | 検索」
 // 選択・セクションは、道具(モード)の切り替え(押された道具を強調する)。キャンバスのドラッグでの移動は、「セクション」以外ではいつでも動く。
 //   セクションは、リーダーだけが使える(リーダーでなければ、押せない見た目。ツールチップで理由を示す)。選ぶと、キャンバスでドラッグして、セクションを置く(Esc か「選択」で戻る)
 // 道具は同時に使えない(セクションを置く間・検索を開く間・メモを編集する間は、他の道具が押せない)
-//   メンバーは、メンバーの管理を開く(リーダーのみ)。検索は、プロダクト内の名前検索を開く。メモは準備中
+//   メンバーは、メンバーの管理を開く(リーダーのみ)。検索は、プロダクト内の名前検索を開く。
+//   コメントは、リーダーだけに出す(`onToggleComment` を渡したときだけ)。押すと配置モード(カーソルがコメントのアイコンになる)。ツリーをクリックして置く。ほかの道具を押すと、やめる
 
 export type TreeMode = CanvasTool
 
@@ -30,6 +31,8 @@ export function TreeToolbar({
   onOpenMembers,
   onOpenSearch,
   onAddMemo,
+  onToggleComment,
+  commentActive = false,
   canEditSections = false,
   searchOpen = false,
   memoEditing = false,
@@ -42,6 +45,10 @@ export function TreeToolbar({
   onOpenSearch?: () => void
   /** キャンバス中央に付箋を追加 */
   onAddMemo?: () => void
+  /** コメントの配置モードの入り・切り(リーダーだけ。渡さなければ、「コメント」は出さない) */
+  onToggleComment?: () => void
+  /** コメントの配置モード中か(押された見た目にする) */
+  commentActive?: boolean
   /** セクションを置ける(リーダー)か。false のときは、「セクション」が押せない見た目 */
   canEditSections?: boolean
   /** 検索を開いているか。開いている間は、検索以外の道具を使えない */
@@ -94,6 +101,16 @@ export function TreeToolbar({
         onClick={onAddMemo}
         disabled={!onAddMemo || busy}
       />
+      {onToggleComment && (
+        <IconButton
+          icon={MessageSquare}
+          label="コメント"
+          tip={busy ? busyTip : commentActive ? 'コメントを置く(ツリーをクリック。ほかの道具を押すとやめる)' : 'コメントを置く'}
+          pressed={commentActive}
+          disabled={busy}
+          onClick={onToggleComment}
+        />
+      )}
       <Divider />
       <IconButton
         icon={Search}
