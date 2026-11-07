@@ -65,12 +65,12 @@ export function CommentDraft({
         }
       }}
     >
-      {/* 入力欄と送信のボタンを、横に並べる(ボタンはアイコンだけ。入力欄の下端にそろえる) */}
+      {/* 入力欄と送信のボタンを、横に並べる(ボタンはアイコンだけ)。入力欄の高さは、1 行のとき、ボタン(sm = 32px)と同じ(`min-h-8`)。行が増えると、入力欄だけ伸びる(ボタンは下端にそろえる) */}
       <div className="flex items-end gap-2">
         <textarea
           aria-label="コメントの内容"
           autoFocus
-          rows={3}
+          rows={1}
           maxLength={2000}
           placeholder="コメントを書く…"
           value={content}
@@ -83,7 +83,7 @@ export function CommentDraft({
               void submit()
             }
           }}
-          className="block min-w-0 flex-1 resize-none bg-transparent p-1 text-m outline-none shadow-box placeholder:text-ink/45"
+          className="block max-h-32 min-h-8 min-w-0 flex-1 resize-none bg-transparent px-2 py-1.5 text-m [field-sizing:content] outline-none shadow-box placeholder:text-ink/45"
         />
         <IconButton
           icon={Send}
