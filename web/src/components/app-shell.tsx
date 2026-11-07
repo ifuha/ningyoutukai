@@ -122,6 +122,8 @@ export function AppShell({
           products={(products.data ?? []).map((p) => ({
             id: p.productId,
             name: p.productName,
+            avatarUrl: p.avatarUrl,
+            isLeader: p.role === 'leader',
           }))}
           invitations={invitations.data}
           onCollapse={() => sidebar.set(true)}

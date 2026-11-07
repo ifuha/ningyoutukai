@@ -251,6 +251,7 @@ function Product() {
                     product.data?.productName ?? tree.data.product.productName
                   }
                   memberCount={tree.data.members.length + 1}
+                  avatarUrl={product.data?.avatarUrl ?? tree.data.product.avatarUrl}
                   open={productManageOpen}
                   onClose={() => setProductManageOpen(false)}
                 />
