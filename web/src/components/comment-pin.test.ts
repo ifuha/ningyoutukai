@@ -3,7 +3,6 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { CommentDraft } from './comment-draft'
 import { CommentPin } from './comment-pin'
-import { CommentToolButton } from './comment-tool-button'
 import { CanvasViewContext } from '#/lib/canvas-view'
 import type { ProductComment } from '#/lib/comment-api'
 
@@ -72,23 +71,10 @@ describe('CommentDraft', () => {
     expect(html).toContain('maxLength="2000"')
     expect(html).toContain('コメントする')
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-label="コメントする"|<button[^>]*aria-label="コメントする"[^>]*disabled=""/)
-    expect(html).toContain('aria-label="やめる"')
   })
-  test('メールで知らせることを、書く前に伝える', () => {
-    expect(renderDraft()).toContain('メンバーにメールで知らせます')
-  })
-})
-
-describe('CommentToolButton', () => {
-  test('「コメント」のボタンが出る。busy のときは押せない', () => {
-    const on = renderToStaticMarkup(createElement(CommentToolButton, { onPlace: () => {} }))
-    expect(on).toContain('aria-label="コメント"')
-    expect(on).not.toContain('disabled=""')
-    const off = renderToStaticMarkup(createElement(CommentToolButton, { onPlace: () => {}, disabled: true, tip: '使えません' }))
-    expect(off).toContain('disabled=""')
-    expect(off).toContain('使えません')
-  })
-  test('ドラッグして置くことを、ツールチップで伝える', () => {
-    expect(renderToStaticMarkup(createElement(CommentToolButton, { onPlace: () => {} }))).toContain('ドラッグして')
+  test('「やめる」のボタンと、メールの案内の文は置かない(キャンセルは Esc)', () => {
+    const html = renderDraft()
+    expect(html).not.toContain('やめる')
+    expect(html).not.toContain('メールで知らせます')
   })
 })

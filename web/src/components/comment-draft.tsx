@@ -1,9 +1,10 @@
-import { Send, X } from 'lucide-react'
+import { Send } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { IconButton } from '#/components/icon-button'
 
 // コメントを書く入力欄。ツールバーからコメントを画面に置いた(ドロップした)位置に出る。
-// 「コメントする」で保存し、「やめる」か Esc で、保存せずに閉じる。保存に失敗したら、理由を出して、書いた内容は残す(やり直せる)
+// Enter か「コメントする」で保存する(Shift + Enter は改行。日本語の変換中の Enter は、確定なので送らない)。Esc で、保存せずに閉じる(「やめる」のボタンは置かない)
+// 保存に失敗したら、理由を出して、書いた内容は残す(やり直せる)
 // 書いている間(開いている間)は、親に伝える。編集中は、セクションなど他の操作を止める(メモと同じ)
 export function CommentDraft({
   x,
@@ -73,6 +74,13 @@ export function CommentDraft({
         value={content}
         disabled={pending}
         onChange={(e) => setContent(e.target.value)}
+        onKeyDown={(e) => {
+          // 日本語の変換中(isComposing)の Enter は、変換の確定。送らない
+          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+            e.preventDefault()
+            void submit()
+          }
+        }}
         className="block w-full resize-none bg-transparent p-1 text-m outline-none shadow-box placeholder:text-ink/45"
       />
       {error && (
@@ -80,9 +88,7 @@ export function CommentDraft({
           {error}
         </p>
       )}
-      <p className="mt-2 text-s text-ink/60">投稿すると、メンバーにメールで知らせます</p>
       <div className="mt-2 flex items-center justify-end gap-1.5">
-        <IconButton icon={X} label="やめる" showLabel size="sm" variant="outline" disabled={pending} onClick={onCancel} />
         <IconButton
           icon={Send}
           label={pending ? '送信中…' : 'コメントする'}

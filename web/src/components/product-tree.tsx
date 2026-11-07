@@ -14,7 +14,6 @@ import { TreeToolbar } from '#/components/tree-toolbar'
 import { CommentDraft } from '#/components/comment-draft'
 import { CommentPin } from '#/components/comment-pin'
 import { StickyNote } from '#/components/sticky-note'
-import type { CommentPlacement } from '#/components/comment-tool-button'
 import type { NewProductComment, ProductComment, ProductCommentPatch } from '#/lib/comment-api'
 import type { ProductNote, ProductNotePatch } from '#/lib/memo-api'
 import { boxToCanvasRect, CanvasViewContext, clientToCanvas } from '#/lib/canvas-view'
@@ -54,6 +53,9 @@ const BOTTOM_INSET = 70
 const ABOVE_TOOLBAR = 'bottom-[74px]'
 /** コメントのピンの大きさ(px。`CommentPin` の `size-8`)。置いた位置が、ピンの中心になるよう、左上をずらすのに使う */
 const COMMENT_PIN_PX = 32
+/** 配置モードのカーソル: コメントのアイコン(lucide の message-square。枠は白、線は黒)。先端(ホットスポット)は、吹き出しの中心 */
+const COMMENT_CURSOR =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z' stroke='%23fff' stroke-width='4.5'/%3E%3Cpath d='M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E\") 14 14, crosshair"
 
 // リーダーを一番上、その下にメンバーを横に並べる木構造。線は破線(CSS だけ)、矢印は子から親へ向く
 // 領域は、親(メイン領域)いっぱいの、自由にパン(移動)とズームができるキャンバス(スクロールバーは出さない)。初期表示は、全体が収まる倍率
@@ -123,6 +125,10 @@ export function ProductTree({
   // コメントを置いた位置(キャンバス座標)。入力欄を出している間だけ持つ。保存か、やめるで閉じる
   const [commentDraft, setCommentDraft] = useState<{ x: number; y: number } | null>(null)
   const [commentError, setCommentError] = useState<string | null>(null)
+  // コメントの配置モード。ツールバーの「コメント」で入り、ツリーをクリックして置く。ほかの道具を押すか、Esc でやめる。置いたら終わる
+  const [commentMode, setCommentMode] = useState(false)
+  // 配置モードの層で、ボタンを押した位置(動かしたドラッグ = 画面の移動のときは、置かない)
+  const commentPressRef = useRef<{ x: number; y: number } | null>(null)
   // メモの内容を編集中か。編集中は、セクションやカードなど他の操作を止める(道具は同時に使えない)
   const [memoEditing, setMemoEditing] = useState(false)
   const memoEditingRef = useRef(false)
@@ -247,17 +253,25 @@ export function ProductTree({
     [contentRef, scale, bounds.offsetX, bounds.offsetY],
   )
   const canvasView = useMemo<CanvasView>(() => ({ scale, toCanvas }), [scale, toCanvas])
-  // コメントを置く: ツールバーのボタンをドラッグして離した位置(画面の座標)か、中央。ピンの中心が、その位置に来るようにして、入力欄を出す
-  const placeComment = (placement: CommentPlacement) => {
-    const rect = containerRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const client = placement === 'center' ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : placement
-    // 画面(ツリー)の外で離したときは、置かない
-    if (client.x < rect.left || client.x > rect.right || client.y < rect.top || client.y > rect.bottom) return
+  // コメントを置く: 配置モードでクリックした位置(画面の座標)。ピンの中心が、その位置に来るようにして、入力欄を出す。置いたら配置モードは終わる
+  const placeComment = (client: { x: number; y: number }) => {
     const at = toCanvas(client)
     setCommentError(null)
+    setCommentMode(false)
     setCommentDraft({ x: at.x - COMMENT_PIN_PX / 2 / scale, y: at.y - COMMENT_PIN_PX / 2 / scale })
   }
+  // 配置モード中の Esc でやめる。ほかの道具を押したときも、やめる(下の `leaveComment`)
+  useEffect(() => {
+    if (!commentMode) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setCommentMode(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [commentMode])
+  // ツールバーの、コメント以外の操作の前に、配置モードをやめる
+  const leaveComment = <A extends unknown[]>(fn?: (...args: A) => void) =>
+    fn ? (...args: A) => { setCommentMode(false); fn(...args) } : undefined
   const showCommentError = (error: unknown) => {
     setCommentError(error instanceof Error ? error.message : '保存できませんでした。時間をおいて再度お試しください')
   }
@@ -656,16 +670,42 @@ export function ProductTree({
           />
           </CanvasViewContext.Provider>
         </div>
+        {/* コメントの配置モード: カーソルをコメントのアイコンにして、クリックした位置に置く。この層が押しを受けるので、下のカード・セクション・メモは、置く間は反応しない。
+            ドラッグ(画面の移動)とホイール(拡大縮小)は、この層の上でも、ツリーの操作として動く(イベントが上へ伝わる)。動かしたドラッグの終わりには、置かない */}
+        {commentMode && (
+          <div
+            data-comment-place=""
+            className="absolute inset-0 z-30"
+            style={{ cursor: COMMENT_CURSOR }}
+            onPointerDown={(e) => {
+              commentPressRef.current = { x: e.clientX, y: e.clientY }
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              const press = commentPressRef.current
+              commentPressRef.current = null
+              if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) >= 4) return
+              placeComment({ x: e.clientX, y: e.clientY })
+            }}
+          />
+        )}
       </div>
       <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2">
         <TreeToolbar
           mode={mode}
           searchOpen={searchOpen}
           memoEditing={memoEditing}
-          onModeChange={interaction.setTool}
-          onOpenMembers={onOpenMembers}
-          onOpenSearch={() => setSearchOpen((open) => !open)}
+          onModeChange={(next) => {
+            setCommentMode(false)
+            interaction.setTool(next)
+          }}
+          onOpenMembers={leaveComment(onOpenMembers)}
+          onOpenSearch={() => {
+            setCommentMode(false)
+            setSearchOpen((open) => !open)
+          }}
           onAddMemo={() => {
+            setCommentMode(false)
             setMemoError(null)
             const rect = containerRef.current?.getBoundingClientRect()
             if (!rect) return
@@ -676,7 +716,8 @@ export function ProductTree({
               showMemoError(error)
             })
           }}
-          onPlaceComment={onAddComment ? placeComment : undefined}
+          onToggleComment={onAddComment ? () => setCommentMode((on) => !on) : undefined}
+          commentActive={commentMode}
           canEditSections={canEditSections}
         />
       </div>
