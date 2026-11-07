@@ -9,6 +9,8 @@ export type SettingsShellSection = {
   /** 左の一覧と、右の見出しに出す名前 */
   label: string
   icon: LucideIcon
+  /** 危険な操作(削除など)のカテゴリか。true なら、左の一覧の項目と、右の見出しを赤にする */
+  danger?: boolean
   /** 右に出す中身 */
   render: () => ReactNode
 }
@@ -59,7 +61,7 @@ export function SettingsShell({
                   type="button"
                   onClick={() => setActiveId(s.id)}
                   aria-current={s.id === active.id ? 'page' : undefined}
-                  className="flex h-10 w-full cursor-pointer items-center gap-2 px-3 text-left text-m hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink aria-[current=page]:bg-side-item"
+                  className={`flex h-10 w-full cursor-pointer items-center gap-2 px-3 text-left text-m hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink aria-[current=page]:bg-side-item${s.danger ? ' text-danger' : ''}`}
                 >
                   <s.icon aria-hidden="true" size={20} className="shrink-0" />
                   <span className="truncate">{s.label}</span>
@@ -70,7 +72,7 @@ export function SettingsShell({
         </nav>
         <section aria-labelledby={headingId} className="flex min-h-0 min-w-0 flex-1 flex-col">
           <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-6 py-3">
-            <h2 id={headingId} className="text-l font-bold">
+            <h2 id={headingId} className={`text-l font-bold${active.danger ? ' text-danger' : ''}`}>
               {active.label}
             </h2>
             <IconButton

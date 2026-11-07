@@ -49,6 +49,26 @@ describe('SettingsShell', () => {
   })
 })
 
+describe('SettingsShell: 危険なカテゴリ(danger)', () => {
+  const withDanger = [
+    sections[0],
+    { id: 'd', label: 'プロダクトの削除', icon: User, danger: true, render: () => createElement('p', null, 'Dの中身') },
+  ]
+  test('danger のカテゴリの項目だけ、赤(text-danger)。ほかは赤くしない', () => {
+    const html = render({ sections: withDanger })
+    expect(html.match(/text-danger/g)?.length).toBe(1)
+  })
+  test('danger のカテゴリを選んでいるとき(先頭にして試す)は、右の見出しも赤にする', () => {
+    const html = render({ sections: [withDanger[1], withDanger[0]] })
+    expect(html).toMatch(/<h2 [^>]*class="text-l font-bold text-danger">プロダクトの削除<\/h2>/)
+    // 項目(1)と見出し(1)
+    expect(html.match(/text-danger/g)?.length).toBe(2)
+  })
+  test('danger でないカテゴリを選んでいるとき、見出しは赤くない', () => {
+    expect(render({ sections: withDanger })).toMatch(/<h2 [^>]*class="text-l font-bold">外観<\/h2>/)
+  })
+})
+
 describe('SettingsDialog(ユーザー設定)', () => {
   const html = renderToStaticMarkup(createElement(SettingsDialog, { open: true, onClose: () => {} }))
   test('見出し「設定」・項目の nav・外観が選ばれている', () => {
