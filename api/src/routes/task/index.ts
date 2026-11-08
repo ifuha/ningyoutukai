@@ -12,6 +12,7 @@ import { updateMessage } from "./update-message";
 import { deleteMessage } from "./delete-message";
 import { assignAssignee } from "./assign-assignee";
 import { suggestAssignee } from "./suggest-assignee";
+import { taskDocumentLinks } from "./task-documents";
 
 /**
  * タスク機能の API(docs/api.md「タスク機能」)。
@@ -30,4 +31,5 @@ export const taskRoutes = new Elysia({ name: "task-routes" })
   .use(listMessages)
   .use(createMessage)
   .use(updateMessage)
-  .use(deleteMessage);
+  .use(deleteMessage)
+  .use(taskDocumentLinks);
