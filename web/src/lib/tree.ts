@@ -18,5 +18,8 @@ export type ProductTree = Omit<RawTree, 'leader'> & {
 /** ツリーの 1 人分(リーダーかメンバー)。`tasks` は期限が近い順 */
 export type TreeMember = ProductTree['leader']
 
+/** メンバー(人)の AI のカード 1 枚 */
+export type TreeAi = TreeMember['ais'][number]
+
 /** ツリーのタスク 1 件 */
 export type TreeTask = TreeMember['tasks'][number]

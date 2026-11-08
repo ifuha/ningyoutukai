@@ -222,6 +222,11 @@ function Product() {
                 onEditTask={openTask}
                 canOpenTask={canOpenTask}
                 onShowTasks={(member) => setListMemberId(member.productMemberId)}
+                onOpenAi={(ai) => {
+                  // 確認待ちの下書きがあるタスクの詳細を開く(そこで、下書きを確認する)
+                  const taskId = ai.pendingTaskIds?.[0]
+                  if (taskId) setDetailId(taskId)
+                }}
                 onAddTask={isLeader ? (member) => setTaskForm({ memberId: member.productMemberId }) : undefined}
                 onOpenMembers={isLeader ? () => setMembersOpen(true) : undefined}
               />

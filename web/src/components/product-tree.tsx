@@ -33,6 +33,7 @@ import {
 } from '#/lib/tree-layout'
 import type {
   ProductTree as ProductTreeData,
+  TreeAi,
   TreeMember,
   TreeTask,
 } from '#/lib/tree'
@@ -85,6 +86,7 @@ export function ProductTree({
   canOpenTask,
   onShowTasks,
   onAddTask,
+  onOpenAi,
   onOpenMembers,
   canEditSections = false,
   sectionActions = NO_SECTION_ACTIONS,
@@ -104,6 +106,8 @@ export function ProductTree({
   canOpenTask?: (member: TreeMember) => boolean
   onShowTasks?: (member: TreeMember) => void
   onAddTask?: (member: TreeMember) => void
+  /** メンバーの AI のカードが押されたとき(確認待ちがある持ち主のカードだけ押せる) */
+  onOpenAi?: (ai: TreeAi) => void
   onOpenMembers?: () => void
   /** 自分がリーダーか(セクションの作成・大きさの変更・削除・カードの移動ができる) */
   canEditSections?: boolean
@@ -548,6 +552,7 @@ export function ProductTree({
                   onEditTask={editFor(leader)}
                   onShowTasks={onShowTasks}
                   onAddTask={onAddTask}
+                  onOpenAi={onOpenAi}
                 />
               </DragSlot>
             )}
@@ -600,6 +605,7 @@ export function ProductTree({
                             onEditTask={editFor(m)}
                             onShowTasks={onShowTasks}
                             onAddTask={onAddTask}
+                            onOpenAi={onOpenAi}
                           />
                         </DragSlot>
                       </li>
@@ -626,6 +632,7 @@ export function ProductTree({
                   onEditTask={editFor(member)}
                   onShowTasks={onShowTasks}
                   onAddTask={onAddTask}
+                  onOpenAi={onOpenAi}
                 />
               </DragSlot>
             </div>
