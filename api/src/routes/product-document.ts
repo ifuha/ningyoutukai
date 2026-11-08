@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, isNull, lt, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
-import { productDocumentVersions, productDocuments, users } from "../db/schema";
+import { productDocumentVersions, productDocuments, products, users } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
 import {
   DOCUMENT_MAX_BYTES,
@@ -371,6 +371,30 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
       params: documentParams,
       response: { 204: t.Undefined(), 403: MessageSchema, 404: MessageSchema, 409: MessageSchema },
       detail: { summary: "文書の削除(ディレクトリの書き込み権限。全ての版を消す。他の人が編集中は 409)" },
+    },
+  )
+  // ---- 自動削除の設定(プロダクトの設定。リーダーだけ) ----
+  // 最後に呼び出されてから何日で、文書を自動で削除するか(初期 7 日)。「自動削除しない」は、文書ごと(PATCH …/document/:documentId の keepForever)
+  .patch(
+    "/api/product/:productId/document-setting",
+    async ({ params, body, user, documentAuthorize, status }) => {
+      const membership = await getMembership(params.productId, user.userId);
+      if (!membership) return status(404, notFoundProduct);
+      if (!documentAuthorize({ role: membership.role }).canManage()) return status(403, { message: "プロダクトリーダーのみ実行できます" });
+      const [updated] = await db
+        .update(products)
+        .set({ documentAutoDeleteDays: body.documentAutoDeleteDays })
+        .where(eq(products.productId, params.productId))
+        .returning({ documentAutoDeleteDays: products.documentAutoDeleteDays });
+      if (!updated) return status(404, notFoundProduct);
+      return updated;
+    },
+    {
+      requireUser: true,
+      params: productParams,
+      body: t.Object({ documentAutoDeleteDays: t.Integer({ minimum: 1, maximum: 3650 }) }),
+      response: { 200: t.Object({ documentAutoDeleteDays: t.Number() }), 403: MessageSchema, 404: MessageSchema },
+      detail: { summary: "文書の自動削除までの日数(リーダー)" },
     },
   )
   // ---- 編集ロック ----

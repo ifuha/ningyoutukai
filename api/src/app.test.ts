@@ -57,6 +57,7 @@ const EXPECTED_ROUTES = [
   "PATCH /api/product/:productId",
   "PATCH /api/product/:productId/comment/:commentId",
   "PATCH /api/product/:productId/directory/:directoryId",
+  "PATCH /api/product/:productId/document-setting",
   "PATCH /api/product/:productId/document/:documentId",
   "PATCH /api/product/:productId/member/:memberId/position",
   "PATCH /api/product/:productId/note/:noteId",
