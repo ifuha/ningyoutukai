@@ -5,6 +5,7 @@ import { ArrowLeft, ClipboardCheck } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { AppShell } from '#/components/app-shell'
 import { Loading } from '#/components/loading'
+import { DocumentsFeature } from '#/components/documents-feature'
 import { InviteMemberDialog } from '#/components/invite-member-dialog'
 import { ManageMenu, type ManageMenuItem } from '#/components/manage-menu'
 import { MemberManageDialog } from '#/components/member-manage-dialog'
@@ -58,6 +59,8 @@ function Product() {
   const [kindsOpen, setKindsOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [productSettingsOpen, setProductSettingsOpen] = useState(false)
+  // 文書(右側のツリー)を開いているか。「管理」メニューの「文書」で開閉する
+  const [docsOpen, setDocsOpen] = useState(false)
   // 他の人の変更を、数秒ごとに見に行って、変わったときだけ取り直す(ドラッグの最中は待つ)
   useProductRevision(productId)
   const queryClient = useQueryClient()
@@ -107,6 +110,7 @@ function Product() {
   // 「管理」メニューの項目。足すときは 1 行足す(リーダーだけなら isLeader の側に)
   const manageItems: ManageMenuItem[] = [
     { label: 'メンバー', onSelect: () => setMembersOpen(true) },
+    { label: docsOpen ? '文書を閉じる' : '文書', onSelect: () => setDocsOpen((open) => !open) },
     ...(isLeader
       ? [
           { label: 'タスクの種類', onSelect: () => setKindsOpen(true) },
@@ -221,6 +225,13 @@ function Product() {
                 onAddTask={isLeader ? (member) => setTaskForm({ memberId: member.productMemberId }) : undefined}
                 onOpenMembers={isLeader ? () => setMembersOpen(true) : undefined}
               />
+            <DocumentsFeature
+              productId={productId}
+              open={docsOpen}
+              isLeader={isLeader}
+              myMemberId={myId}
+              onClose={() => setDocsOpen(false)}
+            />
             <TaskListDialog
               member={
                 [tree.data.leader, ...tree.data.members].find(
