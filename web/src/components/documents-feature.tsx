@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DirectoryPermissionDialog } from '#/components/directory-permission-dialog'
 import { DocumentDialog } from '#/components/document-dialog'
 import { DocumentsPanel } from '#/components/documents-panel'
 import { NewDocumentDialog } from '#/components/new-document-dialog'
@@ -22,6 +23,8 @@ export function DocumentsFeature({
 }) {
   const [openDocId, setOpenDocId] = useState<string | null>(null)
   const [newDocIn, setNewDocIn] = useState<DocDirectory | null>(null)
+  // 権限を設定しているディレクトリ(リーダーだけ)
+  const [permissionDir, setPermissionDir] = useState<DocDirectory | null>(null)
   const actions = useDocumentActions(productId)
 
   return (
@@ -37,6 +40,7 @@ export function DocumentsFeature({
             onClose={onClose}
             onOpenDocument={setOpenDocId}
             onAddDocument={setNewDocIn}
+            onOpenPermissions={setPermissionDir}
           />
         </div>
       )}
@@ -51,6 +55,7 @@ export function DocumentsFeature({
           setOpenDocId(created.documentId)
         }}
       />
+      <DirectoryPermissionDialog productId={productId} directory={permissionDir} onClose={() => setPermissionDir(null)} />
       <DocumentDialog productId={productId} documentId={openDocId} isLeader={isLeader} myMemberId={myMemberId} onClose={() => setOpenDocId(null)} />
     </>
   )
