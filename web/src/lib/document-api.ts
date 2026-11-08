@@ -37,8 +37,8 @@ export const getDocument = (productId: string, documentId: string, version?: num
 export const listDocumentVersions = (productId: string, documentId: string) => edenData(product(productId).document({ documentId }).version.get())
 export const createDocument = (productId: string, directoryId: string, input: { name: string; content: string }) =>
   edenData(product(productId).directory({ directoryId }).document.post(input))
-/** 保存(新しい版)。`baseVersion` = 開いたときの版。`notify` = 割り振られたメンバーにメールで知らせるか(省略は知らせる) */
-export const saveDocument = (productId: string, documentId: string, input: { content: string; baseVersion: number; notify?: boolean }) =>
+/** 保存(`mode` 省略は新しい版。'overwrite' はいまの版を上書き)。`baseVersion` = 開いたときの版。`notify` = 割り振られたメンバーにメールで知らせるか(省略は知らせる) */
+export const saveDocument = (productId: string, documentId: string, input: { content: string; baseVersion: number; notify?: boolean; mode?: 'new' | 'overwrite' }) =>
   edenData(product(productId).document({ documentId }).put(input))
 export const updateDocument = (productId: string, documentId: string, patch: { name?: string; directoryId?: string; keepForever?: boolean }) =>
   edenData(product(productId).document({ documentId }).patch(patch))
