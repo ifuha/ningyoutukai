@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { app } from "../../src/app";
 import { db } from "../../src/db";
-import { productDocuments } from "../../src/db/schema";
+import { productDocumentVersions, productDocuments } from "../../src/db/schema";
 import { createMemoryStorage, setDefaultDocumentStorage } from "../../src/lib/storage";
 import { cleanup, createOutsider, setupProduct } from "../task/helpers";
 
@@ -47,7 +47,9 @@ async function createDoc(s: Setup, directoryId: string, name: string, content: s
   expect(res.status).toBe(201);
   return (await res.json()) as Doc;
 }
+// 版 1 のキーは、固定の形。2 以降は、保存のたびに末尾に乱数が付くので、DB に控えたキーで探す
 const keyOf = (s: Setup, documentId: string, v: number) => `${s.productId}/${documentId}/v${v}.md`;
+const r2KeyOf = async (documentId: string, version: number) => (await db.select().from(productDocumentVersions).where(and(eq(productDocumentVersions.documentId, documentId), eq(productDocumentVersions.version, version))))[0]!.r2Key;
 const text = async (key: string) => (await docs.get(key)) && (await new Response((await docs.get(key))!.body).text());
 
 describe("作成", () => {
@@ -148,7 +150,7 @@ describe("保存(版)", () => {
     expect(saved.currentVersion).toBe(2);
     expect(saved.content).toBe("v2 の本文");
     expect(await text(keyOf(a, doc.documentId, 1))).toBe("v1 の本文");
-    expect(await text(keyOf(a, doc.documentId, 2))).toBe("v2 の本文");
+    expect(await text(await r2KeyOf(doc.documentId, 2))).toBe("v2 の本文");
     const now = (await (await call("GET", docUrl(a, doc.documentId), a.members[1]!.cookie)).json()) as Doc;
     expect([now.version, now.content]).toEqual([2, "v2 の本文"]);
     const old = (await (await call("GET", `${docUrl(a, doc.documentId)}?version=1`, a.members[1]!.cookie)).json()) as Doc;
@@ -162,7 +164,7 @@ describe("保存(版)", () => {
     const res = await call("PUT", docUrl(a, doc.documentId), a.leader.cookie, { content: "3", baseVersion: 1 });
     expect(res.status).toBe(409);
     expect(docs.keys().length).toBe(before);
-    expect(await text(keyOf(a, doc.documentId, 2))).toBe("2");
+    expect(await text(await r2KeyOf(doc.documentId, 2))).toBe("2");
   });
   test("同時に保存すると、片方だけが成功し、もう片方は 409(版が重ならない)", async () => {
     const doc = await createDoc(a, dirId, "race.md", "0");
@@ -231,7 +233,7 @@ describe("削除", () => {
     const doc = await createDoc(a, writeDirId, "delete-me.md", "1");
     await call("PUT", docUrl(a, doc.documentId), a.leader.cookie, { content: "2", baseVersion: 1 });
     expect((await call("DELETE", docUrl(a, doc.documentId), a.members[1]!.cookie)).status).toBe(403);
-    expect(docs.keys()).toContain(keyOf(a, doc.documentId, 2));
+    expect(docs.keys()).toContain(await r2KeyOf(doc.documentId, 2));
     expect((await call("DELETE", docUrl(a, doc.documentId), a.members[0]!.cookie)).status).toBe(204);
     expect(docs.keys().filter((k) => k.includes(doc.documentId))).toEqual([]);
     expect((await call("GET", docUrl(a, doc.documentId), a.leader.cookie)).status).toBe(404);

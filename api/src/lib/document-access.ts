@@ -20,9 +20,15 @@ export const byteLength = (content: string) => new TextEncoder().encode(content)
 
 /**
  * R2 のキー: `<productId>/<documentId>/v<版>.md`。ファイル名を変えても、キーは変えない。
- * 利用者の入力(名前)をキーに使わない(フォルダの外へ出るキーを作らせない)
+ * 利用者の入力(名前)をキーに使わない(フォルダの外へ出るキーを作らせない)。
+ * `attempt` を渡すと、末尾に足す(`v2-ab12cd34.md`)。**保存のたびに、試行ごとに違うキーにする**ため:
+ * 同時に 2 人が保存すると、2 人とも「次の版」のキーに書く。同じキーだと、負けた方が後始末で消すのが、勝った方の本文になってしまう
  */
-export const documentKey = (productId: string, documentId: string, version: number) => `${productId}/${documentId}/v${version}.md`;
+export const documentKey = (productId: string, documentId: string, version: number, attempt?: string) =>
+  `${productId}/${documentId}/v${version}${attempt ? `-${attempt}` : ""}.md`;
+
+/** 保存の試行ごとの、短いランダムな文字列(キーの末尾に足す) */
+export const newAttemptId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 8);
 
 /** メンバーの、そのディレクトリでの権限の設定(なければ null)。リーダーの判定は `documentAuthorize` が行う */
 export async function permissionOf(directoryId: string, productMemberId: string): Promise<DocumentLevel | null> {

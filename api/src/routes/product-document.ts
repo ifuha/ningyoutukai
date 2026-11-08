@@ -8,6 +8,7 @@ import {
   byteLength,
   documentContentSchema,
   documentKey,
+  newAttemptId,
   documentNameSchema,
   findDirectory,
   findDocument,
@@ -243,7 +244,8 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
       if (editor) return status(409, editingMessage(editor.userName));
 
       const next = doc.currentVersion + 1;
-      const key = documentKey(params.productId, doc.documentId, next);
+      // 試行ごとに違うキー(同時に保存した負けた側が、後始末で、勝った側の本文を消さないように)
+      const key = documentKey(params.productId, doc.documentId, next, newAttemptId());
       try {
         await documentStorage.put(key, body.content, { contentType: "text/markdown; charset=utf-8" });
       } catch (e) {
