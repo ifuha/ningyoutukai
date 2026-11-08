@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ImageIcon, Pencil, Settings, Trash2, X } from 'lucide-react'
+import { FileText, ImageIcon, Pencil, Settings, Trash2, X } from 'lucide-react'
 import { AvatarSettings } from '#/components/avatar-settings'
+import { DocumentSettings } from '#/components/document-settings'
 import { IconButton } from '#/components/icon-button'
 import { SettingsShell, type SettingsShellSection } from '#/components/settings-shell'
 import { eden, edenData } from '#/lib/eden'
@@ -163,11 +164,14 @@ export function productSettingsSections({
   productName,
   memberCount,
   avatarUrl,
+  documentAutoDeleteDays,
 }: {
   productId: string
   productName: string
   memberCount?: number
   avatarUrl?: string | null
+  /** 文書の自動削除までの日数(知っていれば) */
+  documentAutoDeleteDays?: number
 }): SettingsShellSection[] {
   return [
     {
@@ -185,6 +189,12 @@ export function productSettingsSections({
       ),
     },
     {
+      id: 'documents',
+      label: '文書',
+      icon: FileText,
+      render: () => <DocumentSettings productId={productId} days={documentAutoDeleteDays} />,
+    },
+    {
       id: 'delete',
       label: 'プロダクトの削除',
       icon: Trash2,
@@ -196,13 +206,14 @@ export function productSettingsSections({
   ]
 }
 
-// プロダクト設定のモーダル(リーダー用)。左にカテゴリ(一般・アイコン・プロダクトの削除)、右に中身。枠は `settings-shell.tsx`。
-// 一般: プロダクト名の変更 / アイコン: アイコンの設定のすべて(選ぶ・設定する・削除) / プロダクトの削除(危険な操作なので、赤で示す)。開閉は親が制御する
+// プロダクト設定のモーダル(リーダー用)。左にカテゴリ(一般・アイコン・文書・プロダクトの削除)、右に中身。枠は `settings-shell.tsx`。
+// 一般: プロダクト名の変更 / アイコン: アイコンの設定のすべて(選ぶ・設定する・削除) / 文書: 自動削除までの日数 / プロダクトの削除(危険な操作なので、赤で示す)。開閉は親が制御する
 export function ProductSettingsDialog({
   productId,
   productName,
   memberCount,
   avatarUrl,
+  documentAutoDeleteDays,
   open,
   onClose,
 }: {
@@ -212,6 +223,8 @@ export function ProductSettingsDialog({
   memberCount?: number
   /** 現在のアイコンの URL。なければ null */
   avatarUrl?: string | null
+  /** 文書の自動削除までの日数(「文書」の項目の初期値) */
+  documentAutoDeleteDays?: number
   open: boolean
   onClose: () => void
 }) {
@@ -221,7 +234,7 @@ export function ProductSettingsDialog({
       onClose={onClose}
       title="プロダクト設定"
       ariaLabel="プロダクト設定の項目"
-      sections={productSettingsSections({ productId, productName, memberCount, avatarUrl })}
+      sections={productSettingsSections({ productId, productName, memberCount, avatarUrl, documentAutoDeleteDays })}
     />
   )
 }

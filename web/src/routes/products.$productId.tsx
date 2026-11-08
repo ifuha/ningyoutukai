@@ -283,6 +283,7 @@ function Product() {
                   }
                   memberCount={tree.data.members.length + 1}
                   avatarUrl={product.data?.avatarUrl ?? tree.data.product.avatarUrl}
+                  documentAutoDeleteDays={product.data?.documentAutoDeleteDays}
                   open={productSettingsOpen}
                   onClose={() => setProductSettingsOpen(false)}
                 />
