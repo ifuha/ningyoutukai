@@ -6,6 +6,7 @@ export * from "./product_notes";
 export * from "./product_comments";
 export * from "./product_documents";
 export * from "./ai_tokens";
+export * from "./task_report_drafts";
 export * from "./product_members";
 export * from "./product_invitations";
 export * from "./task_types";

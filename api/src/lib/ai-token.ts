@@ -62,12 +62,12 @@ export async function countActiveAiTokens(userId: string, now = new Date()) {
 }
 
 /**
- * トークンの持ち主(アプリ側のユーザー)を返す。無効(知らない / 取り消し済み / 期限切れ)なら undefined。
+ * トークンの持ち主(アプリ側のユーザー)と、トークンの ID・名前を返す。無効(知らない / 取り消し済み / 期限切れ)なら undefined。
  * 使われた日時を更新する(5 分以内の続けての更新は間引く)
  */
 export async function authenticateAiToken(token: string, now = new Date()) {
   const [row] = await db
-    .select({ tokenId: aiTokens.tokenId, lastUsedAt: aiTokens.lastUsedAt, user: users })
+    .select({ tokenId: aiTokens.tokenId, name: aiTokens.name, lastUsedAt: aiTokens.lastUsedAt, user: users })
     .from(aiTokens)
     .innerJoin(users, eq(aiTokens.userId, users.userId))
     .where(and(eq(aiTokens.tokenHash, await sha256Hex(token)), isNull(aiTokens.revokedAt), gt(aiTokens.expiresAt, now)));
@@ -78,7 +78,7 @@ export async function authenticateAiToken(token: string, now = new Date()) {
       .set({ lastUsedAt: now })
       .where(and(eq(aiTokens.tokenId, row.tokenId), or(isNull(aiTokens.lastUsedAt), lt(aiTokens.lastUsedAt, new Date(now.getTime() - LAST_USED_TOUCH_MS)))));
   }
-  return row.user;
+  return { user: row.user, tokenId: row.tokenId, name: row.name };
 }
 
 /**

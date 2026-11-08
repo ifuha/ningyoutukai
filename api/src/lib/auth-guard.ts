@@ -13,6 +13,8 @@ import { errorHandler } from "./error-handler";
  */
 /** 何でログインしたか。両方の返り値で同じ型にする(リテラルのままだと、Elysia が型を合成するとき never になる) */
 export type AuthVia = "human" | "ai";
+/** AI 用のトークンでログインしたときの、そのトークン(人のログインのときは null)。下書きに、保存した AI の名前を控えるのに使う */
+export type AuthAiToken = { tokenId: string; name: string } | null;
 
 export const authGuard = new Elysia({ name: "auth-guard" })
   .use(errorHandler)
@@ -27,14 +29,14 @@ export const authGuard = new Elysia({ name: "auth-guard" })
         if (!isAiAllowed(request.method, new URL(request.url).pathname)) {
           return status(403, { message: "AI 用のトークンでは、この操作はできません" });
         }
-        return { user: owner, via: "ai" as AuthVia };
+        return { user: owner.user, via: "ai" as AuthVia, aiToken: { tokenId: owner.tokenId, name: owner.name } as AuthAiToken };
       }
 
       const session = await auth.api.getSession({ headers: request.headers });
       if (!session) return status(401, { message: "ログインが必要です" });
 
       const user = await getOrCreateAppUser(session.user);
-      return { user, via: "human" as AuthVia };
+      return { user, via: "human" as AuthVia, aiToken: null as AuthAiToken };
     },
   },
 });
