@@ -14,6 +14,8 @@ import { productRevisionRoutes } from "./routes/product-revision";
 import { productManageRoutes } from "./routes/product-manage";
 import { productNoteRoutes } from "./routes/product-note";
 import { productCommentRoutes } from "./routes/product-comment";
+import { productDirectoryRoutes } from "./routes/product-directory";
+import { productDocumentRoutes } from "./routes/product-document";
 import { productTreeRoutes } from "./routes/product-tree";
 import { sectionRoutes } from "./routes/section";
 import { taskRoutes } from "./routes/task";
@@ -39,6 +41,8 @@ export const app = new Elysia()
   .use(productRevisionRoutes)
   .use(productNoteRoutes)
   .use(productCommentRoutes)
+  .use(productDirectoryRoutes)
+  .use(productDocumentRoutes)
   .use(sectionRoutes)
   .use(taskRoutes)
   .use(meRoutes)
