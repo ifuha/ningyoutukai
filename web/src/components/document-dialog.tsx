@@ -4,6 +4,7 @@ import { IconButton } from '#/components/icon-button'
 import { LockNoticeBanner } from '#/components/lock-notice'
 import { MarkdownView } from '#/components/markdown-view'
 import { Modal } from '#/components/modal'
+import { SaveModeDialog, type SaveMode } from '#/components/save-mode-dialog'
 import { canEditDocument, canSave, contentTooLarge, editingLabel, formatDocDate, lockNotice, textareaEditable } from '#/lib/document-tree'
 import { useEditLock } from '#/lib/use-edit-lock'
 import { useDocument, useDocumentActions, useDocumentTree, useDocumentVersions } from '#/lib/use-product-documents'
@@ -13,7 +14,7 @@ import { useDocument, useDocumentActions, useDocumentTree, useDocumentVersions }
 // - 編集: そのディレクトリの書き込み権限がある人(リーダーは常に)。**同時に編集はできない**: 編集を始めるとロックを取り、他の人が編集中なら、編集できない(名前を出す)
 //   - **30 分、編集がなければ外れる。解除の 1 分前に予告を出し、外れたら知らせる**(入力した内容は残る。取り直せる)
 //   - 広い画面は、左に書く欄、右にプレビュー。狭い画面は、「編集」と「プレビュー」の切り替え
-//   - 保存を押すと確認が出て、「新しい版として残す」(前の版は残る)か「いまの版を上書き」(版は増えない)を選ぶ。保存のときに「割り振られたメンバーにメールで知らせる」のチェック(初期は付ける)
+//   - 保存を押すと確認のモーダルが出て、「新しい版として残す」(前の版は残る)か「いまの版を上書き」(版は増えない)を選ぶ。保存のときに「割り振られたメンバーにメールで知らせる」のチェック(初期は付ける)
 // - 履歴: 前の版を読める(戻す操作はない)。リーダー: 「自動削除しない」の切り替え。書き込み権限のある人: 削除(2 段階)
 
 export function DocumentDialog({
@@ -99,7 +100,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
     setMode('view')
     setError(null)
   }
-  const save = async (saveMode: 'new' | 'overwrite') => {
+  const save = async (saveMode: SaveMode) => {
     setConfirmSave(false)
     setSaving(true)
     setError(null)
@@ -276,6 +277,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
         )}
       </div>
 
+      <SaveModeDialog open={confirmSave} onChoose={(m) => void save(m)} onClose={() => setConfirmSave(false)} />
       {mode === 'edit' && (
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
           <label className="flex cursor-pointer items-center gap-2 text-m">
@@ -284,19 +286,8 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
           </label>
           <div className="flex items-center gap-2">
             {tooLarge && <span role="alert" className="text-s text-danger">本文は 1MB までです</span>}
-            {confirmSave ? (
-              <div role="alertdialog" aria-label="保存の確認" className="flex flex-wrap items-center gap-2">
-                <span className="text-m">どちらで保存しますか?</span>
-                <IconButton icon={Save} label="新しい版として残す" showLabel variant="solid" onClick={() => void save('new')} />
-                <IconButton icon={Save} label="いまの版を上書き" showLabel variant="outline" onClick={() => void save('overwrite')} />
-                <IconButton icon={X} label="やめる" showLabel variant="plain" onClick={() => setConfirmSave(false)} />
-              </div>
-            ) : (
-              <>
-                <IconButton icon={X} label="編集をやめる" showLabel variant="outline" disabled={saving} onClick={cancelEdit} />
-                <IconButton icon={saving ? Check : Save} label={saving ? '保存中…' : '保存'} showLabel variant="solid" disabled={saving || !canSave(lock.state, draft, original)} onClick={() => setConfirmSave(true)} />
-              </>
-            )}
+            <IconButton icon={X} label="編集をやめる" showLabel variant="outline" disabled={saving} onClick={cancelEdit} />
+            <IconButton icon={saving ? Check : Save} label={saving ? '保存中…' : '保存'} showLabel variant="solid" disabled={saving || !canSave(lock.state, draft, original)} onClick={() => setConfirmSave(true)} />
           </div>
         </footer>
       )}
