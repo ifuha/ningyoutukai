@@ -1,7 +1,7 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { t } from "elysia";
 import { db } from "../db";
-import { productDirectories, productDocuments, taskDirectories, taskDocuments } from "../db/schema";
+import { productDirectories, productDocuments, taskDirectories, taskDocuments, tasks } from "../db/schema";
 
 // タスクに渡す Markdown(文書)。タスクの作成のときに結びつける。結びつけ方は 2 つ:
 //   1. ディレクトリで渡す(`task_directories`): 中の文書すべてが渡る。**後から文書を足したときも渡る**
@@ -107,4 +107,26 @@ export async function taskIdsForDocument(documentId: string, directoryId: string
   const direct = await db.select({ taskId: taskDocuments.taskId }).from(taskDocuments).where(eq(taskDocuments.documentId, documentId));
   const viaDirectory = await db.select({ taskId: taskDirectories.taskId }).from(taskDirectories).where(eq(taskDirectories.directoryId, directoryId));
   return unique([...direct, ...viaDirectory].map((r) => r.taskId));
+}
+
+/**
+ * この文書が、そのメンバーに「渡されている」か(そのメンバーが担当の、**未完了の**タスクに、結びついている)。
+ * AI 用のトークンは、渡された文書しか取れない(`via` が `ai` のとき、文書の取得で確かめる)
+ */
+export async function isDocumentHandedTo(memberId: string, documentId: string, directoryId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ taskId: tasks.taskId })
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.productMemberId, memberId),
+        ne(tasks.status, "completed"),
+        or(
+          sql`exists (select 1 from task_documents td where td.task_id = ${tasks.taskId} and td.document_id = ${documentId})`,
+          sql`exists (select 1 from task_directories tdr where tdr.task_id = ${tasks.taskId} and tdr.directory_id = ${directoryId})`,
+        ),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }

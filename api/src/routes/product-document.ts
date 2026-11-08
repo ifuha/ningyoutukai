@@ -18,6 +18,7 @@ import { notifyDocumentChanged } from "../lib/document-mail";
 import { LOCK_WARN_BEFORE_MS, acquireLock, findValidLock, heartbeatLock, lockIdleMsLeft, lockMsLeft, releaseLock } from "../lib/document-lock";
 import { documentDetailSchema, documentSummarySchema, findDocumentSummary } from "../lib/document-view";
 import { getMembership, type Membership } from "../lib/product-access";
+import { isDocumentHandedTo } from "../lib/task-documents";
 import { MessageSchema } from "../lib/response-schema";
 import { isUniqueViolation } from "../lib/task-kind";
 import type { ObjectStorage } from "../lib/storage";
@@ -162,11 +163,15 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
   // 取得: 参加者全員。?version=N で前の版。呼び出された日時を更新する(CLI / API でも、画面でも)
   .get(
     "/api/product/:productId/document/:documentId",
-    async ({ params, query, user, documentStorage, documentAuthorize, status }) => {
+    async ({ params, query, user, via, documentStorage, documentAuthorize, status }) => {
       const membership = await getMembership(params.productId, user.userId);
       if (!membership) return status(404, notFoundProduct);
       const doc = await findDocument(params.productId, params.documentId);
       if (!doc) return status(404, notFoundDocument);
+      // AI 用のトークンは、持ち主が担当の(未完了の)タスクに渡された文書だけ取れる
+      if (via === "ai" && !(await isDocumentHandedTo(membership.productMemberId, doc.documentId, doc.directoryId))) {
+        return status(404, notFoundDocument);
+      }
       const version = query.version ?? doc.currentVersion;
       const [row] = await db
         .select()

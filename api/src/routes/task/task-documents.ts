@@ -45,12 +45,14 @@ export const taskDocumentLinks = new Elysia({ name: "task-documents" })
   // 渡る文書の一覧(本文は含まない)
   .get(
     "/api/product/:productId/task/:taskId/document",
-    async ({ params, user, status }) => {
+    async ({ params, user, via, status }) => {
       const viewer = await getMembership(params.productId, user.userId);
       if (!viewer) return status(404, { message: "プロダクトが見つかりません" });
       const task = await findTaskOf(params.productId, params.taskId);
       // 見えないタスクは存在を漏らさないよう、存在しない場合と同じ 404 にする
       if (!task || !canSee(task, viewer)) return status(404, { message: "タスクが見つかりません" });
+      // AI 用のトークンは、持ち主が担当のタスクだけ
+      if (via === "ai" && task.productMemberId !== viewer.productMemberId) return status(404, { message: "タスクが見つかりません" });
       return { documents: await resolveTaskDocuments(task.taskId), ...(await getTaskLinkIds(task.taskId)) };
     },
     {
