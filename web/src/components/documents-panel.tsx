@@ -1,4 +1,4 @@
-import { FilePlus, FileText, Folder, FolderPlus, Pencil, ShieldCheck, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, FilePlus, FileText, Folder, FolderPlus, Pencil, ShieldCheck, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { IconButton } from '#/components/icon-button'
 import type { DocDirectory } from '#/lib/document-api'
@@ -54,6 +54,14 @@ export function DocumentsPanelView({
   // 文書を追加している最中のディレクトリと、入力中の名前
   const [addingDocIn, setAddingDocIn] = useState<string | null>(null)
   const [docName, setDocName] = useState('')
+  // 閉じているディレクトリ(開閉は画面の中だけで覚える。既定は、すべて開いている)
+  const [closedIds, setClosedIds] = useState<ReadonlySet<string>>(new Set())
+  const toggleClosed = (id: string) =>
+    setClosedIds((cur) => {
+      const next = new Set(cur)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
 
   const run = async (action: () => Promise<void>, done: () => void) => {
     try {
@@ -121,7 +129,16 @@ export function DocumentsPanelView({
             {directories.map((dir) => (
               <li key={dir.directoryId}>
                 <div className="flex items-center gap-1">
-                  <Folder size={16} aria-hidden="true" className="shrink-0" />
+                  <button
+                    type="button"
+                    aria-expanded={!closedIds.has(dir.directoryId)}
+                    aria-label={closedIds.has(dir.directoryId) ? `${dir.name} を開く` : `${dir.name} を閉じる`}
+                    onClick={() => toggleClosed(dir.directoryId)}
+                    className="flex shrink-0 cursor-pointer items-center gap-0.5 hover:opacity-70 focus-visible:outline-none focus-visible:opacity-70"
+                  >
+                    {closedIds.has(dir.directoryId) ? <ChevronRight size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+                    <Folder size={16} aria-hidden="true" />
+                  </button>
                   {renamingId === dir.directoryId && onRenameDirectory ? (
                     <form
                       className="flex min-w-0 flex-1 items-center gap-1"
@@ -137,9 +154,10 @@ export function DocumentsPanelView({
                     </form>
                   ) : (
                     <>
-                      <span className="min-w-0 flex-1 truncate font-medium" title={dir.name}>
+                      <button type="button" tabIndex={-1} onClick={() => toggleClosed(dir.directoryId)} className="min-w-0 flex-1 cursor-pointer truncate text-left font-medium" title={dir.name}>
                         {dir.name}
-                      </span>
+                      </button>
+                      {closedIds.has(dir.directoryId) && dir.documents.some((d) => d.editingBy) && <span data-editing="" title="編集中の文書があります" className="size-2 shrink-0 rounded-full bg-green-500" />}
                       <span className="shrink-0 text-s opacity-60">{dir.documents.length}</span>
                     </>
                   )}
@@ -152,6 +170,11 @@ export function DocumentsPanelView({
                       pressed={addingDocIn === dir.directoryId}
                       onClick={() => {
                         setAddingDocIn((cur) => (cur === dir.directoryId ? null : dir.directoryId))
+                        setClosedIds((cur) => {
+                          const next = new Set(cur)
+                          next.delete(dir.directoryId)
+                          return next
+                        })
                         setDocName('')
                         setFormError(null)
                       }}
@@ -182,7 +205,7 @@ export function DocumentsPanelView({
                     もう一度押すと「{dir.name}」を削除します(文書が入っていると削除できません)
                   </p>
                 )}
-                {addingDocIn === dir.directoryId && (
+                {!closedIds.has(dir.directoryId) && addingDocIn === dir.directoryId && (
                   <form
                     className="ml-5 mt-1 flex items-start gap-2"
                     onSubmit={(e) => {
@@ -209,7 +232,7 @@ export function DocumentsPanelView({
                     <IconButton icon={FilePlus} label="追加" size="sm" variant="solid" type="submit" disabled={!docName.trim()} />
                   </form>
                 )}
-                {dir.documents.length === 0 ? (
+                {closedIds.has(dir.directoryId) ? null : dir.documents.length === 0 ? (
                   <p className="ml-5 text-s opacity-60"># 文書なし</p>
                 ) : (
                   <ul className="ml-3 mt-1 border-l border-line">
