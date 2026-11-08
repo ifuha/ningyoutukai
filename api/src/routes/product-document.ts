@@ -14,6 +14,7 @@ import {
   permissionOf,
 } from "../lib/document-access";
 import { documentAuthorizer } from "../lib/document-authorize";
+import { LOCK_WARN_BEFORE_MS, acquireLock, findValidLock, heartbeatLock, lockIdleMsLeft, lockMsLeft, releaseLock } from "../lib/document-lock";
 import { documentDetailSchema, documentSummarySchema, findDocumentSummary } from "../lib/document-view";
 import { getMembership, type Membership } from "../lib/product-access";
 import { MessageSchema } from "../lib/response-schema";
@@ -25,7 +26,8 @@ import { documentObjectStorage } from "../lib/storage-plugin";
 // - 読めるのは、プロダクトの参加者全員。書き込み(作成・保存・名前の変更や移動・削除)は、そのディレクトリの書き込み権限がある人(リーダーは常に)
 // - 保存のたびに新しい版になる(前の版は残す)。保存には、開いたときの版(baseVersion)が要る。違えば 409(他の人が先に保存した)
 // - 呼び出された日時(lastFetchedAt)を、取得のたびに更新する(1 時間以内の続けての更新は、書き込まずに間引く)
-// 編集ロック・変更のメール・タスクとの結びつけは、別の PR で足す
+// - 編集ロック: 同時に編集はできない(`document-lock.ts`)。他の人が編集中の文書は、保存・名前の変更・移動・削除ができない(409)。保存すると、自分のロックは外れる
+// 変更のメールは、別の PR で足す
 
 const productParams = t.Object({ productId: t.String({ format: "uuid" }) });
 const directoryParams = t.Object({ productId: t.String({ format: "uuid" }), directoryId: t.String({ format: "uuid" }) });
@@ -43,6 +45,33 @@ const staleVersion = { message: "他の人が先に保存しました。開き�
 const FETCH_TOUCH_INTERVAL_MS = 60 * 60 * 1000;
 
 class VersionConflict extends Error {}
+
+/** 他の人が持っている、有効な編集ロック(なければ undefined。自分のロックは、他の人ではない) */
+async function otherEditor(documentId: string, memberId: string) {
+  const lock = await findValidLock(documentId);
+  return lock && lock.memberId !== memberId ? lock : undefined;
+}
+const editingMessage = (userName: string) => ({ message: `${userName} さんが編集中です` });
+
+/**
+ * ロックの応答。`idleMsLeft` = 「30 分の編集なし」で外れるまで、あと何ミリ秒か。画面は、これが `warnBeforeMs`(1 分)以下になったら、予告を出す。
+ * `msLeft` = ハートビートの途絶(90 秒)も含めて、いちばん早く外れるまで、あと何ミリ秒か
+ */
+const lockSchema = () =>
+  t.Object({
+    held: t.Literal(true),
+    idleMsLeft: t.Number(),
+    msLeft: t.Number(),
+    warnBeforeMs: t.Number(),
+    lockedBy: t.Object({ memberId: t.String(), userName: t.String() }),
+  });
+/** ロックが取れない・外れている、ときの応答。`reason`: taken = 他の人が編集中 / released = ロックが外れている(30 分の編集なし、通信の途絶) */
+const lockConflictSchema = () =>
+  t.Object({
+    message: t.String(),
+    reason: t.Union([t.Literal("taken"), t.Literal("released")]),
+    lockedBy: t.Nullable(t.Object({ memberId: t.String(), userName: t.String() })),
+  });
 
 async function deleteQuietly(storage: ObjectStorage, key: string) {
   try {
@@ -204,6 +233,8 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
       const size = byteLength(body.content);
       if (size > DOCUMENT_MAX_BYTES) return status(413, tooLarge);
       if (body.baseVersion !== doc.currentVersion) return status(409, staleVersion);
+      const editor = await otherEditor(doc.documentId, membership.productMemberId);
+      if (editor) return status(409, editingMessage(editor.userName));
 
       const next = doc.currentVersion + 1;
       const key = documentKey(params.productId, doc.documentId, next);
@@ -230,6 +261,8 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
         throw e;
       }
       const summary = (await findDocumentSummary(doc.documentId))!;
+      // 保存すると、自分のロックは外れる(続けて編集するときは、取り直す)
+      await releaseLock(doc.documentId, membership.productMemberId);
       return { ...summary, version: next, content: body.content, canEdit: true };
     },
     {
@@ -252,6 +285,9 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
 
       if (body.name !== undefined || body.directoryId !== undefined) {
         if (!(await canWriteIn(membership, doc.directoryId, can))) return status(403, forbiddenWrite);
+        // 他の人が編集している間は、名前の変更も移動もしない
+        const editor = await otherEditor(doc.documentId, membership.productMemberId);
+        if (editor) return status(409, editingMessage(editor.userName));
       }
       if (body.directoryId !== undefined && body.directoryId !== doc.directoryId) {
         const target = await findDirectory(params.productId, body.directoryId);
@@ -300,6 +336,10 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
       const can = documentAuthorize({ role: membership.role });
       if (!(await canWriteIn(membership, doc.directoryId, can))) return status(403, forbiddenWrite);
 
+      // 他の人が編集している間は、消さない
+      const editor = await otherEditor(doc.documentId, membership.productMemberId);
+      if (editor) return status(409, editingMessage(editor.userName));
+
       // 行が消えるとキーが読めなくなるので、削除の前に読んでおく
       const versions = await db
         .select({ r2Key: productDocumentVersions.r2Key })
@@ -314,7 +354,82 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
     {
       requireUser: true,
       params: documentParams,
-      response: { 204: t.Undefined(), 403: MessageSchema, 404: MessageSchema },
-      detail: { summary: "文書の削除(ディレクトリの書き込み権限。全ての版を消す)" },
+      response: { 204: t.Undefined(), 403: MessageSchema, 404: MessageSchema, 409: MessageSchema },
+      detail: { summary: "文書の削除(ディレクトリの書き込み権限。全ての版を消す。他の人が編集中は 409)" },
+    },
+  )
+  // ---- 編集ロック ----
+  // 取る: 書き込み権限が要る。だれも編集していない(または前のロックが外れている)ときに取れる。自分のロックなら、取り直せる(続けて編集)。他の人が編集中なら 409
+  .post(
+    "/api/product/:productId/document/:documentId/lock",
+    async ({ params, user, documentAuthorize, status }) => {
+      const membership = await getMembership(params.productId, user.userId);
+      if (!membership) return status(404, notFoundProduct);
+      const doc = await findDocument(params.productId, params.documentId);
+      if (!doc) return status(404, notFoundDocument);
+      const can = documentAuthorize({ role: membership.role });
+      if (!(await canWriteIn(membership, doc.directoryId, can))) return status(403, forbiddenWrite);
+      const row = await acquireLock(doc.documentId, membership.productMemberId);
+      if (!row) {
+        const editor = await findValidLock(doc.documentId);
+        return status(409, {
+          ...editingMessage(editor?.userName ?? "他の人"),
+          reason: "taken" as const,
+          lockedBy: editor ? { memberId: editor.memberId, userName: editor.userName } : null,
+        });
+      }
+      return { held: true as const, idleMsLeft: lockIdleMsLeft(row), msLeft: lockMsLeft(row), warnBeforeMs: LOCK_WARN_BEFORE_MS, lockedBy: { memberId: membership.productMemberId, userName: user.userName } };
+    },
+    {
+      requireUser: true,
+      params: documentParams,
+      response: { 200: lockSchema(), 403: MessageSchema, 404: MessageSchema, 409: lockConflictSchema() },
+      detail: { summary: "編集ロックを取る(書き込み権限。他の人が編集中は 409)" },
+    },
+  )
+  // 知らせ(ハートビート): 画面が編集中、一定間隔(例: 30 秒)で呼ぶ。`edited` = 前回から今回の間に、内容を編集したか。
+  // 外れていたら 409(reason = released: 30 分の編集なし・通信の途絶 / taken: 他の人が取った)。画面は、「ロックが解除されました」と知らせる
+  .put(
+    "/api/product/:productId/document/:documentId/lock",
+    async ({ params, body, user, status }) => {
+      const membership = await getMembership(params.productId, user.userId);
+      if (!membership) return status(404, notFoundProduct);
+      const doc = await findDocument(params.productId, params.documentId);
+      if (!doc) return status(404, notFoundDocument);
+      const row = await heartbeatLock(doc.documentId, membership.productMemberId, body.edited);
+      if (!row) {
+        const editor = await findValidLock(doc.documentId);
+        // 他の人が編集中 = taken。だれも持っていない(外れた) = released
+        if (editor && editor.memberId !== membership.productMemberId) {
+          return status(409, { ...editingMessage(editor.userName), reason: "taken" as const, lockedBy: { memberId: editor.memberId, userName: editor.userName } });
+        }
+        return status(409, { message: "編集ロックが解除されました", reason: "released" as const, lockedBy: null });
+      }
+      return { held: true as const, idleMsLeft: lockIdleMsLeft(row), msLeft: lockMsLeft(row), warnBeforeMs: LOCK_WARN_BEFORE_MS, lockedBy: { memberId: membership.productMemberId, userName: user.userName } };
+    },
+    {
+      requireUser: true,
+      params: documentParams,
+      body: t.Object({ edited: t.Boolean() }),
+      response: { 200: lockSchema(), 404: MessageSchema, 409: lockConflictSchema() },
+      detail: { summary: "編集ロックの知らせ(ハートビート)。外れていたら 409" },
+    },
+  )
+  // 外す(編集をやめたとき): 自分のロックだけ。なくても 204(何度呼んでもよい)
+  .delete(
+    "/api/product/:productId/document/:documentId/lock",
+    async ({ params, user, status }) => {
+      const membership = await getMembership(params.productId, user.userId);
+      if (!membership) return status(404, notFoundProduct);
+      const doc = await findDocument(params.productId, params.documentId);
+      if (!doc) return status(404, notFoundDocument);
+      await releaseLock(doc.documentId, membership.productMemberId);
+      return status(204, undefined);
+    },
+    {
+      requireUser: true,
+      params: documentParams,
+      response: { 204: t.Undefined(), 404: MessageSchema },
+      detail: { summary: "編集ロックを外す(自分のロックだけ)" },
     },
   );
