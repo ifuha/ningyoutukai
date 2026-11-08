@@ -20,7 +20,7 @@ describe("POST /api/product", () => {
     const res = await createProduct(user.cookie, { productName: "プロダクトA" });
     expect(res.status).toBe(201);
     const json = await res.json();
-    expect(Object.keys(json).sort()).toEqual(["avatarUrl", "createdAt", "productId", "productName", "role"]);
+    expect(Object.keys(json).sort()).toEqual(["avatarUrl", "createdAt", "documentAutoDeleteDays", "productId", "productName", "role"]);
     expect(json.productName).toBe("プロダクトA");
     expect(json.role).toBe("leader");
     expect(json.productId).toMatch(/^[0-9a-f-]{36}$/);

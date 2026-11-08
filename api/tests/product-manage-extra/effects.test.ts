@@ -33,7 +33,7 @@ describe("PATCH の応答と副作用", () => {
     const res = await patch(productId, leader.cookie, { productName: "形の確認" });
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(Object.keys(json).sort()).toEqual(["avatarUrl", "createdAt", "productId", "productName", "role"]);
+    expect(Object.keys(json).sort()).toEqual(["avatarUrl", "createdAt", "documentAutoDeleteDays", "productId", "productName", "role"]);
     expect(typeof json.createdAt).toBe("string");
     expect(new Date(json.createdAt).toISOString()).toBe(json.createdAt);
   });

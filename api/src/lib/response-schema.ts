@@ -15,5 +15,7 @@ export const ProductSchema = t.Object({
   createdAt: t.Date(),
   // アイコンの URL(なければ null)。R2 のキー(avatarKey)は出さない
   avatarUrl: t.Union([t.String(), t.Null()]),
+  // 文書(Markdown)の自動削除までの日数(最後に呼び出されてから。初期 7 日)。プロダクト設定の画面が表示する
+  documentAutoDeleteDays: t.Number(),
   role: t.Union([t.Literal("leader"), t.Literal("member")]),
 });

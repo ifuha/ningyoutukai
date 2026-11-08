@@ -37,7 +37,7 @@ const TASK_KEYS = [
   "taskTypeId",
   "timeLimit",
 ];
-const PRODUCT_KEYS = ["avatarUrl", "createdAt", "productId", "productName", "role"];
+const PRODUCT_KEYS = ["avatarUrl", "createdAt", "documentAutoDeleteDays", "productId", "productName", "role"];
 
 describe("応答スキーマを付けても、応答の形が変わらない", () => {
   test("タスク: すべてのフィールドが出て、日時は ISO 文字列、無い値は null", async () => {
