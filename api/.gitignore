@@ -7,6 +7,7 @@
 
 # ローカルのファイル保存(ストレージ。`STORAGE_DIR` で変えられる)
 /.local-storage
+/.local-storage-docs
 
 # testing
 /coverage
