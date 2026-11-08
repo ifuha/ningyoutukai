@@ -1,4 +1,4 @@
-import { Check, History, Pencil, Pin, PinOff, Save, Trash2, X } from 'lucide-react'
+import { Check, Pencil, Pin, PinOff, Save, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { IconButton } from '#/components/icon-button'
 import { LockNoticeBanner } from '#/components/lock-notice'
@@ -42,8 +42,8 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
   const tree = useDocumentTree(productId)
   const [viewVersion, setViewVersion] = useState<number | undefined>(undefined)
   const doc = useDocument(productId, documentId, viewVersion)
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const versions = useDocumentVersions(productId, documentId, historyOpen)
+  // 履歴は、読んでいる間、常に右に出す(編集中は隠す)
+  const versions = useDocumentVersions(productId, documentId, true)
 
   // ツリーの情報(ディレクトリ・自分の権限・編集中の人)。ツリーは別の画面が取り直しているので、ここは同じキャッシュを読む
   const directory = tree.data?.find((d) => d.documents.some((x) => x.documentId === documentId))
@@ -166,7 +166,6 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
         <div className="flex flex-wrap items-center gap-1">
           {mode === 'view' && (
             <>
-              <IconButton icon={History} label="履歴" size="sm" side="bottom" variant={historyOpen ? 'outline' : 'plain'} pressed={historyOpen} onClick={() => setHistoryOpen((o) => !o)} />
               {isLeader && current && (
                 <IconButton icon={current.keepForever ? PinOff : Pin} label={current.keepForever ? '自動削除する設定に戻す' : '自動削除しない'} size="sm" side="bottom" onClick={() => void toggleKeep()} />
               )}
@@ -247,7 +246,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
           )}
         </div>
 
-        {historyOpen && mode === 'view' && (
+        {mode === 'view' && (
           <aside aria-label="履歴" className="w-56 shrink-0 overflow-y-auto border-l border-line p-2">
             <h3 className="px-2 pb-1 text-m font-bold">履歴</h3>
             {versions.isPending ? (
