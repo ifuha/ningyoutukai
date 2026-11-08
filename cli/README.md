@@ -12,12 +12,30 @@
 | `pm logout` | この端末のログインを取り消す |
 | `pm whoami` | ログイン中のユーザーを出す(`--json` あり) |
 | `pm tasks` | 自分に割り振られたタスクの一覧(全プロダクト)。既定は完了以外。`--all` で完了済みも、`--status <状態>` でその状態だけ、`--product <名前 or ID>` でプロダクトを絞る。`--json` あり |
-| `pm task <ID>` | タスクの詳細とメッセージ履歴。ID は `tasks` の ID 列(先頭の一部でもよい)。`--json` あり |
+| `pm task <ID>` | タスクの詳細、渡された文書の一覧、メッセージ履歴。ID は `tasks` の ID 列(先頭の一部でもよい)。`--json` あり |
+| `pm docs <ID>` | タスクに渡された Markdown(文書)の一覧。`--json` あり |
+| `pm doc <ID> <文書>` | 渡された文書の本文(Markdown そのまま)を出す。文書は名前・`ディレクトリ/名前`・ID(先頭の一部でもよい)。`--ver <N>` で前の版 |
+| `pm context <ID>` | AI に渡す全体像: タスクの説明、渡された文書の本文、報告のしかたを、Markdown 1 つで出す。`--json` あり |
+| `pm report <ID>` | AI の報告の下書きを保存する(**AI 用のトークンで**)。本文は `--file <パス>` か `--stdin`。読んだ文書として、渡された文書すべてのいまの版を控える(`--no-read` で控えない) |
+| `pm ai-token create <名前>` | AI 用のトークンを発行する(**人のログインで**)。中身は一度だけ表示。`--days <日数>`(1〜365、既定 90) |
+| `pm ai-token list` / `revoke <ID>` | AI 用のトークンの一覧 / 取り消し |
 
 状態は `in_progress`(作業中)/ `reported`(確認待ち)/ `rejected`(差し戻し中)/ `completed`(完了)。
 
 オプション: `--api <URL>`(環境変数 `NINGYOUTUKAI_API_URL`)、`--no-browser`(login)、`-h`、`-v`。
 環境変数 `NINGYOUTUKAI_TOKEN` にトークンを入れると、キーチェーンより優先して使う(CI やコンテナ向け)。
+
+## AI に任せる(v4.0)
+
+人(タスクの担当者)が、AI にタスクを任せる流れ。仕様は [docs/v4.0/overview.md](../docs/v4.0/overview.md)。
+
+1. 担当者が、`pm login` したうえで、`pm ai-token create "Claude Code"` で AI 用のトークン(`pmai_…`)を発行する
+2. AI を動かす環境に、`export NINGYOUTUKAI_TOKEN=pmai_…` を設定する(`pm login` は要らない)
+3. AI が、`pm tasks` で自分(持ち主)のタスクを見て、`pm context <ID>` で説明と渡された文書を読み、作業する
+4. 終わったら、結果を Markdown に書いて `pm report <ID> --file report.md` で保存する → **下書き**になる
+5. 担当者(人)が、画面で下書きを確認して、完了報告に出すか判断する。AI が自分で完了にはできない
+
+AI 用のトークンでできるのは、持ち主のタスクの一覧、渡された文書の一覧と本文、報告の下書きの保存だけ。プロダクトの変更や、文書の書き込みなどは 403。
 
 ## インストール
 
