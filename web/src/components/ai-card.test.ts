@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AiCard, AiCards, aiCardSummary, aiConnectorPoints } from './ai-card'
+import { AiCard, AiCards, aiBox, aiCardSummary, aiDefaultOrigin } from './ai-card'
+import { connectorPath } from '#/lib/tree-layout'
 import { MemberCard } from './member-card'
 import type { TreeAi, TreeMember } from '#/lib/tree'
 
@@ -88,29 +89,38 @@ describe('AI のカードの位置', () => {
   })
 })
 
-describe('点線(持ち主のカードからカードまで)', () => {
-  test('動かしていなければ、右は短い横線、下はまっすぐ下げて横へ', () => {
-    expect(aiConnectorPoints('right', 0, 0, 0)).toBe('0,24 24,24')
-    expect(aiConnectorPoints('bottom', 0, 0, 0)).toBe('0,-16 0,24 16,24')
+describe('線(メンバーのカードと同じ: 持ち主の下の中央から、AI の上の中央まで)', () => {
+  const owner = { left: 0, top: 0, width: 240, height: 100 }
+  test('初めの置き場所: 下は持ち主の下(16px 空ける)、右は持ち主の右(24px 空ける)。2 枚目は 56px 下', () => {
+    expect(aiDefaultOrigin('bottom', 0, 100)).toEqual({ left: 16, top: 116 })
+    expect(aiDefaultOrigin('bottom', 1, 100)).toEqual({ left: 16, top: 172 })
+    expect(aiDefaultOrigin('right', 0, 100)).toEqual({ left: 264, top: 12 })
   })
-  test('動かすと、端がカードの左の中央に付いていく(持ち主の側の端は動かない)', () => {
-    expect(aiConnectorPoints('right', 0, 100, -30)).toBe('0,24 124,-6')
-    expect(aiConnectorPoints('bottom', 0, 100, 40)).toBe('0,-16 0,24 116,64')
+  test('動かしたずれは、矩形の位置に足される。大きさは変わらない', () => {
+    expect(aiBox('bottom', 0, 100, 30, -10)).toEqual({ left: 46, top: 106, width: 200, height: 48 })
   })
-  test('下に並べた 2 枚目は、持ち主のカードの下の縁まで、1 枚分(48 + 8)長く上へ伸びる', () => {
-    expect(aiConnectorPoints('bottom', 1, 0, 0)).toBe('0,-72 0,24 16,24')
+  test('線は connectorPath(メンバーと同じ関数)で引く。動かすと、子の端だけが付いていく', () => {
+    const still = connectorPath(owner, aiBox('bottom', 0, 100, 0, 0))
+    const moved = connectorPath(owner, aiBox('bottom', 0, 100, 80, 40))
+    // 親(持ち主の下の中央 = 120,100)から出るのは同じ
+    expect(still.d.startsWith('M 120 100')).toBe(true)
+    expect(moved.d.startsWith('M 120 100')).toBe(true)
+    expect(still.d).not.toBe(moved.d)
+    // 子の上の中央(カードの左 16 + 80 + 100 = 196、上 116 + 40 = 156)に、上向きの三角が付く
+    expect(moved.arrow).toBe('191,156 201,156 196,149')
   })
-  test('描画: 点線(polyline)は、動かしたずれを反映して引かれる', () => {
-    const html = renderToStaticMarkup(createElement(AiCards, { ais: [ai({ offsetX: 10, offsetY: 5 })], side: 'right' }))
-    expect(html).toContain('points="0,24 34,29"')
+  test('描画: 線(data-connector-to)は、AI ごとに 1 本。動かしたずれが反映される', () => {
+    const html = renderToStaticMarkup(createElement(AiCards, { ais: [ai({ tokenId: 'k1', offsetX: 80, offsetY: 40 }), ai({ tokenId: 'k2' })], side: 'bottom', ownerHeight: 100 }))
+    expect(html.match(/data-connector-to=/g)?.length).toBe(2)
+    expect(html).toContain(connectorPath(owner, aiBox('bottom', 0, 100, 80, 40)).d)
   })
 })
 
 describe('MemberCard の AI', () => {
-  test('メンバーの AI は、カードの下に出る(top-full)。リーダーの AI は右(left-full)', () => {
+  test('メンバーの AI は、持ち主のカードの下(左 16px)に、リーダーの AI は右(左 264px)に出る', () => {
     const withAi = [ai()]
-    expect(renderToStaticMarkup(createElement(MemberCard, { member: member({ ais: withAi }) }))).toContain('top-full')
-    expect(renderToStaticMarkup(createElement(MemberCard, { member: member({ role: 'leader', ais: withAi }) }))).toContain('left-full')
+    expect(renderToStaticMarkup(createElement(MemberCard, { member: member({ ais: withAi }) }))).toContain('left:16px')
+    expect(renderToStaticMarkup(createElement(MemberCard, { member: member({ role: 'leader', ais: withAi }) }))).toContain('left:264px')
   })
   test('AI がいなければ、何も足されない', () => {
     expect(renderToStaticMarkup(createElement(MemberCard, { member: member() }))).not.toContain('data-ai-card')

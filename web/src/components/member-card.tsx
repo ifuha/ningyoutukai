@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react'
 import { AiCards } from '#/components/ai-card'
+import { useElementHeight } from '#/lib/use-element-height'
 import type { TreeAi, TreeMember, TreeTask } from '#/lib/tree'
 
 const MAX_TASKS = 3
@@ -55,12 +56,15 @@ export function MemberCard({
   onMoveAi?: (ai: TreeAi, offset: { offsetX: number; offsetY: number }) => Promise<void> | void
 }) {
   const isLeader = member.role === 'leader'
+  // AI のカードの線の端は、カードの実際の高さから決める
+  const { ref, height } = useElementHeight<HTMLElement>()
   const shown = member.tasks.slice(0, MAX_TASKS)
   const rest = member.tasks.length - shown.length
   const pending = member.tasks.filter((t) => t.reportedAt).length
 
   return (
     <article
+      ref={ref}
       data-card-id={cardId}
       className="relative w-[240px] shrink-0 shadow-box bg-panel text-left"
     >
@@ -157,7 +161,7 @@ export function MemberCard({
         </button>
       )}
       {/* api が古いとき(デプロイの途中など)は ais がないので、空として扱う */}
-      <AiCards ais={member.ais ?? []} side={isLeader ? 'right' : 'bottom'} onOpen={onOpenAi} onMove={onMoveAi} />
+      <AiCards ais={member.ais ?? []} side={isLeader ? 'right' : 'bottom'} ownerHeight={height} onOpen={onOpenAi} onMove={onMoveAi} />
     </article>
   )
 }
