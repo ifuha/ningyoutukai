@@ -1,4 +1,4 @@
-import { Check, Pencil, Pin, PinOff, Save, Trash2, X } from 'lucide-react'
+import { Check, Pencil, Save, Timer, TimerOff, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { IconButton } from '#/components/icon-button'
 import { LockNoticeBanner } from '#/components/lock-notice'
@@ -167,7 +167,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
           {mode === 'view' && (
             <>
               {isLeader && current && (
-                <IconButton icon={current.keepForever ? PinOff : Pin} label={current.keepForever ? '自動削除する設定に戻す' : '自動削除しない'} size="sm" side="bottom" onClick={() => void toggleKeep()} />
+                <IconButton icon={current.keepForever ? Timer : TimerOff} label={current.keepForever ? '自動削除する設定に戻す' : '自動削除しない'} size="sm" side="bottom" onClick={() => void toggleKeep()} />
               )}
               {level === 'write' &&
                 (confirmDelete ? (

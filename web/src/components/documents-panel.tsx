@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, FilePlus, FileText, Folder, FolderPlus, Pencil, ShieldCheck, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, FilePlus, FileText, Folder, FolderPlus, Pencil, ShieldCheck, TimerOff, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { IconButton } from '#/components/icon-button'
 import type { DocDirectory } from '#/lib/document-api'
@@ -260,8 +260,8 @@ export function DocumentsPanelView({
                             </span>
                             <span className="shrink-0 text-s opacity-60">v{doc.currentVersion}</span>
                             {doc.keepForever && (
-                              <span title="自動削除しない" className="shrink-0 text-s opacity-60">
-                                📌
+                              <span title="自動削除しない" className="shrink-0 opacity-60">
+                                <TimerOff size={14} aria-hidden="true" />
                               </span>
                             )}
                           </button>
