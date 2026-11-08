@@ -227,7 +227,7 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
       detail: { summary: "文書の版の一覧(参加者全員)" },
     },
   )
-  // 保存: 新しい版ができる。baseVersion = 開いたときの版。いまの版と違えば 409
+  // 保存: 既定は新しい版ができる(`mode: "overwrite"` は、いまの版の本文を置き換える。版は増えない)。baseVersion = 開いたときの版。いまの版と違えば 409
   .put(
     "/api/product/:productId/document/:documentId",
     async ({ params, body, user, documentStorage, documentAuthorize, status }) => {
@@ -243,7 +243,8 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
       const editor = await otherEditor(doc.documentId, membership.productMemberId);
       if (editor) return status(409, editingMessage(editor.userName));
 
-      const next = doc.currentVersion + 1;
+      const overwrite = body.mode === "overwrite";
+      const next = overwrite ? doc.currentVersion : doc.currentVersion + 1;
       // 試行ごとに違うキー(同時に保存した負けた側が、後始末で、勝った側の本文を消さないように)
       const key = documentKey(params.productId, doc.documentId, next, newAttemptId());
       try {
@@ -252,8 +253,29 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
         console.error("[product-document] 本文を保存できませんでした", e);
         return status(500, { message: "文書を保存できませんでした" });
       }
+      let replacedKey: string | undefined;
       try {
         await db.transaction(async (tx) => {
+          if (overwrite) {
+            // 上書き: いまの版の行が、開いたときの版のままのときだけ、本文の置き場所を差し替える
+            const [row] = await tx
+              .select({ r2Key: productDocumentVersions.r2Key })
+              .from(productDocumentVersions)
+              .where(and(eq(productDocumentVersions.documentId, doc.documentId), eq(productDocumentVersions.version, body.baseVersion)))
+              .for("update");
+            const stillCurrent = await tx
+              .update(productDocuments)
+              .set({ updatedAt: new Date() })
+              .where(and(eq(productDocuments.documentId, doc.documentId), eq(productDocuments.currentVersion, body.baseVersion)))
+              .returning({ documentId: productDocuments.documentId });
+            if (!row || stillCurrent.length === 0) throw new VersionConflict();
+            await tx
+              .update(productDocumentVersions)
+              .set({ r2Key: key, sizeBytes: size, createdBy: user.userId })
+              .where(and(eq(productDocumentVersions.documentId, doc.documentId), eq(productDocumentVersions.version, body.baseVersion)));
+            replacedKey = row.r2Key;
+            return;
+          }
           // 開いたときの版のままのときだけ進める(同時の保存で、版が重ならないように)
           const updated = await tx
             .update(productDocuments)
@@ -268,6 +290,7 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
         if (e instanceof VersionConflict || isUniqueViolation(e)) return status(409, staleVersion);
         throw e;
       }
+      if (replacedKey) await deleteQuietly(documentStorage, replacedKey);
       const summary = (await findDocumentSummary(doc.documentId))!;
       // 保存すると、自分のロックは外れる(続けて編集するときは、取り直す)
       await releaseLock(doc.documentId, membership.productMemberId);
@@ -289,8 +312,9 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
     {
       requireUser: true,
       params: documentParams,
+      // mode: "new"(省略・新しい版として残す)/ "overwrite"(いまの版を上書き)
       // notify: この保存を、割り振られたメンバーにメールで知らせるか(省略は、知らせる)
-      body: t.Object({ content: documentContentSchema(), baseVersion: t.Integer({ minimum: 1 }), notify: t.Optional(t.Boolean()) }),
+      body: t.Object({ content: documentContentSchema(), baseVersion: t.Integer({ minimum: 1 }), notify: t.Optional(t.Boolean()), mode: t.Optional(t.Union([t.Literal("new"), t.Literal("overwrite")])) }),
       response: { 200: documentDetailSchema(), 403: MessageSchema, 404: MessageSchema, 409: MessageSchema, 413: MessageSchema, 500: MessageSchema },
       detail: { summary: "文書の保存(新しい版。ディレクトリの書き込み権限)" },
     },

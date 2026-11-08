@@ -109,6 +109,15 @@ describe('右側のツリー', () => {
   })
 })
 
+describe('ディレクトリの開閉', () => {
+  test('最初は、すべて開いている。開閉のボタンがあり、中の文書が見える', () => {
+    const html = render({ directories: [dir({ directoryId: 'd1', name: '仕様', documents: [doc({ documentId: 'a', name: 'spec.md' })] })] })
+    expect(html).toContain('aria-expanded="true"')
+    expect(html).toContain('aria-label="仕様 を閉じる"')
+    expect(html).toContain('spec.md')
+  })
+})
+
 describe('編集ロックの案内', () => {
   const NOW = 1_000_000_000_000
   const render = (state: Parameters<typeof lockNotice>[0], onReacquire = () => {}) => renderToStaticMarkup(createElement(LockNoticeBanner, { notice: lockNotice(state, NOW), onReacquire }))

@@ -1,7 +1,7 @@
 // ツリー表示用データの組み立て。DB には触らない純粋関数。
 import type { productMembers, products, taskTypes, tasks, users } from "../db/schema";
 import { avatarUrlOf } from "./avatar";
-import type { ProductTree,TreeNode, TreeTask } from "./tree-schema";
+import type { ProductTree, TreeAi, TreeNode, TreeTask } from "./tree-schema";
 
 // 入力(DB から取ってきた行)の型は、drizzle のテーブルの型から作る
 type Member = typeof productMembers.$inferSelect;
@@ -34,6 +34,8 @@ export function buildTree(
   memberRows: MemberRow[],
   taskRows: TaskRow[],
   viewerProductMemberId: string,
+  /** 持ち主(userId)ごとの AI のカード。なければ空 */
+  aisByUser: Map<string, TreeAi[]> = new Map(),
 ): ProductTree {
   // メンバーごとにタスクをまとめる（入力の並び順を保つ）
   const tasksByMember = new Map<string, TreeTask[]>();
@@ -65,6 +67,7 @@ export function buildTree(
     positionX: m.positionX,
     positionY: m.positionY,
     tasks: tasksByMember.get(m.productMemberId) ?? [],
+    ais: aisByUser.get(m.userId) ?? [],
   }));
 
   // リーダーは最上部に1人。想定外に複数いても、2人目以降は members に入れて落とさない

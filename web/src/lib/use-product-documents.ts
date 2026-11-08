@@ -98,7 +98,7 @@ export function useDocumentActions(productId: string) {
       await refreshTree()
       return created
     },
-    save: async (documentId: string, input: { content: string; baseVersion: number; notify?: boolean }) => {
+    save: async (documentId: string, input: { content: string; baseVersion: number; notify?: boolean; mode?: 'new' | 'overwrite' }) => {
       const saved = await saveDocument(productId, documentId, input)
       await Promise.all([refreshTree(), refreshDocument(documentId)])
       return saved

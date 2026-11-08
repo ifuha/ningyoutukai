@@ -1,5 +1,7 @@
 import { Plus } from 'lucide-react'
-import type { TreeMember, TreeTask } from '#/lib/tree'
+import { AiCards } from '#/components/ai-card'
+import { useElementHeight } from '#/lib/use-element-height'
+import type { TreeAi, TreeMember, TreeTask } from '#/lib/tree'
 
 const MAX_TASKS = 3
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
@@ -33,6 +35,8 @@ export function formatLimit(iso: string): string {
 // `onEditTask` を渡すと、タスク名が押せる(リーダーにだけ渡す。ツリーに完了済みは出ないので、すべて編集できる)
 // `onShowTasks` を渡すと、4 件目以降があるとき「他 N 件」が押せて、全タスクの一覧を開ける
 // `onAddTask` を渡すと(リーダーにだけ渡す)、カードの一番下に、破線で区切った「+ タスクを追加」の行が出て、その人を渡す(その人を担当者にして、フォームを開く)
+// `onOpenAi` を渡すと、カードにぶら下がる AI のカード(確認待ちがある持ち主のもの)が押せる。AI のカードは、リーダーは右、メンバーは下に、絶対配置で出す(カードの大きさ・位置の測定には影響しない)
+// `onMoveAi` を渡すと(リーダーにだけ)、AI のカードをつかんで動かせる
 // `cardId` を渡すと、カードに `data-card-id` を付ける(親子の線の端点を、カードの実際の位置・高さで描くために、測る目印)
 export function MemberCard({
   member,
@@ -40,22 +44,29 @@ export function MemberCard({
   onEditTask,
   onShowTasks,
   onAddTask,
+  onOpenAi,
+  onMoveAi,
 }: {
   member: TreeMember
   cardId?: string
   onEditTask?: (task: TreeTask) => void
   onShowTasks?: (member: TreeMember) => void
   onAddTask?: (member: TreeMember) => void
+  onOpenAi?: (ai: TreeAi) => void
+  onMoveAi?: (ai: TreeAi, offset: { offsetX: number; offsetY: number }) => Promise<void> | void
 }) {
   const isLeader = member.role === 'leader'
+  // AI のカードの線の端は、カードの実際の高さから決める
+  const { ref, height } = useElementHeight<HTMLElement>()
   const shown = member.tasks.slice(0, MAX_TASKS)
   const rest = member.tasks.length - shown.length
   const pending = member.tasks.filter((t) => t.reportedAt).length
 
   return (
     <article
+      ref={ref}
       data-card-id={cardId}
-      className="w-[240px] shrink-0 shadow-box bg-panel text-left"
+      className="relative w-[240px] shrink-0 shadow-box bg-panel text-left"
     >
       <header
         className={`flex items-center gap-2 border-b border-line p-2 ${isLeader ? 'bg-ink text-surface' : ''}`}
@@ -149,6 +160,8 @@ export function MemberCard({
           タスクを追加
         </button>
       )}
+      {/* api が古いとき(デプロイの途中など)は ais がないので、空として扱う */}
+      <AiCards ais={member.ais ?? []} side={isLeader ? 'right' : 'bottom'} ownerHeight={height} onOpen={onOpenAi} onMove={onMoveAi} />
     </article>
   )
 }

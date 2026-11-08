@@ -1,9 +1,10 @@
-import { Check, History, Pencil, Pin, PinOff, Save, Trash2, X } from 'lucide-react'
+import { Check, Pencil, Save, Timer, TimerOff, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { IconButton } from '#/components/icon-button'
 import { LockNoticeBanner } from '#/components/lock-notice'
 import { MarkdownView } from '#/components/markdown-view'
 import { Modal } from '#/components/modal'
+import { SaveModeDialog, type SaveMode } from '#/components/save-mode-dialog'
 import { canEditDocument, canSave, contentTooLarge, editingLabel, formatDocDate, lockNotice, textareaEditable } from '#/lib/document-tree'
 import { useEditLock } from '#/lib/use-edit-lock'
 import { useDocument, useDocumentActions, useDocumentTree, useDocumentVersions } from '#/lib/use-product-documents'
@@ -13,7 +14,7 @@ import { useDocument, useDocumentActions, useDocumentTree, useDocumentVersions }
 // - 編集: そのディレクトリの書き込み権限がある人(リーダーは常に)。**同時に編集はできない**: 編集を始めるとロックを取り、他の人が編集中なら、編集できない(名前を出す)
 //   - **30 分、編集がなければ外れる。解除の 1 分前に予告を出し、外れたら知らせる**(入力した内容は残る。取り直せる)
 //   - 広い画面は、左に書く欄、右にプレビュー。狭い画面は、「編集」と「プレビュー」の切り替え
-//   - 保存すると新しい版になる(前の版は残る)。保存のときに「割り振られたメンバーにメールで知らせる」のチェック(初期は付ける)
+//   - 保存を押すと確認のモーダルが出て、「新しい版として残す」(前の版は残る)か「いまの版を上書き」(版は増えない)を選ぶ。保存のときに「割り振られたメンバーにメールで知らせる」のチェック(初期は付ける)
 // - 履歴: 前の版を読める(戻す操作はない)。リーダー: 「自動削除しない」の切り替え。書き込み権限のある人: 削除(2 段階)
 
 export function DocumentDialog({
@@ -41,8 +42,8 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
   const tree = useDocumentTree(productId)
   const [viewVersion, setViewVersion] = useState<number | undefined>(undefined)
   const doc = useDocument(productId, documentId, viewVersion)
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const versions = useDocumentVersions(productId, documentId, historyOpen)
+  // 履歴は、読んでいる間、常に右に出す(編集中は隠す)
+  const versions = useDocumentVersions(productId, documentId, true)
 
   // ツリーの情報(ディレクトリ・自分の権限・編集中の人)。ツリーは別の画面が取り直しているので、ここは同じキャッシュを読む
   const directory = tree.data?.find((d) => d.documents.some((x) => x.documentId === documentId))
@@ -54,6 +55,8 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
   const [original, setOriginal] = useState('')
   const [baseVersion, setBaseVersion] = useState(1)
   const [notify, setNotify] = useState(true)
+  // 保存を押すと出す確認(新しい版として残すか、上書きか)
+  const [confirmSave, setConfirmSave] = useState(false)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -87,6 +90,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
     setDraft(current.content)
     setBaseVersion(current.currentVersion)
     setNotify(true)
+    setConfirmSave(false)
     setTab('edit')
     setError(null)
     setMode('edit')
@@ -96,11 +100,12 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
     setMode('view')
     setError(null)
   }
-  const save = async () => {
+  const save = async (saveMode: SaveMode) => {
+    setConfirmSave(false)
     setSaving(true)
     setError(null)
     try {
-      await actions.save(documentId, { content: draft, baseVersion, notify })
+      await actions.save(documentId, { content: draft, baseVersion, notify, mode: saveMode })
       setMode('view')
       setViewVersion(undefined)
     } catch (e) {
@@ -161,9 +166,8 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
         <div className="flex flex-wrap items-center gap-1">
           {mode === 'view' && (
             <>
-              <IconButton icon={History} label="履歴" size="sm" side="bottom" variant={historyOpen ? 'outline' : 'plain'} pressed={historyOpen} onClick={() => setHistoryOpen((o) => !o)} />
               {isLeader && current && (
-                <IconButton icon={current.keepForever ? PinOff : Pin} label={current.keepForever ? '自動削除する設定に戻す' : '自動削除しない'} size="sm" side="bottom" onClick={() => void toggleKeep()} />
+                <IconButton icon={current.keepForever ? Timer : TimerOff} label={current.keepForever ? '自動削除する設定に戻す' : '自動削除しない'} size="sm" side="bottom" onClick={() => void toggleKeep()} />
               )}
               {level === 'write' &&
                 (confirmDelete ? (
@@ -242,7 +246,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
           )}
         </div>
 
-        {historyOpen && mode === 'view' && (
+        {mode === 'view' && (
           <aside aria-label="履歴" className="w-56 shrink-0 overflow-y-auto border-l border-line p-2">
             <h3 className="px-2 pb-1 text-m font-bold">履歴</h3>
             {versions.isPending ? (
@@ -272,6 +276,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
         )}
       </div>
 
+      <SaveModeDialog open={confirmSave} onChoose={(m) => void save(m)} onClose={() => setConfirmSave(false)} />
       {mode === 'edit' && (
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
           <label className="flex cursor-pointer items-center gap-2 text-m">
@@ -281,7 +286,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
           <div className="flex items-center gap-2">
             {tooLarge && <span role="alert" className="text-s text-danger">本文は 1MB までです</span>}
             <IconButton icon={X} label="編集をやめる" showLabel variant="outline" disabled={saving} onClick={cancelEdit} />
-            <IconButton icon={saving ? Check : Save} label={saving ? '保存中…' : '保存'} showLabel variant="solid" disabled={saving || !canSave(lock.state, draft, original)} onClick={() => void save()} />
+            <IconButton icon={saving ? Check : Save} label={saving ? '保存中…' : '保存'} showLabel variant="solid" disabled={saving || !canSave(lock.state, draft, original)} onClick={() => setConfirmSave(true)} />
           </div>
         </footer>
       )}

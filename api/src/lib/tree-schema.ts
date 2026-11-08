@@ -21,6 +21,21 @@ export const TreeTaskSchema = t.Object({
   ]),
 });
 
+// メンバー(人)の下に出す、その人の AI のカード。AI はメンバーではなく、持ち主が使う道具(トークンごとに 1 枚)
+export const TreeAiSchema = t.Object({
+  tokenId: t.String(),
+  name: t.String(),
+  // このプロダクトで、最後に下書きを出した日時(なければ null)
+  lastDraftAt: nullableDate,
+  // 確認待ちの下書きの数。持ち主本人にだけ数を返す(他の人には null)
+  pendingCount: t.Union([t.Number(), t.Null()]),
+  // 確認待ちの下書きがあるタスクの ID(古い下書きから順。持ち主本人にだけ返す。他の人には null)
+  pendingTaskIds: t.Union([t.Array(t.String()), t.Null()]),
+  // カードの位置: 初めの置き場所(リーダーは右、メンバーは下)からのずれ(px)。動かしていなければ null
+  offsetX: t.Union([t.Number(), t.Null()]),
+  offsetY: t.Union([t.Number(), t.Null()]),
+});
+
 export const TreeNodeSchema = t.Object({
   productMemberId: t.String(),
   userId: t.String(),
@@ -32,6 +47,7 @@ export const TreeNodeSchema = t.Object({
   positionX: t.Union([t.Number(), t.Null()]),
   positionY: t.Union([t.Number(), t.Null()]),
   tasks: t.Array(TreeTaskSchema),
+  ais: t.Array(TreeAiSchema),
 });
 
 export const ProductTreeSchema = t.Object({
@@ -43,5 +59,6 @@ export const ProductTreeSchema = t.Object({
 });
 
 export type TreeTask = Static<typeof TreeTaskSchema>;
+export type TreeAi = Static<typeof TreeAiSchema>;
 export type TreeNode = Static<typeof TreeNodeSchema>;
 export type ProductTree = Static<typeof ProductTreeSchema>;
