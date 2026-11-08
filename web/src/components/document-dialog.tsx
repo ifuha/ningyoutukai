@@ -13,7 +13,7 @@ import { useDocument, useDocumentActions, useDocumentTree, useDocumentVersions }
 // - 編集: そのディレクトリの書き込み権限がある人(リーダーは常に)。**同時に編集はできない**: 編集を始めるとロックを取り、他の人が編集中なら、編集できない(名前を出す)
 //   - **30 分、編集がなければ外れる。解除の 1 分前に予告を出し、外れたら知らせる**(入力した内容は残る。取り直せる)
 //   - 広い画面は、左に書く欄、右にプレビュー。狭い画面は、「編集」と「プレビュー」の切り替え
-//   - 保存は、「新しい版として残す」(既定。前の版は残る)か「上書き」(いまの版を置き換える。版は増えない)を選べる。保存のときに「割り振られたメンバーにメールで知らせる」のチェック(初期は付ける)
+//   - 保存を押すと確認が出て、「新しい版として残す」(前の版は残る)か「いまの版を上書き」(版は増えない)を選ぶ。保存のときに「割り振られたメンバーにメールで知らせる」のチェック(初期は付ける)
 // - 履歴: 前の版を読める(戻す操作はない)。リーダー: 「自動削除しない」の切り替え。書き込み権限のある人: 削除(2 段階)
 
 export function DocumentDialog({
@@ -54,7 +54,8 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
   const [original, setOriginal] = useState('')
   const [baseVersion, setBaseVersion] = useState(1)
   const [notify, setNotify] = useState(true)
-  const [saveMode, setSaveMode] = useState<'new' | 'overwrite'>('new')
+  // 保存を押すと出す確認(新しい版として残すか、上書きか)
+  const [confirmSave, setConfirmSave] = useState(false)
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -88,7 +89,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
     setDraft(current.content)
     setBaseVersion(current.currentVersion)
     setNotify(true)
-    setSaveMode('new')
+    setConfirmSave(false)
     setTab('edit')
     setError(null)
     setMode('edit')
@@ -98,7 +99,8 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
     setMode('view')
     setError(null)
   }
-  const save = async () => {
+  const save = async (saveMode: 'new' | 'overwrite') => {
+    setConfirmSave(false)
     setSaving(true)
     setError(null)
     try {
@@ -281,13 +283,20 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
             割り振られたメンバーにメールで知らせる
           </label>
           <div className="flex items-center gap-2">
-            <select aria-label="保存のしかた" value={saveMode} disabled={saving} onChange={(e) => setSaveMode(e.target.value as 'new' | 'overwrite')} className="h-9 bg-transparent px-2 text-m shadow-box">
-              <option value="new">新しい版として残す</option>
-              <option value="overwrite">いまの版を上書き</option>
-            </select>
             {tooLarge && <span role="alert" className="text-s text-danger">本文は 1MB までです</span>}
-            <IconButton icon={X} label="編集をやめる" showLabel variant="outline" disabled={saving} onClick={cancelEdit} />
-            <IconButton icon={saving ? Check : Save} label={saving ? '保存中…' : '保存'} showLabel variant="solid" disabled={saving || !canSave(lock.state, draft, original)} onClick={() => void save()} />
+            {confirmSave ? (
+              <div role="alertdialog" aria-label="保存の確認" className="flex flex-wrap items-center gap-2">
+                <span className="text-m">どちらで保存しますか?</span>
+                <IconButton icon={Save} label="新しい版として残す" showLabel variant="solid" onClick={() => void save('new')} />
+                <IconButton icon={Save} label="いまの版を上書き" showLabel variant="outline" onClick={() => void save('overwrite')} />
+                <IconButton icon={X} label="やめる" showLabel variant="plain" onClick={() => setConfirmSave(false)} />
+              </div>
+            ) : (
+              <>
+                <IconButton icon={X} label="編集をやめる" showLabel variant="outline" disabled={saving} onClick={cancelEdit} />
+                <IconButton icon={saving ? Check : Save} label={saving ? '保存中…' : '保存'} showLabel variant="solid" disabled={saving || !canSave(lock.state, draft, original)} onClick={() => setConfirmSave(true)} />
+              </>
+            )}
           </div>
         </footer>
       )}
