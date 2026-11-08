@@ -3,6 +3,7 @@ import { run } from './cli'
 import { configDir } from './config'
 import type { Context } from './context'
 import { keychain } from './credentials'
+import { readFile } from 'node:fs/promises'
 
 // ブラウザで URL を開く。開けなくても(ヘッドレス・コマンドが無い)失敗しない。URL は画面に出してある
 async function openBrowser(url: string): Promise<void> {
@@ -30,6 +31,8 @@ const ctx: Context = {
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   now: () => Date.now(),
   openBrowser,
+  readFile: (path) => readFile(path, 'utf8'),
+  readStdin: () => Bun.stdin.text(),
 }
 
 process.exit(await run(process.argv.slice(2), ctx))
