@@ -12,6 +12,7 @@ export function Modal({
   size = 'md',
   closeOnBackdrop = true,
   animateResize = false,
+  padded = true,
 }: {
   open: boolean
   onClose: () => void
@@ -24,6 +25,8 @@ export function Modal({
   closeOnBackdrop?: boolean
   /** 中身の高さが変わったとき(詳細を開くなど)、モーダルの高さを、なめらかに動かす(`ResizeBox`)。`size="md"` のとき。`overflowVisible` とは、一緒に使わない(動いている間、はみ出しを隠すため) */
   animateResize?: boolean
+  /** 外枠の余白(p-6)をつけるか。false は、中身が余白を持つ(小さな確認など) */
+  padded?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   // 開く直前にフォーカスされていた要素。閉じたら戻す(消えていたら何もしない)
@@ -71,7 +74,7 @@ export function Modal({
       className={`m-auto ${sizeClass} shadow-box bg-panel text-ink backdrop:bg-black/40 ${overflowVisible ? 'overflow-visible' : ''}`}
     >
       {open && (
-        <div className={size === 'full' ? 'h-full' : 'space-y-4 p-6'}>
+        <div className={size === 'full' ? 'h-full' : padded ? 'space-y-4 p-6' : ''}>
           {animateResize && size === 'md' && !overflowVisible ? <ResizeBox>{children}</ResizeBox> : children}
         </div>
       )}

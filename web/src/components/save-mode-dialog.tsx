@@ -7,9 +7,9 @@ export type SaveMode = 'new' | 'overwrite'
 // 文書の保存の確認(モーダル): 新しい版として残すか、いまの版を上書きするか。上書きすると、置き換える前の本文には戻せない
 export function SaveModeDialog({ open, onChoose, onClose }: { open: boolean; onChoose: (mode: SaveMode) => void; onClose: () => void }) {
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal open={open} onClose={onClose} padded={false}>
       {open && (
-        <div className="space-y-2 text-ink">
+        <div className="space-y-2 p-2 text-ink">
           <div className="flex items-start justify-between gap-2">
             <h2 className="min-w-0 text-l font-bold">どちらで保存しますか?</h2>
             <IconButton icon={X} label="閉じる" size="sm" side="bottom" onClick={onClose} />
