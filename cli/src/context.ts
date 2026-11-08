@@ -15,4 +15,8 @@ export type Context = {
   now: () => number
   /** ブラウザで URL を開く(開けなくても失敗しない) */
   openBrowser: (url: string) => Promise<void>
+  /** ファイルを文字列で読む(報告の本文)。読めなければ例外 */
+  readFile: (path: string) => Promise<string>
+  /** 標準入力を最後まで読む(報告の本文) */
+  readStdin: () => Promise<string>
 }

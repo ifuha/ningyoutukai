@@ -46,14 +46,29 @@ export type TaskFilters = {
 }
 
 /**
- * ベアラートークンで GET して、JSON を返す。
- * 401 は「ログインの期限切れ」(終了コード 3)、404 などはサーバーのメッセージを添えて失敗(終了コード 1)にする
+ * ベアラートークンで api を呼んで、JSON を返す(応答が 204 のときは undefined)。
+ * 401 は「ログインの期限切れ」(終了コード 3。AI 用のトークンなら、取り消しか期限切れ)、
+ * 404 などはサーバーのメッセージを添えて失敗(終了コード 1)にする
  */
-async function getJson<T>(fetchFn: Fetch, url: string, token: string): Promise<T> {
-  const res = await send(fetchFn, url, { headers: { authorization: `Bearer ${token}` } })
+export async function requestJson<T>(
+  fetchFn: Fetch,
+  url: string,
+  token: string,
+  init: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  const res = await send(fetchFn, url, {
+    method: init.method ?? 'GET',
+    headers: {
+      authorization: `Bearer ${token}`,
+      ...(init.body !== undefined ? { 'content-type': 'application/json' } : {}),
+    },
+    ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
+  })
   if (res.status === 401) {
     throw new CliError(
-      `ログインの有効期限が切れています。\`${CLI_NAME} login\` でログインし直してください`,
+      token.startsWith('pmai_')
+        ? 'AI 用のトークンが使えません(取り消されたか、期限が切れています)。トークンを発行し直してください'
+        : `ログインの有効期限が切れています。\`${CLI_NAME} login\` でログインし直してください`,
       EXIT.auth,
     )
   }
@@ -61,8 +76,11 @@ async function getJson<T>(fetchFn: Fetch, url: string, token: string): Promise<T
     const body = (await res.json().catch(() => null)) as { message?: string } | null
     throw new CliError(`サーバーがエラーを返しました(${res.status})${body?.message ? `: ${body.message}` : ''}`, EXIT.error)
   }
+  if (res.status === 204) return undefined as T
   return (await res.json()) as T
 }
+
+const getJson = <T>(fetchFn: Fetch, url: string, token: string) => requestJson<T>(fetchFn, url, token)
 
 /** 自分に割り振られたタスク(全プロダクト)。`GET /api/me/task` */
 export function fetchMyTasks(fetchFn: Fetch, apiUrl: string, token: string, filters: TaskFilters = {}): Promise<MyTask[]> {
