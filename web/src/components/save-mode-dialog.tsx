@@ -9,16 +9,16 @@ export function SaveModeDialog({ open, onChoose, onClose }: { open: boolean; onC
   return (
     <Modal open={open} onClose={onClose}>
       {open && (
-        <div className="space-y-3 bg-panel p-4 text-ink">
+        <div className="space-y-2 text-ink">
           <div className="flex items-start justify-between gap-2">
             <h2 className="min-w-0 text-l font-bold">どちらで保存しますか?</h2>
             <IconButton icon={X} label="閉じる" size="sm" side="bottom" onClick={onClose} />
           </div>
-          <ul className="space-y-1 text-s opacity-80">
+          <ul className="flex flex-wrap gap-x-4 text-s opacity-80">
             <li>新しい版として残す: 前の版は履歴に残ります</li>
             <li>いまの版を上書き: 版は増えません。置き換える前の本文には戻せません</li>
           </ul>
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex flex-nowrap items-center justify-end gap-1">
             <IconButton icon={X} label="やめる" showLabel variant="outline" onClick={onClose} />
             <IconButton icon={Save} label="いまの版を上書き" showLabel variant="outline" onClick={() => onChoose('overwrite')} />
             <IconButton icon={Save} label="新しい版として残す" showLabel variant="solid" onClick={() => onChoose('new')} />
