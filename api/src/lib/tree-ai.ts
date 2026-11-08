@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../db";
-import { aiTokens, taskReportDrafts, tasks } from "../db/schema";
+import { aiTokens, productAiPositions, taskReportDrafts, tasks } from "../db/schema";
 import type { TreeAi } from "./tree-schema";
 
 // ツリーに出す、メンバーの AI のカード。仕様は docs/v4.0/overview.md
@@ -10,6 +10,7 @@ import type { TreeAi } from "./tree-schema";
 
 /** `members` の持ち主ごとの AI のカード(`viewerUserId` = 見ている人) */
 export async function loadTreeAis(
+  productId: string,
   members: { productMemberId: string; userId: string }[],
   viewerUserId: string,
   now = new Date(),
@@ -40,6 +41,13 @@ export async function loadTreeAis(
     )
     .groupBy(taskReportDrafts.aiTokenId);
   const byToken = new Map(stats.map((s) => [s.tokenId, s]));
+
+  // カードの位置(動かしたものだけ)
+  const positions = await db
+    .select({ tokenId: productAiPositions.tokenId, offsetX: productAiPositions.offsetX, offsetY: productAiPositions.offsetY })
+    .from(productAiPositions)
+    .where(and(eq(productAiPositions.productId, productId), inArray(productAiPositions.tokenId, tokens.map((t) => t.tokenId))));
+  const offsetByToken = new Map(positions.map((p) => [p.tokenId, p]));
 
   // 確認待ちの下書き(見ている人の AI の分だけ。古い順)
   const mine = tokens.filter((t) => t.userId === viewerUserId).map((t) => t.tokenId);
@@ -72,6 +80,8 @@ export async function loadTreeAis(
       name: token.name,
       lastDraftAt: stat?.lastDraftAt ? new Date(stat.lastDraftAt) : null,
       pendingCount: token.userId === viewerUserId ? (pendingByToken.get(token.tokenId)?.length ?? 0) : null,
+      offsetX: offsetByToken.get(token.tokenId)?.offsetX ?? null,
+      offsetY: offsetByToken.get(token.tokenId)?.offsetY ?? null,
       pendingTaskIds: token.userId === viewerUserId ? [...new Set(pendingByToken.get(token.tokenId) ?? [])] : null,
     };
     const list = result.get(token.userId);

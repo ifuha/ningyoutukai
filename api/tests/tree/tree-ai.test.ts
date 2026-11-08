@@ -9,7 +9,7 @@ import { cleanup, insertTask, setupProduct } from "../task/helpers";
 // ツリーに出る、メンバーの AI のカード(有効なトークンごとに 1 枚。確認待ちの数は持ち主だけに返す)
 
 type Setup = Awaited<ReturnType<typeof setupProduct>>;
-type Ai = { tokenId: string; name: string; lastDraftAt: string | null; pendingCount: number | null };
+type Ai = { tokenId: string; name: string; lastDraftAt: string | null; pendingCount: number | null; pendingTaskIds: string[] | null };
 type Tree = { leader: { ais: Ai[] }; members: { productMemberId: string; ais: Ai[] }[] };
 
 let a: Setup;

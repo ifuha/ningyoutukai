@@ -100,7 +100,7 @@ export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
         .orderBy(asc(tasks.timeLimit), asc(tasks.taskId));
 
       // 5. ツリーに組み立てて返す
-      const aisByUser = await loadTreeAis(memberRows, user.userId);
+      const aisByUser = await loadTreeAis(productId, memberRows, user.userId);
       return buildTree(product, memberRows, taskRows, me.productMemberId, aisByUser);
     },
     {
