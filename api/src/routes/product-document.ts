@@ -14,6 +14,7 @@ import {
   permissionOf,
 } from "../lib/document-access";
 import { documentAuthorizer } from "../lib/document-authorize";
+import { notifyDocumentChanged } from "../lib/document-mail";
 import { LOCK_WARN_BEFORE_MS, acquireLock, findValidLock, heartbeatLock, lockIdleMsLeft, lockMsLeft, releaseLock } from "../lib/document-lock";
 import { documentDetailSchema, documentSummarySchema, findDocumentSummary } from "../lib/document-view";
 import { getMembership, type Membership } from "../lib/product-access";
@@ -263,12 +264,26 @@ export const productDocumentRoutes = new Elysia({ name: "product-document" })
       const summary = (await findDocumentSummary(doc.documentId))!;
       // 保存すると、自分のロックは外れる(続けて編集するときは、取り直す)
       await releaseLock(doc.documentId, membership.productMemberId);
+      // 要件が変わったことを、この文書が割り振られたメンバーに、メールで知らせる(`notify: false` で送らない。誤字の直しなど)。
+      // mailer.send は失敗しても例外を投げないので、保存は成功させる
+      if (body.notify !== false) {
+        await notifyDocumentChanged({
+          productId: params.productId,
+          documentId: doc.documentId,
+          directoryId: doc.directoryId,
+          documentName: doc.name,
+          version: next,
+          editorName: user.userName,
+          editorMemberId: membership.productMemberId,
+        });
+      }
       return { ...summary, version: next, content: body.content, canEdit: true };
     },
     {
       requireUser: true,
       params: documentParams,
-      body: t.Object({ content: documentContentSchema(), baseVersion: t.Integer({ minimum: 1 }) }),
+      // notify: この保存を、割り振られたメンバーにメールで知らせるか(省略は、知らせる)
+      body: t.Object({ content: documentContentSchema(), baseVersion: t.Integer({ minimum: 1 }), notify: t.Optional(t.Boolean()) }),
       response: { 200: documentDetailSchema(), 403: MessageSchema, 404: MessageSchema, 409: MessageSchema, 413: MessageSchema, 500: MessageSchema },
       detail: { summary: "文書の保存(新しい版。ディレクトリの書き込み権限)" },
     },
