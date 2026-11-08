@@ -1,17 +1,18 @@
 import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
-import { products } from "../db/schema";
+import { productDocumentVersions, productDocuments, products } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
 import { withAvatarUrl } from "../lib/avatar";
 import { getMembership } from "../lib/product-access";
 import { MessageSchema, ProductSchema } from "../lib/response-schema";
-import { objectStorage } from "../lib/storage-plugin";
+import { documentObjectStorage, objectStorage } from "../lib/storage-plugin";
 import { NO_NUL } from "../lib/validation";
 
 export const productManageRoutes = new Elysia({ name: "product-manage" })
   .use(authGuard)
   .use(objectStorage)
+  .use(documentObjectStorage)
   // プロダクト情報変更(リーダーのみ): 所属していないプロダクトは存在を漏らさないよう 404
   .patch(
     "/api/product/:productId",
@@ -47,12 +48,19 @@ export const productManageRoutes = new Elysia({ name: "product-manage" })
   // プロダクト削除(リーダーのみ): メンバー・招待・タスク種類・タスクは外部キーの cascade で一緒に消える
   .delete(
     "/api/product/:productId",
-    async ({ params, user, storage, status }) => {
+    async ({ params, user, storage, documentStorage, status }) => {
       const membership = await getMembership(params.productId, user.userId);
       if (!membership) return status(404, { message: "プロダクトが見つかりません" });
       if (membership.role !== "leader") {
         return status(403, { message: "プロダクトリーダーのみ実行できます" });
       }
+
+      // 行が消えると文書の本文のキーが読めなくなるので、削除の前に読んでおく
+      const documentKeys = await db
+        .select({ r2Key: productDocumentVersions.r2Key })
+        .from(productDocumentVersions)
+        .innerJoin(productDocuments, eq(productDocumentVersions.documentId, productDocuments.documentId))
+        .where(eq(productDocuments.productId, params.productId));
 
       // 行が消えると avatarKey が読めなくなるので、削除の前に読んでおく
       const [before] = await db
@@ -72,6 +80,15 @@ export const productManageRoutes = new Elysia({ name: "product-manage" })
           await storage.delete(before.avatarKey);
         } catch (e) {
           console.warn(`[product-manage] アイコンの画像を消せませんでした: ${before.avatarKey}`, e);
+        }
+      }
+
+      // 文書の本文(全ての版)も消す(消せなくても、削除は成功させる)
+      for (const { r2Key } of documentKeys) {
+        try {
+          await documentStorage.delete(r2Key);
+        } catch (e) {
+          console.warn(`[product-manage] 文書の本文を消せませんでした: ${r2Key}`, e);
         }
       }
 
