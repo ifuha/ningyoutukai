@@ -8,6 +8,7 @@ import { devStorageRoutes } from "./routes/dev-storage";
 // 登録の追加・消失が意図的でないと失敗させるための、期待するルート一覧(メソッド + パス)
 const EXPECTED_ROUTES = [
   "ALL /api/auth/*",
+  "DELETE /api/me/ai-token/:tokenId",
   "DELETE /api/product/:productId",
   "DELETE /api/product/:productId/avatar",
   "DELETE /api/product/:productId/comment/:commentId",
@@ -24,6 +25,7 @@ const EXPECTED_ROUTES = [
   "GET /api/calendar/status",
   "GET /api/_dev-storage/*",
   "GET /api/invitation",
+  "GET /api/me/ai-token",
   "GET /api/me/task",
   "GET /api/product/",
   "GET /api/product/:productId",
@@ -70,6 +72,7 @@ const EXPECTED_ROUTES = [
   "PATCH /api/product/:productId/task/:taskId/message/:messageId",
   "POST /api/invitation/:invitationId/accept",
   "POST /api/invitation/:invitationId/reject",
+  "POST /api/me/ai-token",
   "POST /api/product/",
   "POST /api/product/:productId/comment",
   "POST /api/product/:productId/directory",
