@@ -35,6 +35,7 @@ export function formatLimit(iso: string): string {
 // `onShowTasks` を渡すと、4 件目以降があるとき「他 N 件」が押せて、全タスクの一覧を開ける
 // `onAddTask` を渡すと(リーダーにだけ渡す)、カードの一番下に、破線で区切った「+ タスクを追加」の行が出て、その人を渡す(その人を担当者にして、フォームを開く)
 // `onOpenAi` を渡すと、カードにぶら下がる AI のカード(確認待ちがある持ち主のもの)が押せる。AI のカードは、リーダーは右、メンバーは下に、絶対配置で出す(カードの大きさ・位置の測定には影響しない)
+// `onMoveAi` を渡すと(リーダーにだけ)、AI のカードをつかんで動かせる
 // `cardId` を渡すと、カードに `data-card-id` を付ける(親子の線の端点を、カードの実際の位置・高さで描くために、測る目印)
 export function MemberCard({
   member,
@@ -43,6 +44,7 @@ export function MemberCard({
   onShowTasks,
   onAddTask,
   onOpenAi,
+  onMoveAi,
 }: {
   member: TreeMember
   cardId?: string
@@ -50,6 +52,7 @@ export function MemberCard({
   onShowTasks?: (member: TreeMember) => void
   onAddTask?: (member: TreeMember) => void
   onOpenAi?: (ai: TreeAi) => void
+  onMoveAi?: (ai: TreeAi, offset: { offsetX: number; offsetY: number }) => Promise<void> | void
 }) {
   const isLeader = member.role === 'leader'
   const shown = member.tasks.slice(0, MAX_TASKS)
@@ -154,7 +157,7 @@ export function MemberCard({
         </button>
       )}
       {/* api が古いとき(デプロイの途中など)は ais がないので、空として扱う */}
-      <AiCards ais={member.ais ?? []} side={isLeader ? 'right' : 'bottom'} onOpen={onOpenAi} />
+      <AiCards ais={member.ais ?? []} side={isLeader ? 'right' : 'bottom'} onOpen={onOpenAi} onMove={onMoveAi} />
     </article>
   )
 }

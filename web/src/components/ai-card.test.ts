@@ -13,6 +13,8 @@ const ai = (over: Partial<TreeAi> = {}): TreeAi => ({
   lastDraftAt: null,
   pendingCount: 0,
   pendingTaskIds: [],
+  offsetX: null,
+  offsetY: null,
   ...over,
 })
 const member = (over: Partial<TreeMember> = {}): TreeMember =>
@@ -69,6 +71,20 @@ describe('AiCards', () => {
     )
     expect(html.match(/<button/g)?.length).toBe(1)
     expect(html.match(/<article/g)?.length).toBe(1)
+  })
+})
+
+describe('AI のカードの位置', () => {
+  test('保存された、初めの置き場所からのずれが、カードの位置に使われる。なければ 0', () => {
+    const moved = renderToStaticMarkup(createElement(AiCards, { ais: [ai({ offsetX: 30, offsetY: -12 })], side: 'bottom' }))
+    expect(moved).toContain('translate:30px -12px')
+    expect(renderToStaticMarkup(createElement(AiCards, { ais: [ai()], side: 'bottom' }))).toContain('translate:0px 0px')
+  })
+  test('動かせる(onMove あり)ときだけ、つかめる見た目(cursor-grab)', () => {
+    const movable = renderToStaticMarkup(createElement(AiCards, { ais: [ai()], side: 'bottom', onMove: () => {} }))
+    const fixed = renderToStaticMarkup(createElement(AiCards, { ais: [ai()], side: 'bottom' }))
+    expect(movable).toContain('cursor-grab')
+    expect(fixed).not.toContain('cursor-grab')
   })
 })
 
