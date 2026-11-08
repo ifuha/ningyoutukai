@@ -3,7 +3,7 @@ import { ResizeBox } from '#/components/resize-box'
 
 // 共通のモーダル(`dialog`)。`open` の間だけ中身を置くので、閉じると入力の状態は消える。
 // 余白は中の div 側に持たせ、背景(dialog 自体)を押したときだけ閉じる。見た目は暫定(ターミナル風)
-// `size="full"` は、画面いっぱい気味(設定の画面など)。余白と配置は、中身が持つ(中の div は高さいっぱい)
+// `size="lg"` は、幅 56rem までの広いモーダル(タスクの詳細など、情報が多いもの)。`size="full"` は、画面いっぱい気味(設定の画面など)。余白と配置は、中身が持つ(中の div は高さいっぱい)
 export function Modal({
   open,
   onClose,
@@ -20,7 +20,7 @@ export function Modal({
   /** 中身が外へはみ出す部品(候補のリストなど)を置くとき。スクロールさせず、はみ出させる */
   overflowVisible?: boolean
   /** 'md': 幅 32rem までの、ふつうのモーダル(既定)。'full': 画面いっぱい気味(スマホ幅は全面、PC 幅は周りに 2rem の余白) */
-  size?: 'md' | 'full'
+  size?: 'md' | 'lg' | 'full'
   /** 背景(外側)を押したときに閉じるか。入力の途中で、うっかり押して内容が消えるのを避けたいフォームでは false(Esc と「閉じる」では閉じられる) */
   closeOnBackdrop?: boolean
   /** 中身の高さが変わったとき(詳細を開くなど)、モーダルの高さを、なめらかに動かす(`ResizeBox`)。`size="md"` のとき。`overflowVisible` とは、一緒に使わない(動いている間、はみ出しを隠すため) */
@@ -61,7 +61,7 @@ export function Modal({
   const sizeClass =
     size === 'full'
       ? 'h-dvh max-h-none w-screen max-w-none overflow-hidden md:h-[calc(100dvh-4rem)] md:w-[calc(100vw-4rem)]'
-      : 'max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))]'
+      : `max-h-[calc(100dvh-2rem)] ${size === 'lg' ? 'w-[min(56rem,calc(100vw-2rem))]' : 'w-[min(32rem,calc(100vw-2rem))]'}`
 
   return (
     <dialog
@@ -75,7 +75,7 @@ export function Modal({
     >
       {open && (
         <div className={size === 'full' ? 'h-full' : padded ? 'space-y-4 p-6' : ''}>
-          {animateResize && size === 'md' && !overflowVisible ? <ResizeBox>{children}</ResizeBox> : children}
+          {animateResize && size !== 'full' && !overflowVisible ? <ResizeBox>{children}</ResizeBox> : children}
         </div>
       )}
     </dialog>

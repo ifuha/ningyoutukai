@@ -161,7 +161,7 @@ export function TaskDetailDialog({
   onClose: () => void
 }) {
   return (
-    <Modal open={target !== null} onClose={onClose}>
+    <Modal open={target !== null} onClose={onClose} size="lg">
       {target && (
         <Detail
           key={target.task.taskId}
