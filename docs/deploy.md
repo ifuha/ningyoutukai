@@ -226,6 +226,16 @@ curl -s -o /dev/null -w "%{http_code}\n" "$WEB/api/product"   # 401(未ログイ
 3. デプロイする。`DOCS` がない環境でも、api は動く。文書のルートだけが、「R2 のバインディング(DOCS)が設定されていません」で失敗する。
 4. ローカル(Bun)とテストは、R2 を使わず、ローカルのフォルダ(`DOCS_STORAGE_DIR`、既定は `api/.local-storage-docs`。コミットしない)に保存する。
 
+### 定期実行(文書の自動削除。v4.0)
+
+`api/wrangler.jsonc` の `triggers.crons` で、毎日 18:00 UTC(日本時間の翌日 3:00)に、長い間呼び出されない文書を自動で削除する(`src/worker.ts` の `scheduled` → `lib/document-auto-delete.ts`)。
+日数は、プロダクトの設定(`products.document_auto_delete_days`。初期 7 日。リーダーが変える)。「自動削除しない」の文書と、未完了のタスクに結びついている文書、編集中の文書は消さない。消したら、そのプロダクトの参加者全員にメールで知らせる(ごみ箱も、消す前のメールもない)。
+
+- デプロイすると、Cron Trigger も一緒に登録される(追加の手順は要らない)。`DOCS` のバインディングがなければ、削除の R2 の後始末が warn になるだけで、動作は止まらない
+- 手元で 1 回動かす: `cd api && bun run scripts/document-auto-delete.ts`(`DATABASE_URL` は `.env.local` / `.env`。ローカルのフォルダの保存先を使う)
+- 実行の記録は、Cloudflare のダッシュボードの Worker のログ(`[document-auto-delete] N プロダクトで M 件の文書を削除しました`)で見る
+- 失敗したら、次の実行でやり直せる(条件に合う文書は、また候補になる)
+
 ### R2 の準備(バックアップ用)
 
 1. Cloudflare ダッシュボードの R2 でバケット(例: `ningyoutukai-backup`)を作る。公開設定はしない。CLI なら `npx wrangler r2 bucket create ningyoutukai-backup`。

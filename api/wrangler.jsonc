@@ -38,5 +38,9 @@
       "id": "988ccd0f0a7f4fba90c4fbdcf6f68797",
       "localConnectionString": "postgres://postgres:postgres@localhost:5434/ningyoutukai"
     }
-  ]
+  ],
+
+  // 定期実行(Cron Trigger。時刻は UTC)。毎日 18:00 UTC(日本時間の翌日 3:00)に、長い間呼び出されない文書を自動で削除する(src/worker.ts の scheduled)。
+  // 日数は、プロダクトの設定(初期 7 日)。docs/deploy.md の「定期実行」
+  "triggers": { "crons": ["0 18 * * *"] }
 }
