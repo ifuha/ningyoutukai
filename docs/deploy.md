@@ -217,6 +217,15 @@ curl -s -o /dev/null -w "%{http_code}\n" "$WEB/api/product"   # 401(未ログイ
 3. デプロイする。`STORAGE` がない環境(バケットを作る前)でも、api は動く。ファイルを保存するルートだけが、「R2 のバインディング(STORAGE)が設定されていません」で失敗する。
 4. ローカル(Bun)とテストは、R2 を使わず、ローカルのフォルダ(`STORAGE_DIR`、既定は `api/.local-storage`。コミットしない)に保存する。
 
+### 文書用のバケット(Markdown。v4.0)
+
+アイコン用とも、バックアップ用とも**別のバケット**を作り、api の Worker にバインディング `DOCS` で付ける(鍵は要らない)。**アイコン用のバケットとは違い、公開 URL(`r2.dev`)は有効にしない**(文書は、参加者だけが読めればよい。読み出しは api を通し、ログインと権限を確かめる)。
+
+1. バケットを作る(公開設定はしない): `npx wrangler r2 bucket create ningyoutukai-product-docs`
+2. 作ってから、`api/wrangler.jsonc` の `r2_buckets` に、バインディング `DOCS` と、そのバケット名を足す(見本はコメントで書いてある)。**作る前に書くと、デプロイが失敗する**。
+3. デプロイする。`DOCS` がない環境でも、api は動く。文書のルートだけが、「R2 のバインディング(DOCS)が設定されていません」で失敗する。
+4. ローカル(Bun)とテストは、R2 を使わず、ローカルのフォルダ(`DOCS_STORAGE_DIR`、既定は `api/.local-storage-docs`。コミットしない)に保存する。
+
 ### R2 の準備(バックアップ用)
 
 1. Cloudflare ダッシュボードの R2 でバケット(例: `ningyoutukai-backup`)を作る。公開設定はしない。CLI なら `npx wrangler r2 bucket create ningyoutukai-backup`。

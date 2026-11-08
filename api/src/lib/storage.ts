@@ -235,3 +235,30 @@ export const storage: ObjectStorage = {
   get: (key) => (storageContext.getStore() ?? getDefaultStorage()).get(key),
   delete: (key) => (storageContext.getStore() ?? getDefaultStorage()).delete(key),
 };
+
+// ---- 文書用(Markdown。非公開のバケット) ----
+
+/**
+ * 文書(Markdown)の保存先。アイコン用の `storage` とは**別のバケット**(バインディング `DOCS`)。
+ * アイコン用のバケットは、公開 URL(`r2.dev`)を有効にしているので、キーが分かれば誰でも読める。文書は、参加者だけが読めればよいので、**公開しない別のバケット**に置く。
+ * 読み出しは、必ず api を通す(ログインと権限を確かめてから返す)。バケットの公開 URL は使わない。
+ * 仕組みは `storage` と同じ: Workers ではリクエストごとに R2 のバインディング(`src/worker.ts` が差し込む)、Bun のローカル起動とテストでは
+ * ローカルのフォルダ(`DOCS_STORAGE_DIR`、既定は `./.local-storage-docs`)。
+ */
+export const documentStorageContext = new AsyncLocalStorage<ObjectStorage>();
+
+let defaultDocumentStorage: ObjectStorage | undefined;
+const getDefaultDocumentStorage = () =>
+  (defaultDocumentStorage ??= createLocalStorage(process.env.DOCS_STORAGE_DIR ?? "./.local-storage-docs"));
+
+/** テストで、文書用の既定の保存先を差し替える(`undefined` で、既定に戻す) */
+export function setDefaultDocumentStorage(storage: ObjectStorage | undefined) {
+  defaultDocumentStorage = storage;
+}
+
+/** いまの文書用の保存先。Workers ではリクエストの R2(`DOCS`)、それ以外では既定(ローカルのフォルダ)に、そのまま渡す */
+export const documentStorage: ObjectStorage = {
+  put: (key, body, options) => (documentStorageContext.getStore() ?? getDefaultDocumentStorage()).put(key, body, options),
+  get: (key) => (documentStorageContext.getStore() ?? getDefaultDocumentStorage()).get(key),
+  delete: (key) => (documentStorageContext.getStore() ?? getDefaultDocumentStorage()).delete(key),
+};

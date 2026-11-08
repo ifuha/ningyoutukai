@@ -25,6 +25,8 @@
   // バケットは、先に作っておくこと(`npx wrangler r2 bucket create ningyoutukai-product-avatar`)。ないとデプロイが失敗する。
   // `STORAGE` が無い環境でも api は動き、ファイルを保存するルートだけが失敗する(src/worker.ts)。docs/deploy.md の「アップロード用のバケット」
   "r2_buckets": [{ "binding": "STORAGE", "bucket_name": "ningyoutukai-product-avatar" }],
+  // 文書(Markdown)用の、公開しない R2 バケット(v4.0)。**バケットを作ってから**、上の配列に次の 1 行を足す(作る前に書くと、デプロイが失敗する)。docs/deploy.md の「文書用のバケット」
+  //   { "binding": "DOCS", "bucket_name": "ningyoutukai-product-docs" }
 
   // Neon への接続は Hyperdrive 経由。id は `wrangler hyperdrive create` が出力する値に置き換える。
   // ローカルの `wrangler dev` では id は使われず、localConnectionString(dev 用コンテナの既定の値。秘密ではない)
