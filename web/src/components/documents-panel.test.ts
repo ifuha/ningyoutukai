@@ -4,7 +4,6 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { DocumentDialog } from './document-dialog'
 import { DocumentsPanelView, type DocumentsPanelViewProps } from './documents-panel'
 import { LockNoticeBanner } from './lock-notice'
-import { NewDocumentDialog } from './new-document-dialog'
 import type { DocDirectory } from '#/lib/document-api'
 import { lockNotice } from '#/lib/document-tree'
 import { heldState } from '#/lib/edit-lock'
@@ -34,7 +33,7 @@ const props = (over: Partial<DocumentsPanelViewProps> = {}): DocumentsPanelViewP
   isLeader: false,
   onClose: () => {},
   onOpenDocument: () => {},
-  onAddDocument: () => {},
+  onCreateDocument: async () => {},
   ...over,
 })
 const render = (over: Partial<DocumentsPanelViewProps> = {}) => renderToStaticMarkup(createElement(DocumentsPanelView, props(over)))
@@ -139,11 +138,20 @@ describe('編集ロックの案内', () => {
   })
 })
 
-describe('ダイアログ', () => {
-  test('文書を追加するダイアログは、閉じている間は中身を置かない', () => {
-    const html = renderToStaticMarkup(createElement(NewDocumentDialog, { open: false, directoryName: '仕様', onSubmit: async () => {}, onClose: () => {} }))
-    expect(html).not.toContain('文書を追加')
+describe('文書の追加(ツリーの中で名前を入力。モーダルは開かない)', () => {
+  test('書き込み権限のあるディレクトリに「文書を追加」のボタン。押す前は、名前の入力欄はない', () => {
+    const html = render({ directories: [dir({ directoryId: 'd1', name: '書ける', myLevel: 'write' })] })
+    expect(html).toContain('aria-label="文書を追加"')
+    expect(html).not.toContain('aria-label="文書の名前"')
+    expect(html).not.toContain('<dialog')
   })
+  test('モーダルの部品(NewDocumentDialog)は、もう使っていない', async () => {
+    const files = await Array.fromAsync(new Bun.Glob('**/*.{ts,tsx}').scan({ cwd: `${import.meta.dir}` }))
+    expect(files).not.toContain('new-document-dialog.tsx')
+  })
+})
+
+describe('ダイアログ', () => {
   test('文書のダイアログも、文書を選ぶまでは中身を置かない', () => {
     const html = renderToStaticMarkup(createElement(DocumentDialog, { productId: 'p', documentId: null, isLeader: true, myMemberId: 'me', onClose: () => {} }))
     expect(html).not.toContain('編集')
