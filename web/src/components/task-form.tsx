@@ -6,6 +6,9 @@ import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 import { CheckBox, SelectMenu } from '#/components/form-controls'
 import { IconButton } from '#/components/icon-button'
+import { TaskDocumentPicker, sameSelection, type TaskLinkSelection } from '#/components/task-document-picker'
+import { getTaskDocuments, setTaskDocuments } from '#/lib/document-api'
+import { useDocumentTree } from '#/lib/use-product-documents'
 import { Check, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 
 // 期限は日本時間(+09:00)として扱う。`datetime-local` の値(`2026-12-01T09:00`)と ISO を行き来する
@@ -56,8 +59,20 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
   const [timeLimit, setTimeLimit] = useState(toInputValue(initial?.timeLimit ?? null))
   const [kindId, setKindId] = useState(initial?.taskType?.taskTypeId ?? '')
   const [isVisible, setIsVisible] = useState(initial?.isVisible ?? true)
-  // 詳細(説明・期限・種類)を開いているか。作成のときは閉じて、編集のときは開いておく
+  // 詳細(説明・期限・種類・渡す文書)を開いているか。作成のときは閉じて、編集のときは開いておく
   const [detailsOpen, setDetailsOpen] = useState(Boolean(initial))
+
+  // 渡す Markdown(文書・ディレクトリ)。作成では空から。編集では、いま結びついているものを読んで、それを初期値にする(触るまでは、読んだ値)
+  const tree = useDocumentTree(productId)
+  const savedLinks = useQuery({
+    queryKey: ['products', productId, 'task', initial?.taskId ?? 'new', 'documents'],
+    queryFn: () => getTaskDocuments(productId, initial!.taskId),
+    enabled: Boolean(initial),
+    retry: false,
+  })
+  const loadedLinks: TaskLinkSelection = { documentIds: savedLinks.data?.documentIds ?? [], directoryIds: savedLinks.data?.directoryIds ?? [] }
+  const [editedLinks, setEditedLinks] = useState<TaskLinkSelection | null>(null)
+  const links = editedLinks ?? loadedLinks
 
   const kinds = useQuery({
     queryKey: ['products', productId, 'task_kinds'],
@@ -78,6 +93,8 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
             ...(timeLimit !== '' && { timeLimit: toIso(timeLimit) }),
             ...(kindId !== '' && { taskTypeId: kindId }),
             isVisible,
+            ...(links.documentIds.length > 0 && { documentIds: links.documentIds }),
+            ...(links.directoryIds.length > 0 && { directoryIds: links.directoryIds }),
           }),
         )
         return
@@ -98,6 +115,10 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
       const task = product.task({ taskId: initial.taskId })
       if (Object.keys(changes).length > 0) {
         await edenData(task.patch(changes))
+      }
+      // 渡す Markdown は別の api(置き換え)。変えたときだけ呼ぶ
+      if (editedLinks && !sameSelection(editedLinks, loadedLinks)) {
+        await setTaskDocuments(productId, initial.taskId, editedLinks)
       }
       // 種類は別の api。割り当てのみで、外す(なしに戻す)api はないので、選んだときだけ呼ぶ
       if (kindId !== '' && kindId !== (initial.taskType?.taskTypeId ?? '')) {
@@ -206,7 +227,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
               />
             </span>
             詳細
-            <span className="text-s font-normal opacity-70">(説明・期限・種類)</span>
+            <span className="text-s font-normal opacity-70">(説明・期限・種類・渡す Markdown)</span>
           </span>
         </summary>
         <div className="details-in mt-4 space-y-4">
@@ -265,6 +286,15 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
               ERR {kinds.error.message}
             </p>
           )}
+
+          <TaskDocumentPicker
+            directories={tree.data}
+            loading={tree.isPending || (Boolean(initial) && savedLinks.isPending)}
+            error={tree.isError && tree.data === undefined ? tree.error.message : null}
+            selection={links}
+            onChange={setEditedLinks}
+            disabled={save.isPending}
+          />
         </div>
       </details>
 
