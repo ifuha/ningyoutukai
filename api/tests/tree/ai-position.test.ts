@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { app } from "../../src/app";
 import { db } from "../../src/db";
 import { aiTokens } from "../../src/db/schema";
+import { aiPositionAuthorize } from "../../src/lib/ai-position-authorize";
 import { createAiToken } from "../../src/lib/ai-token";
 import { cleanup, createOutsider, setupProduct } from "../task/helpers";
 
@@ -28,6 +29,13 @@ const myAi = async (cookie: string) => {
   const tree = (await (await call("GET", `/api/product/${a.productId}/tree`, cookie)).json()) as { members: { productMemberId: string; ais: Ai[] }[] };
   return tree.members.find((m) => m.productMemberId === a.members[0]!.memberId)!.ais[0]!;
 };
+
+describe("aiPositionAuthorize(権限のプラグイン)", () => {
+  test("リーダーだけが動かせる", () => {
+    expect(aiPositionAuthorize({ userId: "u", role: "leader" }).canMove()).toBe(true);
+    expect(aiPositionAuthorize({ userId: "u", role: "member" }).canMove()).toBe(false);
+  });
+});
 
 describe("AI のカードの位置", () => {
   test("動かしていなければ null", async () => {

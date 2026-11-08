@@ -1,33 +1,45 @@
-import { Bot } from "lucide-react";
-import { useContext, useEffect, useRef, useState } from "react";
-import { formatDateTime } from "#/components/member-card";
-import { CanvasViewContext } from "#/lib/canvas-view";
-import type { TreeAi } from "#/lib/tree";
+import { Bot } from 'lucide-react'
+import { useContext } from 'react'
+import { formatDateTime } from '#/components/member-card'
+import { CanvasViewContext } from '#/lib/canvas-view'
+import type { TreeAi } from '#/lib/tree'
+import { useOffsetDrag, type Offset } from '#/lib/use-offset-drag'
 
 // メンバーの AI のカード(ツリー)。AI はメンバーではなく、持ち主が使う道具。仕様は docs/v4.0/overview.md
 // - 名前は全員に見える。確認待ちの下書きの数は、持ち主本人にだけ出る(他の人には `pendingCount` が null)
 // - `onOpen` を渡すと(持ち主で、確認待ちがあるとき)押せて、確認待ちのタスクの詳細を開く
-// - **リーダーだけ**、カードをつかんで動かせる(メンバーのカードと同じ)。位置は、初めの置き場所からのずれ(px)。持ち主のカードに付いて動く
-// - リーダーの AI はリーダーのカードの右に、メンバーの AI はそのメンバーのカードの下に、点線でつないで出す(`MemberCard` が置く)
+// - **リーダーだけ**、カードをつかんで動かせる(メンバーのカードと同じ)。位置は、初めの置き場所からのずれ(px)。持ち主のカードに付いて動く。動かすロジックは `lib/use-offset-drag.ts`
+// - リーダーの AI はリーダーのカードの右に、メンバーの AI はそのメンバーのカードの下に、点線でつなぐ(`MemberCard` が置く)。**点線は、持ち主のカードからカードまで引き直す**(動かしても、つながったまま)
 
-export function aiCardSummary(
-  ai: Pick<TreeAi, "pendingCount" | "lastDraftAt">,
-): string {
-  if (ai.pendingCount !== null && ai.pendingCount > 0)
-    return `確認待ち ${ai.pendingCount} 件`;
-  return ai.lastDraftAt
-    ? `下書き ${formatDateTime(ai.lastDraftAt)}`
-    : "下書きなし";
+/** カードの高さ(px)。点線の端の位置を決めるため、固定する(`h-12`) */
+export const AI_CARD_HEIGHT = 48
+const ROW_GAP = 8
+/** 右に置くとき: 持ち主のカードとの間の点線の長さ */
+const STUB = 24
+/** 下に置くとき: 左の余白 */
+const INDENT = 16
+
+export type AiSide = 'right' | 'bottom'
+
+/**
+ * 持ち主のカードからカードまでの点線の座標(`points` 用)。原点は、そのカードの行の左上。`(dx, dy)` は動かしたずれ
+ * - 右: 持ち主のカードの右の縁(0, 高さの半分)から、カードの左の中央まで
+ * - 下: 持ち主のカードの下の縁から、まっすぐ下げて、カードの左の中央まで(`index` 番目のカードの分だけ上から)
+ */
+export function aiConnectorPoints(side: AiSide, index: number, dx: number, dy: number): string {
+  const mid = AI_CARD_HEIGHT / 2
+  if (side === 'right') return `0,${mid} ${STUB + dx},${mid + dy}`
+  const top = -(INDENT + index * (AI_CARD_HEIGHT + ROW_GAP))
+  return `0,${top} 0,${mid} ${INDENT + dx},${mid + dy}`
 }
 
-export function AiCard({
-  ai,
-  onOpen,
-}: {
-  ai: TreeAi;
-  onOpen?: (ai: TreeAi) => void;
-}) {
-  const waiting = ai.pendingCount !== null && ai.pendingCount > 0;
+export function aiCardSummary(ai: Pick<TreeAi, 'pendingCount' | 'lastDraftAt'>): string {
+  if (ai.pendingCount !== null && ai.pendingCount > 0) return `確認待ち ${ai.pendingCount} 件`
+  return ai.lastDraftAt ? `下書き ${formatDateTime(ai.lastDraftAt)}` : '下書きなし'
+}
+
+export function AiCard({ ai, onOpen }: { ai: TreeAi; onOpen?: (ai: TreeAi) => void }) {
+  const waiting = ai.pendingCount !== null && ai.pendingCount > 0
   const body = (
     <>
       <Bot size={16} aria-hidden="true" className="shrink-0" />
@@ -35,16 +47,11 @@ export function AiCard({
         <span className="block truncate font-bold" title={ai.name}>
           {ai.name}
         </span>
-        <span
-          className={`block truncate text-s ${waiting ? "" : "opacity-70"}`}
-        >
-          {aiCardSummary(ai)}
-        </span>
+        <span className={`block truncate text-s ${waiting ? '' : 'opacity-70'}`}>{aiCardSummary(ai)}</span>
       </span>
     </>
-  );
-  const className =
-    "flex w-[200px] items-center gap-2 shadow-box bg-panel p-2 text-left";
+  )
+  const className = 'flex h-12 w-[200px] items-center gap-2 shadow-box bg-panel px-2 text-left'
   return onOpen ? (
     <button
       type="button"
@@ -55,165 +62,52 @@ export function AiCard({
       {body}
     </button>
   ) : (
-    <article
-      data-ai-card={ai.tokenId}
-      aria-label={`AI ${ai.name}`}
-      className={className}
-    >
+    <article data-ai-card={ai.tokenId} aria-label={`AI ${ai.name}`} className={className}>
       {body}
     </article>
-  );
+  )
 }
 
-const MOVE_THRESHOLD = 3;
+type MoveHandler = (ai: TreeAi, offset: { offsetX: number; offsetY: number }) => Promise<void> | void
 
-/** 動かせるカード 1 枚。つかんで動かす間は手元の位置を使い、離したら `onMove` で保存する(終わるまでは手元の位置のまま) */
-function MovableAiCard({
-  ai,
-  side,
-  onOpen,
-  onMove,
-}: {
-  ai: TreeAi;
-  side: "right" | "bottom";
-  onOpen?: (ai: TreeAi) => void;
-  onMove?: (
-    ai: TreeAi,
-    offset: { offsetX: number; offsetY: number },
-  ) => Promise<void> | void;
-}) {
+/** 動かせるカード 1 枚と、持ち主のカードからの点線 */
+function MovableAiCard({ ai, side, index, onOpen, onMove }: { ai: TreeAi; side: AiSide; index: number; onOpen?: (ai: TreeAi) => void; onMove?: MoveHandler }) {
   // 拡大率(キャンバスの外、たとえばテストでは 1)
-  const scale = useContext(CanvasViewContext)?.scale ?? 1;
-  const saved = { x: ai.offsetX ?? 0, y: ai.offsetY ?? 0 };
-  const [local, setLocal] = useState<{ x: number; y: number } | null>(null);
-  const drag = useRef<{
-    startX: number;
-    startY: number;
-    base: { x: number; y: number };
-    moved: boolean;
-  } | null>(null);
-  const justDragged = useRef(false);
-  // 保存した位置が変わったら(取り直しが終わった・他の人が動かした)、手元の位置はやめる
-  useEffect(() => setLocal(null), [ai.offsetX, ai.offsetY]);
-  const at = local ?? saved;
+  const scale = useContext(CanvasViewContext)?.scale ?? 1
+  const { at, bind } = useOffsetDrag({
+    saved: { x: ai.offsetX ?? 0, y: ai.offsetY ?? 0 },
+    scale,
+    enabled: !!onMove,
+    onMove: onMove && ((o: Offset) => onMove(ai, { offsetX: o.x, offsetY: o.y })),
+  })
 
   return (
-    <div className={side === "right" ? "flex items-center" : ""}>
-      {/* 持ち主のカードとの点線は、カードを動かしても、持ち主の側に残す */}
-      {side === "right" && (
-        <span
-          aria-hidden="true"
-          className="w-6 border-t border-dashed border-ink/50"
-        />
-      )}
-      <div
-        data-ai-slot=""
-        style={{ translate: `${at.x}px ${at.y}px` }}
-        className={
-          onMove ? "touch-none cursor-grab active:cursor-grabbing" : undefined
-        }
-        onPointerDown={(e) => {
-          // 持ち主のカード(ドラッグで動くカード)や、キャンバスのパンに、渡さない
-          e.stopPropagation();
-          if (!onMove || e.button !== 0) return;
-          e.currentTarget.setPointerCapture(e.pointerId);
-          drag.current = {
-            startX: e.clientX,
-            startY: e.clientY,
-            base: at,
-            moved: false,
-          };
-        }}
-        onPointerMove={(e) => {
-          const d = drag.current;
-          if (!d) return;
-          const dx = (e.clientX - d.startX) / scale;
-          const dy = (e.clientY - d.startY) / scale;
-          if (!d.moved && Math.hypot(dx, dy) * scale < MOVE_THRESHOLD) return;
-          d.moved = true;
-          setLocal({ x: d.base.x + dx, y: d.base.y + dy });
-        }}
-        onPointerUp={(e) => {
-          const d = drag.current;
-          drag.current = null;
-          if (!d?.moved || !onMove) return;
-          justDragged.current = true;
-          const next = {
-            x: d.base.x + (e.clientX - d.startX) / scale,
-            y: d.base.y + (e.clientY - d.startY) / scale,
-          };
-          setLocal(next);
-          void Promise.resolve(
-            onMove(ai, {
-              offsetX: Math.round(next.x),
-              offsetY: Math.round(next.y),
-            }),
-          ).finally(() => setLocal(null));
-        }}
-        onPointerCancel={() => {
-          drag.current = null;
-          setLocal(null);
-        }}
-        onClickCapture={(e) => {
-          // ドラッグのあとの click は、カードを開く操作にしない
-          if (justDragged.current) {
-            justDragged.current = false;
-            e.stopPropagation();
-            e.preventDefault();
-          }
-        }}
-        onDragStart={(e) => e.preventDefault()}
-      >
+    <div className={`relative ${side === 'right' ? 'flex items-center' : 'pl-4'}`} style={{ height: AI_CARD_HEIGHT }}>
+      {/* 点線: 動かしても、持ち主のカードから、つながったまま */}
+      <svg aria-hidden="true" className="pointer-events-none absolute top-0 left-0 overflow-visible text-ink/50" width={side === 'right' ? STUB : INDENT} height={AI_CARD_HEIGHT}>
+        <polyline points={aiConnectorPoints(side, index, at.x, at.y)} fill="none" stroke="currentColor" strokeWidth={1} strokeDasharray="4 3" />
+      </svg>
+      {side === 'right' && <span aria-hidden="true" className="w-6 shrink-0" />}
+      <div data-ai-slot="" style={{ translate: `${at.x}px ${at.y}px` }} className={onMove ? 'touch-none cursor-grab active:cursor-grabbing' : undefined} {...bind}>
         <AiCard ai={ai} onOpen={onOpen} />
       </div>
     </div>
-  );
+  )
 }
 
 /** 持ち主のカードにぶら下げる、AI のカードの並び。リーダーは右、メンバーは下。`onMove` を渡すと(リーダーにだけ)動かせる */
-export function AiCards({
-  ais,
-  side,
-  onOpen,
-  onMove,
-}: {
-  ais: TreeAi[];
-  side: "right" | "bottom";
-  onOpen?: (ai: TreeAi) => void;
-  onMove?: (
-    ai: TreeAi,
-    offset: { offsetX: number; offsetY: number },
-  ) => Promise<void> | void;
-}) {
-  if (ais.length === 0) return null;
-  const open = (ai: TreeAi) =>
-    ai.pendingTaskIds && ai.pendingTaskIds.length > 0 ? onOpen : undefined;
+export function AiCards({ ais, side, onOpen, onMove }: { ais: TreeAi[]; side: AiSide; onOpen?: (ai: TreeAi) => void; onMove?: MoveHandler }) {
+  if (ais.length === 0) return null
+  const open = (ai: TreeAi) => (ai.pendingTaskIds && ai.pendingTaskIds.length > 0 ? onOpen : undefined)
   return (
-    <div
-      className={
-        side === "right"
-          ? "absolute top-3 left-full flex items-start"
-          : "absolute top-full left-4 flex flex-col"
-      }
-    >
-      <ul
-        className={
-          side === "right"
-            ? "flex flex-col gap-2"
-            : "flex flex-col gap-2 border-l border-dashed border-ink/50 pt-4 pl-4"
-        }
-      >
-        {ais.map((ai) => (
+    <div className={side === 'right' ? 'absolute top-3 left-full flex items-start' : 'absolute top-full left-4 flex flex-col'}>
+      <ul className={`flex flex-col ${side === 'right' ? '' : 'pt-4'}`} style={{ gap: ROW_GAP }}>
+        {ais.map((ai, i) => (
           <li key={ai.tokenId}>
-            <MovableAiCard
-              ai={ai}
-              side={side}
-              onOpen={open(ai)}
-              onMove={onMove}
-            />
+            <MovableAiCard ai={ai} side={side} index={i} onOpen={open(ai)} onMove={onMove} />
           </li>
         ))}
       </ul>
     </div>
-  );
+  )
 }

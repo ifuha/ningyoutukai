@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { aiTokens, productAiPositions, productMembers } from "../db/schema";
+import { aiPositionAuthorizer } from "../lib/ai-position-authorize";
 import { authGuard } from "../lib/auth-guard";
 import { getMembership } from "../lib/product-access";
 import { MessageSchema } from "../lib/response-schema";
@@ -16,12 +17,13 @@ const OffsetSchema = t.Object({ offsetX: t.Number(), offsetY: t.Number() });
 
 export const productAiPositionRoutes = new Elysia({ name: "product-ai-position" })
   .use(authGuard)
+  .use(aiPositionAuthorizer)
   .put(
     "/api/product/:productId/ai/:tokenId/position",
-    async ({ params, body, user, status }) => {
+    async ({ params, body, user, aiPositionAuthorize, status }) => {
       const membership = await getMembership(params.productId, user.userId);
       if (!membership) return status(404, { message: "プロダクトが見つかりません" });
-      if (membership.role !== "leader") return status(403, { message: "プロダクトリーダーのみ実行できます" });
+      if (!aiPositionAuthorize({ userId: user.userId, role: membership.role }).canMove()) return status(403, { message: "プロダクトリーダーのみ実行できます" });
       if (!(await tokenInProduct(params.productId, params.tokenId))) return status(404, { message: "AI が見つかりません" });
       await db
         .insert(productAiPositions)
@@ -40,10 +42,10 @@ export const productAiPositionRoutes = new Elysia({ name: "product-ai-position" 
   )
   .delete(
     "/api/product/:productId/ai/:tokenId/position",
-    async ({ params, user, status }) => {
+    async ({ params, user, aiPositionAuthorize, status }) => {
       const membership = await getMembership(params.productId, user.userId);
       if (!membership) return status(404, { message: "プロダクトが見つかりません" });
-      if (membership.role !== "leader") return status(403, { message: "プロダクトリーダーのみ実行できます" });
+      if (!aiPositionAuthorize({ userId: user.userId, role: membership.role }).canMove()) return status(403, { message: "プロダクトリーダーのみ実行できます" });
       await db.delete(productAiPositions).where(and(eq(productAiPositions.productId, params.productId), eq(productAiPositions.tokenId, params.tokenId)));
       return { message: "初めの置き場所に戻しました" };
     },

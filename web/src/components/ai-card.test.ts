@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AiCard, AiCards, aiCardSummary } from './ai-card'
+import { AiCard, AiCards, aiCardSummary, aiConnectorPoints } from './ai-card'
 import { MemberCard } from './member-card'
 import type { TreeAi, TreeMember } from '#/lib/tree'
 
@@ -85,6 +85,24 @@ describe('AI のカードの位置', () => {
     const fixed = renderToStaticMarkup(createElement(AiCards, { ais: [ai()], side: 'bottom' }))
     expect(movable).toContain('cursor-grab')
     expect(fixed).not.toContain('cursor-grab')
+  })
+})
+
+describe('点線(持ち主のカードからカードまで)', () => {
+  test('動かしていなければ、右は短い横線、下はまっすぐ下げて横へ', () => {
+    expect(aiConnectorPoints('right', 0, 0, 0)).toBe('0,24 24,24')
+    expect(aiConnectorPoints('bottom', 0, 0, 0)).toBe('0,-16 0,24 16,24')
+  })
+  test('動かすと、端がカードの左の中央に付いていく(持ち主の側の端は動かない)', () => {
+    expect(aiConnectorPoints('right', 0, 100, -30)).toBe('0,24 124,-6')
+    expect(aiConnectorPoints('bottom', 0, 100, 40)).toBe('0,-16 0,24 116,64')
+  })
+  test('下に並べた 2 枚目は、持ち主のカードの下の縁まで、1 枚分(48 + 8)長く上へ伸びる', () => {
+    expect(aiConnectorPoints('bottom', 1, 0, 0)).toBe('0,-72 0,24 16,24')
+  })
+  test('描画: 点線(polyline)は、動かしたずれを反映して引かれる', () => {
+    const html = renderToStaticMarkup(createElement(AiCards, { ais: [ai({ offsetX: 10, offsetY: 5 })], side: 'right' }))
+    expect(html).toContain('points="0,24 34,29"')
   })
 })
 
