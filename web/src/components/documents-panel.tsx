@@ -2,13 +2,14 @@ import { FilePlus, FileText, Folder, FolderPlus, Pencil, ShieldCheck, Trash2, X 
 import { useState } from 'react'
 import { IconButton } from '#/components/icon-button'
 import type { DocDirectory } from '#/lib/document-api'
-import { directoryNameError, editingLabel } from '#/lib/document-tree'
+import { directoryNameError, documentNameError, editingLabel, ensureMdName } from '#/lib/document-tree'
 import { useDocumentActions, useDocumentTree } from '#/lib/use-product-documents'
 
 // 画面の右側に出す、ディレクトリのツリー(スマホは、画面いっぱいの 1 ページ)。仕様は docs/v4.0/overview.md
 // - ディレクトリ(1 段)と、中の文書。文書を押すと、文書のダイアログ(プレビュー・編集)が開く
 // - **編集中の文書には、緑の点と、編集している人の名前を出す。** 12 秒おきに取り直して更新する(リアルタイム通信は使わない)
 // - リーダー: ディレクトリの追加・名前の変更・削除(文書が入っていると消せない)、権限の設定。書き込み権限のある人: 文書の追加
+// - **ディレクトリも文書も、ツリーの中で名前を入力して追加する**(モーダルは開かない)。文書は、名前(`.md` は自動で付く)だけで作り、作ったら文書のダイアログを開く(本文は、そこで書く)
 // 表示(`DocumentsPanelView`)と、データを取る・操作する部分(`DocumentsPanel`)に分けてある
 
 export type DocumentsPanelViewProps = {
@@ -20,7 +21,8 @@ export type DocumentsPanelViewProps = {
   activeDocumentId?: string | null
   onClose: () => void
   onOpenDocument: (documentId: string) => void
-  onAddDocument: (directory: DocDirectory) => void
+  /** 書き込み権限のあるディレクトリに、名前だけで文書を作る(`.md` は付いた名前で渡る)。作れたら、親が文書を開く */
+  onCreateDocument: (directory: DocDirectory, name: string) => Promise<void>
   /** リーダーだけ。渡さなければ、ボタンを出さない */
   onAddDirectory?: (name: string) => Promise<void>
   onRenameDirectory?: (directory: DocDirectory, name: string) => Promise<void>
@@ -37,7 +39,7 @@ export function DocumentsPanelView({
   activeDocumentId,
   onClose,
   onOpenDocument,
-  onAddDocument,
+  onCreateDocument,
   onAddDirectory,
   onRenameDirectory,
   onDeleteDirectory,
@@ -49,6 +51,9 @@ export function DocumentsPanelView({
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  // 文書を追加している最中のディレクトリと、入力中の名前
+  const [addingDocIn, setAddingDocIn] = useState<string | null>(null)
+  const [docName, setDocName] = useState('')
 
   const run = async (action: () => Promise<void>, done: () => void) => {
     try {
@@ -138,7 +143,20 @@ export function DocumentsPanelView({
                       <span className="shrink-0 text-s opacity-60">{dir.documents.length}</span>
                     </>
                   )}
-                  {dir.myLevel === 'write' && <IconButton icon={FilePlus} label="文書を追加" size="sm" side="bottom" onClick={() => onAddDocument(dir)} />}
+                  {dir.myLevel === 'write' && (
+                    <IconButton
+                      icon={FilePlus}
+                      label="文書を追加"
+                      size="sm"
+                      side="bottom"
+                      pressed={addingDocIn === dir.directoryId}
+                      onClick={() => {
+                        setAddingDocIn((cur) => (cur === dir.directoryId ? null : dir.directoryId))
+                        setDocName('')
+                        setFormError(null)
+                      }}
+                    />
+                  )}
                   {isLeader && onOpenPermissions && <IconButton icon={ShieldCheck} label="権限" size="sm" side="bottom" onClick={() => onOpenPermissions(dir)} />}
                   {isLeader && onRenameDirectory && renamingId !== dir.directoryId && (
                     <IconButton
@@ -163,6 +181,33 @@ export function DocumentsPanelView({
                   <p role="alert" className="ml-5 text-s text-danger">
                     もう一度押すと「{dir.name}」を削除します(文書が入っていると削除できません)
                   </p>
+                )}
+                {addingDocIn === dir.directoryId && (
+                  <form
+                    className="ml-5 mt-1 flex items-start gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      const finalName = ensureMdName(docName)
+                      const error = documentNameError(finalName)
+                      if (error) return setFormError(error)
+                      void run(() => onCreateDocument(dir, finalName), () => {
+                        setDocName('')
+                        setAddingDocIn(null)
+                      })
+                    }}
+                  >
+                    <input
+                      aria-label="文書の名前"
+                      autoFocus
+                      value={docName}
+                      maxLength={100}
+                      placeholder="文書の名前(.md は自動)"
+                      onChange={(e) => setDocName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Escape' && setAddingDocIn(null)}
+                      className="h-8 min-w-0 flex-1 bg-transparent px-2 text-m shadow-box outline-none placeholder:text-ink/45"
+                    />
+                    <IconButton icon={FilePlus} label="追加" size="sm" variant="solid" type="submit" disabled={!docName.trim()} />
+                  </form>
                 )}
                 {dir.documents.length === 0 ? (
                   <p className="ml-5 text-s opacity-60"># 文書なし</p>
@@ -219,7 +264,7 @@ export function DocumentsPanel({
   activeDocumentId,
   onClose,
   onOpenDocument,
-  onAddDocument,
+  onCreateDocument,
   onOpenPermissions,
 }: {
   productId: string
@@ -228,7 +273,7 @@ export function DocumentsPanel({
   activeDocumentId?: string | null
   onClose: () => void
   onOpenDocument: (documentId: string) => void
-  onAddDocument: (directory: DocDirectory) => void
+  onCreateDocument: (directory: DocDirectory, name: string) => Promise<void>
   onOpenPermissions?: (directory: DocDirectory) => void
 }) {
   const tree = useDocumentTree(productId, { poll: true })
@@ -243,7 +288,7 @@ export function DocumentsPanel({
       activeDocumentId={activeDocumentId}
       onClose={onClose}
       onOpenDocument={onOpenDocument}
-      onAddDocument={onAddDocument}
+      onCreateDocument={onCreateDocument}
       onAddDirectory={isLeader ? async (name) => void (await actions.createDirectory(name)) : undefined}
       onRenameDirectory={isLeader ? (dir, name) => actions.renameDirectory(dir.directoryId, name) : undefined}
       onDeleteDirectory={isLeader ? (dir) => actions.deleteDirectory(dir.directoryId) : undefined}

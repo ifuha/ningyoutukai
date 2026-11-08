@@ -3,12 +3,11 @@ import { PanelResizeHandle } from '#/components/panel-resize-handle'
 import { DirectoryPermissionDialog } from '#/components/directory-permission-dialog'
 import { DocumentDialog } from '#/components/document-dialog'
 import { DocumentsPanel } from '#/components/documents-panel'
-import { NewDocumentDialog } from '#/components/new-document-dialog'
 import type { DocDirectory } from '#/lib/document-api'
 import { PANEL_DEFAULT_PX, loadPanelWidth, savePanelWidth } from '#/lib/panel-width'
 import { useDocumentActions } from '#/lib/use-product-documents'
 
-// 文書の機能(右側のツリー + 文書のダイアログ + 文書を追加するダイアログ)をまとめて、プロダクトの画面に置く部品。
+// 文書の機能(右側のツリー + 文書のダイアログ + 権限のダイアログ)をまとめて、プロダクトの画面に置く部品。
 // ツリーは、**画面の右側に、浮かせて**出す(広い画面)。スマホ幅では、画面いっぱいの 1 ページとして出す(`md` 未満)。開閉は、親(「管理」メニューの「文書」)が持つ
 // 広い画面では、パネルの左の縁を**マウスで掴んで、幅を変えられる**(`PanelResizeHandle`)。幅は覚えておく(次に開くとき、同じ幅)
 export function DocumentsFeature({
@@ -25,7 +24,6 @@ export function DocumentsFeature({
   onClose: () => void
 }) {
   const [openDocId, setOpenDocId] = useState<string | null>(null)
-  const [newDocIn, setNewDocIn] = useState<DocDirectory | null>(null)
   // 権限を設定しているディレクトリ(リーダーだけ)
   const [permissionDir, setPermissionDir] = useState<DocDirectory | null>(null)
   const actions = useDocumentActions(productId)
@@ -58,22 +56,15 @@ export function DocumentsFeature({
             activeDocumentId={openDocId}
             onClose={onClose}
             onOpenDocument={setOpenDocId}
-            onAddDocument={setNewDocIn}
+            onCreateDocument={async (dir, name) => {
+              // 名前だけで作る(本文は空)。作ったら文書のダイアログを開く(本文は、そこで書く)
+              const created = await actions.createDocument(dir.directoryId, { name, content: '' })
+              setOpenDocId(created.documentId)
+            }}
             onOpenPermissions={setPermissionDir}
           />
         </div>
       )}
-      <NewDocumentDialog
-        open={newDocIn !== null}
-        directoryName={newDocIn?.name ?? ''}
-        onClose={() => setNewDocIn(null)}
-        onSubmit={async (input) => {
-          if (!newDocIn) return
-          const created = await actions.createDocument(newDocIn.directoryId, input)
-          setNewDocIn(null)
-          setOpenDocId(created.documentId)
-        }}
-      />
       <DirectoryPermissionDialog productId={productId} directory={permissionDir} onClose={() => setPermissionDir(null)} />
       <DocumentDialog productId={productId} documentId={openDocId} isLeader={isLeader} myMemberId={myMemberId} onClose={() => setOpenDocId(null)} />
     </>
