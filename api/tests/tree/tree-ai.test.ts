@@ -60,6 +60,9 @@ describe("AI のカード", () => {
     expect(own.lastDraftAt).not.toBeNull();
     const leaderView = (await tree(a.leader.cookie)).members.find((m) => m.productMemberId === a.members[0]!.memberId)!.ais[0]!;
     expect(leaderView.pendingCount).toBeNull();
+    expect(leaderView.pendingTaskIds).toBeNull();
+    // 同じタスクに 2 件あっても、タスクの ID は 1 つ
+    expect(own.pendingTaskIds).toEqual([task!.taskId]);
     expect(leaderView.lastDraftAt).not.toBeNull();
 
     await db.update(taskReportDrafts).set({ status: "discarded" }).where(eq(taskReportDrafts.draftId, d1!.draftId));

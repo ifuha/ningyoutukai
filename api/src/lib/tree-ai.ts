@@ -29,7 +29,6 @@ export async function loadTreeAis(
     .select({
       tokenId: taskReportDrafts.aiTokenId,
       lastDraftAt: sql<Date | null>`max(${taskReportDrafts.createdAt})`,
-      pending: sql<number>`count(*) filter (where ${taskReportDrafts.status} = 'pending')::int`,
     })
     .from(taskReportDrafts)
     .innerJoin(tasks, eq(tasks.taskId, taskReportDrafts.taskId))
@@ -42,13 +41,38 @@ export async function loadTreeAis(
     .groupBy(taskReportDrafts.aiTokenId);
   const byToken = new Map(stats.map((s) => [s.tokenId, s]));
 
+  // 確認待ちの下書き(見ている人の AI の分だけ。古い順)
+  const mine = tokens.filter((t) => t.userId === viewerUserId).map((t) => t.tokenId);
+  const pendingByToken = new Map<string, string[]>();
+  if (mine.length > 0) {
+    const pendingRows = await db
+      .select({ tokenId: taskReportDrafts.aiTokenId, taskId: taskReportDrafts.taskId })
+      .from(taskReportDrafts)
+      .innerJoin(tasks, eq(tasks.taskId, taskReportDrafts.taskId))
+      .where(
+        and(
+          inArray(taskReportDrafts.aiTokenId, mine),
+          eq(taskReportDrafts.status, "pending"),
+          inArray(tasks.productMemberId, members.map((m) => m.productMemberId)),
+        ),
+      )
+      .orderBy(asc(taskReportDrafts.createdAt), asc(taskReportDrafts.draftId));
+    for (const row of pendingRows) {
+      if (!row.tokenId) continue;
+      const list = pendingByToken.get(row.tokenId);
+      if (list) list.push(row.taskId);
+      else pendingByToken.set(row.tokenId, [row.taskId]);
+    }
+  }
+
   for (const token of tokens) {
     const stat = byToken.get(token.tokenId);
     const card: TreeAi = {
       tokenId: token.tokenId,
       name: token.name,
       lastDraftAt: stat?.lastDraftAt ? new Date(stat.lastDraftAt) : null,
-      pendingCount: token.userId === viewerUserId ? (stat?.pending ?? 0) : null,
+      pendingCount: token.userId === viewerUserId ? (pendingByToken.get(token.tokenId)?.length ?? 0) : null,
+      pendingTaskIds: token.userId === viewerUserId ? [...new Set(pendingByToken.get(token.tokenId) ?? [])] : null,
     };
     const list = result.get(token.userId);
     if (list) list.push(card);

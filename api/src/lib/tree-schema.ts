@@ -29,6 +29,8 @@ export const TreeAiSchema = t.Object({
   lastDraftAt: nullableDate,
   // 確認待ちの下書きの数。持ち主本人にだけ数を返す(他の人には null)
   pendingCount: t.Union([t.Number(), t.Null()]),
+  // 確認待ちの下書きがあるタスクの ID(古い下書きから順。持ち主本人にだけ返す。他の人には null)
+  pendingTaskIds: t.Union([t.Array(t.String()), t.Null()]),
 });
 
 export const TreeNodeSchema = t.Object({
