@@ -48,6 +48,16 @@ describe('DocumentsFeature の幅', () => {
     // スマホは全面(inset-0)のまま
     expect(html).toContain('inset-0')
   })
+  test('広い画面では、浮かせたカード: 右・下に 12px の余白、上は見出しのボタンの下を空ける。影がつく。端に付いた全高のパネルではない', () => {
+    const html = render(true)
+    expect(html).toContain('md:inset-auto')
+    expect(html).toContain('md:top-16')
+    expect(html).toContain('md:right-3')
+    expect(html).toContain('md:bottom-3')
+    expect(html).toContain('md:drop-shadow-xl')
+    // 以前の、右端に付いて全高の形(left-auto)ではない
+    expect(html).not.toContain('md:left-auto')
+  })
   test('閉じているときは、パネルもつまみも出ない', () => {
     const html = render(false)
     expect(html).not.toContain('data-documents-panel')

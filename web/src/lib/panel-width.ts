@@ -8,6 +8,8 @@ export const PANEL_MAX_RATIO = 0.7
 export const PANEL_DEFAULT_PX = 352
 /** キーボードで変える、1 回あたりの幅(px) */
 export const PANEL_KEY_STEP_PX = 16
+/** 浮かせたパネルの、置き場所の右端からの余白(px。`right-3` = 12px)。ドラッグの幅の計算に使う */
+export const PANEL_EDGE_MARGIN_PX = 12
 
 /** 幅を、許される範囲に収める。数でない値は、既定の幅 */
 export function clampPanelWidth(width: number, containerWidth: number): number {
@@ -17,11 +19,11 @@ export function clampPanelWidth(width: number, containerWidth: number): number {
 }
 
 /**
- * ドラッグ中の幅。パネルは置き場所の右端に付いているので、幅 = 置き場所の右端 − マウスの位置。
- * 左へ動かすと広がり、右へ動かすと狭まる
+ * ドラッグ中の幅。パネルは置き場所の右端から `margin` だけ内側に浮いているので、幅 = (置き場所の右端 − 余白) − マウスの位置。
+ * 左へ動かすと広がり、右へ動かすと狭まる。つまみが、マウスの下に付いてくる
  */
-export function widthFromPointer(containerRight: number, pointerX: number, containerWidth: number): number {
-  return clampPanelWidth(containerRight - pointerX, containerWidth)
+export function widthFromPointer(containerRight: number, pointerX: number, containerWidth: number, margin = PANEL_EDGE_MARGIN_PX): number {
+  return clampPanelWidth(containerRight - margin - pointerX, containerWidth)
 }
 
 /** キーボード(← で広げ、→ で狭める。Home で最小、End で最大)。他のキーは null */

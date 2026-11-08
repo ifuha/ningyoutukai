@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import {
   PANEL_DEFAULT_PX,
+  PANEL_EDGE_MARGIN_PX,
   PANEL_KEY_STEP_PX,
   PANEL_MAX_PX,
   PANEL_MIN_PX,
@@ -33,10 +34,21 @@ describe('clampPanelWidth', () => {
 })
 
 describe('widthFromPointer(ドラッグ)', () => {
-  test('幅 = 置き場所の右端 − マウスの位置。左へ動かすと広がり、右へ動かすと狭まる', () => {
-    expect(widthFromPointer(1400, 1000, 1400)).toBe(400)
-    expect(widthFromPointer(1400, 900, 1400)).toBe(500)
+  test('幅 = (置き場所の右端 − 右の余白) − マウスの位置。左へ動かすと広がり、右へ動かすと狭まる', () => {
+    expect(PANEL_EDGE_MARGIN_PX).toBe(12)
+    expect(widthFromPointer(1400, 1000, 1400)).toBe(388)
+    expect(widthFromPointer(1400, 900, 1400)).toBe(488)
     expect(widthFromPointer(1400, 1200, 1400)).toBe(PANEL_MIN_PX)
+  })
+  test('浮いているので、つまみがマウスの下に付いてくる(パネルの左端 = マウスの位置)', () => {
+    const containerRight = 1400
+    const pointerX = 1000
+    const width = widthFromPointer(containerRight, pointerX, 1400)
+    // パネルの右端は containerRight − 余白。左端 = 右端 − 幅 = マウスの位置
+    expect(containerRight - PANEL_EDGE_MARGIN_PX - width).toBe(pointerX)
+  })
+  test('余白を 0 にすると、右端に付いたパネルと同じ計算', () => {
+    expect(widthFromPointer(1400, 1000, 1400, 0)).toBe(400)
   })
   test('行きすぎても、範囲に収まる', () => {
     expect(widthFromPointer(1400, -500, 1400)).toBe(900)

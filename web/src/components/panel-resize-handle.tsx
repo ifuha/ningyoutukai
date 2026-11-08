@@ -5,7 +5,7 @@ import { PANEL_MAX_PX, PANEL_MIN_PX, widthFromKey, widthFromPointer } from '#/li
 // - マウス(タッチ)で掴んで、左右にドラッグする。左へ動かすと広がり、右へ動かすと狭まる
 // - キーボードでも変えられる: フォーカスして ← で広げ、→ で狭める、Home で最小、End で最大
 // - ダブルクリックで、既定の幅に戻す
-// 幅の範囲は `lib/panel-width.ts`。置き場所(パネルの親の要素)の幅を見て、広がりすぎないようにする
+// 幅の範囲は `lib/panel-width.ts`。置き場所(パネルの親の要素)の幅を見て、広がりすぎないようにする。パネルは右の縁から余白を空けて浮いている(`PANEL_EDGE_MARGIN_PX`)
 export function PanelResizeHandle({
   width,
   onChange,
