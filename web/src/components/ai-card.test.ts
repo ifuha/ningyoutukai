@@ -12,6 +12,7 @@ import type { TreeAi, TreeMember } from '#/lib/tree'
 const ai = (over: Partial<TreeAi> = {}): TreeAi => ({
   tokenId: 'k1',
   name: 'Claude Code',
+  mine: false,
   lastDraftAt: null,
   pendingCount: 0,
   pendingTaskIds: [],
@@ -106,6 +107,23 @@ describe('線の描画(メンバーのカードと同じ: 持ち主の下の中�
     const html = renderToStaticMarkup(createElement(AiCards, { ais: [ai({ tokenId: 'k1', offsetX: 80, offsetY: 40 }), ai({ tokenId: 'k2' })], side: 'bottom', ownerHeight: 100 }))
     expect(html.match(/data-connector-to=/g)?.length).toBe(2)
     expect(html).toContain(connectorPath(owner, aiBox('bottom', 0, 100, 80, 40)).d)
+  })
+})
+
+describe('トークンの取り消し(自分のトークンのカードだけ)', () => {
+  test('onRevoke を渡さなければ、取り消しのボタンは出ない', () => {
+    const html = renderToStaticMarkup(createElement(AiCards, { ais: [ai({ mine: true })], side: 'bottom' }))
+    expect(html).not.toContain('のトークンを取り消す')
+  })
+  test('自分のトークン(mine)のカードにだけ出る。他の人のカードには出ない', () => {
+    const html = renderToStaticMarkup(createElement(AiCards, { ais: [ai({ tokenId: 'a', mine: true }), ai({ tokenId: 'b', mine: false })], side: 'bottom', onRevoke: () => {} }))
+    // ボタンのラベル(aria-label)が付くのは 1 枚だけ
+    expect(html.match(/aria-label="この AI のトークンを取り消す"/g)?.length).toBe(1)
+  })
+  test('カードが押せる(onOpen)ときも、ボタンは入れ子にならない(取り消しは、カードの外に並ぶ)', () => {
+    const html = renderToStaticMarkup(createElement(AiCard, { ai: ai({ mine: true, pendingCount: 1 }), onOpen: () => {}, onRevoke: () => {} }))
+    expect(html.match(/<button/g)?.length).toBe(2)
+    expect(html).not.toMatch(/<button[^>]*>(?:(?!<\/button>).)*<button/s)
   })
 })
 

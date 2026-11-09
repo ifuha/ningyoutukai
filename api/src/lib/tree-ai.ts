@@ -78,6 +78,7 @@ export async function loadTreeAis(
     const card: TreeAi = {
       tokenId: token.tokenId,
       name: token.name,
+      mine: token.userId === viewerUserId,
       lastDraftAt: stat?.lastDraftAt ? new Date(stat.lastDraftAt) : null,
       pendingCount: token.userId === viewerUserId ? (pendingByToken.get(token.tokenId)?.length ?? 0) : null,
       offsetX: offsetByToken.get(token.tokenId)?.offsetX ?? null,

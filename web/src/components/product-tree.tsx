@@ -88,6 +88,7 @@ export function ProductTree({
   onAddTask,
   onOpenAi,
   onMoveAi,
+  onRevokeAi,
   onOpenMembers,
   canEditSections = false,
   sectionActions = NO_SECTION_ACTIONS,
@@ -111,6 +112,8 @@ export function ProductTree({
   onOpenAi?: (ai: TreeAi) => void
   /** AI のカードを動かしたとき(リーダーにだけ渡す)。初めの置き場所からのずれ(px) */
   onMoveAi?: (ai: TreeAi, offset: { offsetX: number; offsetY: number }) => Promise<void> | void
+  /** 自分のトークンの AI のカードの「取り消す」が押されたとき */
+  onRevokeAi?: (ai: TreeAi) => Promise<void> | void
   onOpenMembers?: () => void
   /** 自分がリーダーか(セクションの作成・大きさの変更・削除・カードの移動ができる) */
   canEditSections?: boolean
@@ -557,6 +560,7 @@ export function ProductTree({
                   onAddTask={onAddTask}
                   onOpenAi={onOpenAi}
                   onMoveAi={onMoveAi}
+                  onRevokeAi={onRevokeAi}
                 />
               </DragSlot>
             )}
@@ -611,6 +615,7 @@ export function ProductTree({
                             onAddTask={onAddTask}
                             onOpenAi={onOpenAi}
                             onMoveAi={onMoveAi}
+                            onRevokeAi={onRevokeAi}
                           />
                         </DragSlot>
                       </li>
@@ -639,6 +644,7 @@ export function ProductTree({
                   onAddTask={onAddTask}
                   onOpenAi={onOpenAi}
                   onMoveAi={onMoveAi}
+                  onRevokeAi={onRevokeAi}
                 />
               </DragSlot>
             </div>

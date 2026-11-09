@@ -25,6 +25,8 @@ export const TreeTaskSchema = t.Object({
 export const TreeAiSchema = t.Object({
   tokenId: t.String(),
   name: t.String(),
+  // 見ている人自身のトークンか(自分のトークンだけ、画面から取り消せる)
+  mine: t.Boolean(),
   // このプロダクトで、最後に下書きを出した日時(なければ null)
   lastDraftAt: nullableDate,
   // 確認待ちの下書きの数。持ち主本人にだけ数を返す(他の人には null)
