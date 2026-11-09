@@ -92,6 +92,7 @@ describe("リーダーから見たツリー", () => {
     expect(tree.leader.productMemberId).toBe(p.leader.memberId);
     expect(tree.members).toHaveLength(2);
     expect(Object.keys(tree.members[0]).sort()).toEqual([
+      "ais",
       "avatarUrl",
       "positionX",
       "positionY",

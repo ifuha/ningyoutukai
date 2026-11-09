@@ -1,4 +1,5 @@
 import type { Context } from '../context'
+import { fetchTaskDocumentsOrEmpty, isAiToken } from '../docs-api'
 import { CliError } from '../errors'
 import { formatDateTime } from '../format'
 import { CLI_NAME, EXIT } from '../meta'
@@ -43,10 +44,14 @@ export async function task(ctx: Context, id: string, opts: TaskOptions): Promise
   // 完了済みも含めて探す。タスクの詳細は、一覧の行と同じ(プロダクトの ID が要るので、一覧から引く)
   const rows = await fetchMyTasks(ctx.fetchFn, apiUrl, token, { includeCompleted: true })
   const found = findTaskById(rows, id)
-  const messages = await fetchMessages(ctx.fetchFn, apiUrl, token, found)
+  // AI 用のトークンは、メッセージの履歴を読めない(許可されていない)。人のときだけ読む
+  const ai = isAiToken(token)
+  const messages = ai ? [] : await fetchMessages(ctx.fetchFn, apiUrl, token, found)
+  // 渡された Markdown(文書)の一覧。本文は `doc` / `context` で読む
+  const documents = await fetchTaskDocumentsOrEmpty(ctx.fetchFn, apiUrl, token, found)
 
   if (opts.json) {
-    ctx.out(JSON.stringify({ task: found, messages }, null, 2))
+    ctx.out(JSON.stringify({ task: found, messages, documents }, null, 2))
     return
   }
 
@@ -63,7 +68,18 @@ export async function task(ctx: Context, id: string, opts: TaskOptions): Promise
     ctx.out(found.description)
   }
 
+  if (documents.length > 0) {
+    ctx.out('')
+    ctx.out(`渡された文書(${documents.length} 件)`)
+    for (const d of documents) ctx.out(`  ${d.directoryName}/${d.name}(版 ${d.currentVersion})`)
+    ctx.out(`  → 本文: ${CLI_NAME} doc ${found.taskId.slice(0, 8)} <文書の名前>   /   まとめて: ${CLI_NAME} context ${found.taskId.slice(0, 8)}`)
+  }
+
   ctx.out('')
+  if (ai) {
+    ctx.out('(AI 用のトークンでは、メッセージの履歴は読めません)')
+    return
+  }
   if (messages.length === 0) {
     ctx.out('メッセージはありません')
     return

@@ -12,6 +12,7 @@ const productColumns = {
   productName: products.productName,
   createdAt: products.createdAt,
   avatarKey: products.avatarKey,
+  documentAutoDeleteDays: products.documentAutoDeleteDays,
   role: productMembers.role,
 };
 

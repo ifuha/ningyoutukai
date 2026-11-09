@@ -1,11 +1,14 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
 import { Modal } from '#/components/modal'
 import { IconButton } from '#/components/icon-button'
+import { ReportDrafts } from '#/components/report-drafts'
 import { TaskMessages } from '#/components/task-messages'
-import { Check, Pencil, X } from 'lucide-react'
+import { Check, FileText, Pencil, X } from 'lucide-react'
 import type { TreeMember, TreeTask } from '#/lib/tree'
+import { getTaskDocuments } from '#/lib/document-api'
 import { eden, edenData } from '#/lib/eden'
+import { retryDelay, retryTransient } from '#/lib/query-retry'
 
 export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 
@@ -26,6 +29,13 @@ function Detail({
 }) {
   const { task } = target
   const queryClient = useQueryClient()
+  // 渡された Markdown(文書)。なければ(機能がない・取得に失敗)何も出さない
+  const handed = useQuery({
+    queryKey: ['products', productId, 'task', task.taskId, 'documents', 'handed'],
+    queryFn: () => getTaskDocuments(productId, task.taskId),
+    retry: retryTransient,
+    retryDelay,
+  })
   const report = useMutation({
     mutationFn: () =>
       edenData(
@@ -73,6 +83,26 @@ function Detail({
           </dd>
         </div>
       </dl>
+      {handed.data && handed.data.documents.length > 0 && (
+        <section aria-label="渡された文書" className="space-y-1">
+          <h3 className="text-m font-bold">
+            渡された文書 <span className="text-s font-normal opacity-70">({handed.data.documents.length} 件)</span>
+          </h3>
+          <ul className="space-y-0.5 text-m">
+            {handed.data.documents.map((d) => (
+              <li key={d.documentId} className="flex items-center gap-2">
+                <FileText size={14} aria-hidden="true" className="shrink-0" />
+                <span className="min-w-0 truncate">
+                  {d.directoryName}/{d.name}
+                </span>
+                <span className="shrink-0 text-s opacity-60">版 {d.currentVersion}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {/* AI からの報告の下書き: 担当者だけ。確認して、完了報告に出す */}
+      {canReport && !task.reportedAt && <ReportDrafts productId={productId} taskId={task.taskId} onAdopted={onClose} />}
       <TaskMessages
         productId={productId}
         taskId={task.taskId}
@@ -131,7 +161,7 @@ export function TaskDetailDialog({
   onClose: () => void
 }) {
   return (
-    <Modal open={target !== null} onClose={onClose}>
+    <Modal open={target !== null} onClose={onClose} size="lg">
       {target && (
         <Detail
           key={target.task.taskId}

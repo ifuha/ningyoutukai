@@ -19,6 +19,13 @@ import {
 } from "../../lib/task-input";
 import { MessageSchema } from "../../lib/response-schema";
 import { TaskSchema, taskColumns } from "../../lib/task-view";
+import {
+  replaceTaskLinks,
+  resolveTaskDocuments,
+  taskDirectoryIdsSchema,
+  taskDocumentIdsSchema,
+  validateLinkTargets,
+} from "../../lib/task-documents";
 
 // タスクを追加 POST /api/product/:productId/task
 export const createTask = new Elysia({ name: "task-create-task" })
@@ -59,17 +66,28 @@ export const createTask = new Elysia({ name: "task-create-task" })
         if (!type) return status(400, { message: "タスクの種類が見つかりません" });
       }
 
-      const [created] = await db
-        .insert(tasks)
-        .values({
-          taskName,
-          productMemberId: body.productMemberId,
-          description: body.description,
-          timeLimit,
-          taskTypeId: body.taskTypeId,
-          isVisible: body.isVisible,
-        })
-        .returning(taskColumns);
+      // 渡す Markdown(文書・ディレクトリ)が、このプロダクトのものか確かめる(他のプロダクトのものを渡させない)
+      const documentIds = body.documentIds ?? [];
+      const directoryIds = body.directoryIds ?? [];
+      const linkError = await validateLinkTargets(params.productId, documentIds, directoryIds);
+      if (linkError) return status(400, { message: linkError });
+
+      // タスクと、渡す Markdown の結びつけは、同じトランザクションで書く(どちらかだけ残らないように)
+      const created = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(tasks)
+          .values({
+            taskName,
+            productMemberId: body.productMemberId,
+            description: body.description,
+            timeLimit,
+            taskTypeId: body.taskTypeId,
+            isVisible: body.isVisible,
+          })
+          .returning(taskColumns);
+        if (documentIds.length > 0 || directoryIds.length > 0) await replaceTaskLinks(tx, row.taskId, documentIds, directoryIds);
+        return row;
+      });
 
       // カレンダー登録と通知に使う担当者の連絡先。
       const contact = await getMemberContact(created.productMemberId);
@@ -98,6 +116,9 @@ export const createTask = new Elysia({ name: "task-create-task" })
       if (contact) {
         const lines = [`タスク「${created.taskName}」があなたに割り振られました。`];
         if (created.timeLimit) lines.push(`期限: ${created.timeLimit.toISOString()}`);
+        // 渡された Markdown があれば、名前を載せる(中身は載せない。開くと読める)
+        const handed = await resolveTaskDocuments(created.taskId);
+        if (handed.length > 0) lines.push("", "渡された文書:", ...handed.map((d) => `- ${d.directoryName}/${d.name}`));
         await mailer.send({
           to: contact.email,
           subject: `タスクが割り振られました: ${created.taskName}`,
@@ -117,6 +138,9 @@ export const createTask = new Elysia({ name: "task-create-task" })
         timeLimit: t.Optional(timeLimitSchema()),
         taskTypeId: t.Optional(t.String({ format: "uuid" })),
         isVisible: t.Optional(t.Boolean()),
+        // 渡す Markdown(任意)。文書を個別に / ディレクトリで(中の文書すべて)。どちらも付けてよい
+        documentIds: t.Optional(taskDocumentIdsSchema()),
+        directoryIds: t.Optional(taskDirectoryIdsSchema()),
       }),
       response: { 201: TaskSchema, 400: MessageSchema, 403: MessageSchema, 404: MessageSchema },
       detail: { summary: "タスクを追加" },

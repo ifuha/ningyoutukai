@@ -66,6 +66,10 @@ export async function makeContext(over: Partial<Context> = {}) {
     openBrowser: async (url) => {
       opened.push(url)
     },
+    readFile: async (path) => {
+      throw new Error(`ENOENT: ${path}`)
+    },
+    readStdin: async () => '',
     ...over,
   }
   return { ctx, dir, out, err, opened, cleanup: () => rm(dir, { recursive: true, force: true }) }
