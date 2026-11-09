@@ -28,6 +28,7 @@ import { ApiError } from '#/lib/api'
 import type { ProductTree as TreeData, TreeMember, TreeTask } from '#/lib/tree'
 import { fetchUnlessCommitted } from '#/lib/pending-commits'
 import { setAiPosition } from '#/lib/ai-position-api'
+import { revokeAiToken } from '#/lib/document-api'
 import { eden, edenData } from '#/lib/eden'
 import { canEditSections } from '#/lib/section-permissions'
 import { useSectionActions } from '#/lib/use-section-actions'
@@ -234,6 +235,14 @@ function Product() {
                       }
                     : undefined
                 }
+                onRevokeAi={async (ai) => {
+                  try {
+                    await revokeAiToken(ai.tokenId)
+                  } finally {
+                    // 取り消すとすぐ使えなくなる。カードは、取り直したツリーから消える
+                    await queryClient.invalidateQueries({ queryKey: treeQueryKey(productId) })
+                  }
+                }}
                 onOpenAi={(ai) => {
                   // 確認待ちの下書きがあるタスクの詳細を開く(そこで、下書きを確認する)
                   const taskId = ai.pendingTaskIds?.[0]

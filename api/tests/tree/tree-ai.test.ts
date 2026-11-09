@@ -9,7 +9,7 @@ import { cleanup, insertTask, setupProduct } from "../task/helpers";
 // ツリーに出る、メンバーの AI のカード(有効なトークンごとに 1 枚。確認待ちの数は持ち主だけに返す)
 
 type Setup = Awaited<ReturnType<typeof setupProduct>>;
-type Ai = { tokenId: string; name: string; lastDraftAt: string | null; pendingCount: number | null; pendingTaskIds: string[] | null };
+type Ai = { tokenId: string; name: string; mine: boolean; lastDraftAt: string | null; pendingCount: number | null; pendingTaskIds: string[] | null };
 type Tree = { leader: { ais: Ai[] }; members: { productMemberId: string; ais: Ai[] }[] };
 
 let a: Setup;
@@ -41,6 +41,14 @@ describe("AI のカード", () => {
     expect(mine.ais.map((x) => x.name)).toEqual(["メンバーの AI"]);
     const other = t.members.find((m) => m.productMemberId === a.members[1]!.memberId)!;
     expect(other.ais).toEqual([]);
+  });
+
+  test("mine: 見ている人自身のトークンだけ true(画面で取り消せるのは、自分のトークンだけ)", async () => {
+    const asOwner = (await tree(a.members[0]!.cookie)).members.find((m) => m.productMemberId === a.members[0]!.memberId)!.ais[0]!;
+    const asLeader = (await tree(a.leader.cookie)).members.find((m) => m.productMemberId === a.members[0]!.memberId)!.ais[0]!;
+    expect(asOwner.mine).toBe(true);
+    expect(asLeader.mine).toBe(false);
+    expect((await tree(a.leader.cookie)).leader.ais[0]!.mine).toBe(true);
   });
 
   test("下書きがなければ、最後の日時は null、確認待ちは 0(持ち主本人)/ null(他の人)", async () => {

@@ -51,7 +51,6 @@ export function useOffsetDrag({
       // 持ち主のカード(ドラッグで動くカード)や、キャンバスのパンに、渡さない
       e.stopPropagation()
       if (!enabled || e.button !== 0) return
-      e.currentTarget.setPointerCapture(e.pointerId)
       drag.current = { startX: e.clientX, startY: e.clientY, base: at, moved: false }
     },
     onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
@@ -60,6 +59,8 @@ export function useOffsetDrag({
       const dx = e.clientX - d.startX
       const dy = e.clientY - d.startY
       if (!d.moved && !isDrag(dx, dy)) return
+      // 動き始めてから捕まえる(押しただけのときは捕まえない: 中のボタンの click が、そのまま届く)
+      if (!d.moved) e.currentTarget.setPointerCapture(e.pointerId)
       d.moved = true
       setLocal(moveBy(d.base, dx, dy, scale))
     },
