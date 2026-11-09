@@ -1,9 +1,9 @@
 import { Bot } from 'lucide-react'
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect } from 'react'
 import { formatDateTime } from '#/components/member-card'
 import { TreeConnectors } from '#/components/tree-connectors'
+import { aiConnectorTargets, aiDefaultOrigin, ownerBox, useLiveOffsets, type AiSide } from '#/lib/ai-connector'
 import { CanvasViewContext } from '#/lib/canvas-view'
-import type { Box } from '#/lib/tree-layout'
 import type { TreeAi } from '#/lib/tree'
 import { useOffsetDrag, type Offset } from '#/lib/use-offset-drag'
 
@@ -12,35 +12,7 @@ import { useOffsetDrag, type Offset } from '#/lib/use-offset-drag'
 // - `onOpen` を渡すと(持ち主で、確認待ちがあるとき)押せて、確認待ちのタスクの詳細を開く
 // - **リーダーだけ**、カードをつかんで動かせる(メンバーのカードと同じ)。位置は、初めの置き場所からのずれ(px)。持ち主のカードに付いて動く。動かすロジックは `lib/use-offset-drag.ts`
 // - リーダーの AI はリーダーのカードの右に、メンバーの AI はそのメンバーのカードの下に置く(`MemberCard` が置く)
-// - **線は、メンバーのカードと同じ**(`connectorPath`: 持ち主のカードの下の中央から、AI のカードの上の中央まで、直角に曲がる破線 + 上向きの三角)。動かすと、端が付いていく
-
-/** カードの大きさ(px)。線の端の位置(`Box`)を決めるため、固定する(`h-12` / `w-[200px]`) */
-export const AI_CARD_WIDTH = 200
-export const AI_CARD_HEIGHT = 48
-/** 持ち主のカードの幅(`member-card.tsx` の `w-[240px]`) */
-const OWNER_WIDTH = 240
-const ROW_GAP = 8
-/** 初めの置き場所: 右 = 持ち主のカードの右の縁から離す距離 / 下 = 持ち主のカードの下の縁から離す距離と、左の余白 */
-const RIGHT_GAP = 24
-const BOTTOM_GAP = 16
-const BOTTOM_LEFT = 16
-
-export type AiSide = 'right' | 'bottom'
-
-/**
- * `index` 番目の AI のカードの、初めの置き場所(持ち主のカードの左上を原点にした、カードの左上)。
- * `ownerHeight` は持ち主のカードの高さ(測った値)。右は、持ち主の上から少し下げて並べる。下は、持ち主の下に並べる
- */
-export function aiDefaultOrigin(side: AiSide, index: number, ownerHeight: number): { left: number; top: number } {
-  const row = index * (AI_CARD_HEIGHT + ROW_GAP)
-  return side === 'right' ? { left: OWNER_WIDTH + RIGHT_GAP, top: 12 + row } : { left: BOTTOM_LEFT, top: ownerHeight + BOTTOM_GAP + row }
-}
-
-/** 線に渡す、AI のカードの矩形(持ち主のカードの左上が原点)。`(dx, dy)` は動かしたずれ */
-export function aiBox(side: AiSide, index: number, ownerHeight: number, dx: number, dy: number): Box {
-  const o = aiDefaultOrigin(side, index, ownerHeight)
-  return { left: o.left + dx, top: o.top + dy, width: AI_CARD_WIDTH, height: AI_CARD_HEIGHT }
-}
+// - **線は、メンバーのカードと同じ**(`connectorPath`: 持ち主のカードの下の中央から、AI のカードの上の中央まで、直角に曲がる破線 + 上向きの三角)。動かすと、端が付いていく。置き場所と線の入力の計算は `lib/ai-connector.ts`
 
 export function aiCardSummary(ai: Pick<TreeAi, 'pendingCount' | 'lastDraftAt'>): string {
   if (ai.pendingCount !== null && ai.pendingCount > 0) return `確認待ち ${ai.pendingCount} 件`
@@ -113,20 +85,13 @@ function AiSlot({ ai, side, index, ownerHeight, onOpen, onMove, report }: { ai: 
  * 持ち主のカード(`relative`)の中に置く。`ownerHeight` = 持ち主のカードの高さ
  */
 export function AiCards({ ais, side, ownerHeight = 0, onOpen, onMove }: { ais: TreeAi[]; side: AiSide; ownerHeight?: number; onOpen?: (ai: TreeAi) => void; onMove?: MoveHandler }) {
-  // 動かしている途中の位置(線が付いていくため)。保存された位置と、つかんでいる間の位置
-  const [live, setLive] = useState<Record<string, { x: number; y: number }>>({})
+  // つかんでいる間の位置(線の端が付いていくため)
+  const { live, report } = useLiveOffsets()
   if (ais.length === 0) return null
   const open = (ai: TreeAi) => (ai.pendingTaskIds && ai.pendingTaskIds.length > 0 ? onOpen : undefined)
-  const parent: Box = { left: 0, top: 0, width: OWNER_WIDTH, height: ownerHeight }
   return (
     <div className="pointer-events-none absolute inset-0">
-      <TreeConnectors
-        parent={parent}
-        targets={ais.map((ai, i) => {
-          const at = live[ai.tokenId] ?? { x: ai.offsetX ?? 0, y: ai.offsetY ?? 0 }
-          return { id: ai.tokenId, box: aiBox(side, i, ownerHeight, at.x, at.y) }
-        })}
-      />
+      <TreeConnectors parent={ownerBox(ownerHeight)} targets={aiConnectorTargets(ais, side, ownerHeight, live)} />
       {ais.map((ai, i) => (
         <AiSlot
           key={ai.tokenId}
@@ -136,7 +101,7 @@ export function AiCards({ ais, side, ownerHeight = 0, onOpen, onMove }: { ais: T
           ownerHeight={ownerHeight}
           onOpen={open(ai)}
           onMove={onMove}
-          report={(id, at) => setLive((cur) => (cur[id]?.x === at.x && cur[id]?.y === at.y ? cur : { ...cur, [id]: at }))}
+          report={report}
         />
       ))}
     </div>

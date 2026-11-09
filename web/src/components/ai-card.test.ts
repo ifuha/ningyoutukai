@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AiCard, AiCards, aiBox, aiCardSummary, aiDefaultOrigin } from './ai-card'
+import { AiCard, AiCards, aiCardSummary } from './ai-card'
+import { aiBox } from '#/lib/ai-connector'
 import { connectorPath } from '#/lib/tree-layout'
 import { MemberCard } from './member-card'
 import type { TreeAi, TreeMember } from '#/lib/tree'
@@ -89,16 +90,8 @@ describe('AI のカードの位置', () => {
   })
 })
 
-describe('線(メンバーのカードと同じ: 持ち主の下の中央から、AI の上の中央まで)', () => {
+describe('線の描画(メンバーのカードと同じ: 持ち主の下の中央から、AI の上の中央まで)', () => {
   const owner = { left: 0, top: 0, width: 240, height: 100 }
-  test('初めの置き場所: 下は持ち主の下(16px 空ける)、右は持ち主の右(24px 空ける)。2 枚目は 56px 下', () => {
-    expect(aiDefaultOrigin('bottom', 0, 100)).toEqual({ left: 16, top: 116 })
-    expect(aiDefaultOrigin('bottom', 1, 100)).toEqual({ left: 16, top: 172 })
-    expect(aiDefaultOrigin('right', 0, 100)).toEqual({ left: 264, top: 12 })
-  })
-  test('動かしたずれは、矩形の位置に足される。大きさは変わらない', () => {
-    expect(aiBox('bottom', 0, 100, 30, -10)).toEqual({ left: 46, top: 106, width: 200, height: 48 })
-  })
   test('線は connectorPath(メンバーと同じ関数)で引く。動かすと、子の端だけが付いていく', () => {
     const still = connectorPath(owner, aiBox('bottom', 0, 100, 0, 0))
     const moved = connectorPath(owner, aiBox('bottom', 0, 100, 80, 40))
