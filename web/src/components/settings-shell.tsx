@@ -71,7 +71,7 @@ export function SettingsShell({
           </ul>
         </nav>
         <section aria-labelledby={headingId} className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-6 py-3">
+          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-3 py-3">
             <h2 id={headingId} className={`text-l font-bold${active.danger ? ' text-danger' : ''}`}>
               {active.label}
             </h2>
@@ -84,7 +84,7 @@ export function SettingsShell({
               onClick={onClose}
             />
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto p-6">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <div className="max-w-2xl space-y-6">{active.render()}</div>
           </div>
         </section>
