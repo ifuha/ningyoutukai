@@ -14,7 +14,7 @@ import { useOffsetDrag, type Offset } from '#/lib/use-offset-drag'
 // - `onRevoke` を渡すと(自分のトークンのカードだけ)、カードに「取り消す」が出る(2 回押すと取り消す。取り消すとすぐ使えなくなり、カードも消える)
 // - **リーダーだけ**、カードをつかんで動かせる(メンバーのカードと同じ)。位置は、初めの置き場所からのずれ(px)。持ち主のカードに付いて動く。動かすロジックは `lib/use-offset-drag.ts`
 // - リーダーの AI はリーダーのカードの右に、メンバーの AI はそのメンバーのカードの下に置く(`MemberCard` が置く)
-// - **線は、メンバーのカードと同じ**(`connectorPath`: 持ち主のカードの下の中央から、AI のカードの上の中央まで、直角に曲がる破線 + 上向きの三角)。動かすと、端が付いていく。置き場所と線の入力の計算は `lib/ai-connector.ts`
+// - **線は、メンバーのカードと同じ**(`connectorPath`: 直角に曲がる破線 + 三角。出る辺は、AI のカードの位置で変わる: 右に置けば持ち主の右から、下に置けば下から)。動かすと、端が付いていく。置き場所と線の入力の計算は `lib/ai-connector.ts`
 
 export function aiCardSummary(ai: Pick<TreeAi, 'pendingCount' | 'lastDraftAt'>): string {
   if (ai.pendingCount !== null && ai.pendingCount > 0) return `確認待ち ${ai.pendingCount} 件`

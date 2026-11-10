@@ -3,11 +3,12 @@ import {
   ARROW_HEIGHT,
   CARD_HEIGHT_ESTIMATE,
   CARD_WIDTH,
-  CONNECTOR_DROP,
+  CONNECTOR_MIN_GAP,
   canvasBounds,
   cardRect,
   connectorKind,
   connectorPath,
+  connectorSide,
   hasPosition,
   splitByPosition,
 } from './tree-layout'
@@ -163,29 +164,54 @@ describe('connectorKind', () => {
   })
 })
 
-describe('connectorPath', () => {
+describe('connectorPath(線の出る辺は、子の位置で変わる)', () => {
   const parent = { left: 100, top: 0, width: 240, height: 150 }
+  const child = (left: number, top: number) => ({ left, top, width: 240, height: 100 })
 
-  test('子が下にあるとき、親の下の中央から、中間の高さで横へ曲がり、子の上の中央へ', () => {
-    const { d, arrow } = connectorPath(parent, { left: 400, top: 300, width: 240 })
-    // 親の下の中央 = (220, 150)、子の上の中央 = (520, 300)、中間 = 225、三角の頂点 = 300 - 7
+  test('どの辺から出るか: 下 > 上 > 右 > 左 の順。重なっていれば null(線を出さない)', () => {
+    expect(connectorSide(parent, child(400, 300))).toBe('bottom')
+    expect(connectorSide(parent, child(400, -300))).toBe('top')
+    expect(connectorSide(parent, child(400, 100))).toBe('right')
+    expect(connectorSide(parent, child(-300, 100))).toBe('left')
+    expect(connectorSide(parent, child(200, 100))).toBeNull()
+    // 隙間が足りない(三角を描けない)向きには、出さない
+    expect(connectorSide(parent, child(400, 150 + CONNECTOR_MIN_GAP))).toBe('bottom')
+    expect(connectorSide(parent, child(400, 150 + CONNECTOR_MIN_GAP - 1))).toBe('right')
+  })
+  test('下: 親の下の中央から、中間の高さで横へ曲がり、子の上の中央へ。三角は上向き', () => {
+    const { d, arrow } = connectorPath(parent, child(400, 300))
     expect(d).toBe(`M 220 150 V 225 H 520 V ${300 - ARROW_HEIGHT}`)
-    // 三角は、子の上の辺に底を置き、上(親の側)へ向く
     expect(arrow).toBe(`515,300 525,300 520,${300 - ARROW_HEIGHT}`)
   })
   test('子が真下にあるとき、横には曲がらない(同じ x)', () => {
-    const { d } = connectorPath(parent, { left: 100, top: 300, width: 240 })
-    expect(d).toBe(`M 220 150 V 225 H 220 V ${300 - ARROW_HEIGHT}`)
+    expect(connectorPath(parent, child(100, 300)).d).toBe(`M 220 150 V 225 H 220 V ${300 - ARROW_HEIGHT}`)
   })
-  test('子が親と同じ高さか、上にあるときは、親の真下へ最小の距離だけ下げてから曲がる', () => {
-    const { d } = connectorPath(parent, { left: 400, top: 100, width: 240 })
-    expect(d).toBe(`M 220 150 V ${150 + CONNECTOR_DROP} H 520 V ${100 - ARROW_HEIGHT}`)
+  test('上: 親の上の中央から、子の下の中央へ。三角は下向き(子から親へ)', () => {
+    const { d, arrow } = connectorPath(parent, child(400, -300))
+    // 親の上の中央 = (220, 0)、子の下の中央 = (520, -200)、中間 = -100
+    expect(d).toBe(`M 220 0 V -100 H 520 V ${-200 + ARROW_HEIGHT}`)
+    expect(arrow).toBe(`515,-200 525,-200 520,${-200 + ARROW_HEIGHT}`)
+  })
+  test('右: 親の右の中央から、子の左の中央へ。三角は左向き', () => {
+    const { d, arrow } = connectorPath(parent, child(400, 100))
+    // 親の右の中央 = (340, 75)、子の左の中央 = (400, 150)、中間 = 370
+    expect(d).toBe(`M 340 75 H 370 V 150 H ${400 - ARROW_HEIGHT}`)
+    expect(arrow).toBe(`400,145 400,155 ${400 - ARROW_HEIGHT},150`)
+  })
+  test('左: 親の左の中央から、子の右の中央へ。三角は右向き', () => {
+    const { d, arrow } = connectorPath(parent, child(-300, 100))
+    // 親の左の中央 = (100, 75)、子の右の中央 = (-60, 150)、中間 = 20
+    expect(d).toBe(`M 100 75 H 20 V 150 H ${-60 + ARROW_HEIGHT}`)
+    expect(arrow).toBe(`-60,145 -60,155 ${-60 + ARROW_HEIGHT},150`)
+  })
+  test('重なっているとき・近すぎて三角を描けないときは、線も三角も出さない(空)', () => {
+    expect(connectorPath(parent, child(200, 100))).toEqual({ d: '', arrow: '' })
+    // 真下にあるが、隙間が足りない(横にも並んでいない)
+    expect(connectorPath(parent, child(100, 150 + CONNECTOR_MIN_GAP - 1))).toEqual({ d: '', arrow: '' })
+    expect(connectorPath(parent, child(100, 150 + CONNECTOR_MIN_GAP)).d).not.toBe('')
   })
   test('親が負の座標側にあっても、数値のまま組み立てる', () => {
-    const { d } = connectorPath(
-      { left: -50, top: -20, width: 100, height: 40 },
-      { left: 0, top: 100, width: 100 },
-    )
+    const { d } = connectorPath({ left: -50, top: -20, width: 100, height: 40 }, { left: 0, top: 100, width: 100, height: 40 })
     expect(d).toBe(`M 0 20 V 60 H 50 V ${100 - ARROW_HEIGHT}`)
   })
 })
