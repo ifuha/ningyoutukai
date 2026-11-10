@@ -158,7 +158,7 @@ export function CommentPin({
         <div
           role="group"
           aria-label="コメントの内容"
-          className="comment-card-in absolute top-full left-0 z-10 mt-1 w-64 cursor-default shadow-box bg-panel p-3 text-ink"
+          className="comment-card-in absolute top-full left-0 z-10 mt-1 w-64 cursor-default rounded-sm shadow-box bg-panel p-3 text-ink"
         >
           <div className="mb-2 flex items-center gap-2">
             <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-box">

@@ -31,6 +31,14 @@ describe('TokenRow', () => {
   test('最後に使った日時が出る', () => {
     expect(row({ token: token({ lastUsedAt: '2030-02-01T09:30:00.000Z' }) })).toContain('最後に使った')
   })
+  test('項目は、ラベルと値の組(期限・最後に使った)。状態は、名前の横のバッジ。取り消しは、カードの下', () => {
+    const html = row()
+    const labels = [...html.matchAll(/<dt[^>]*>([^<]+)<\/dt>/g)].map((m) => m[1])
+    expect(labels).toEqual(['期限', '最後に使った'])
+    expect(html).toMatch(/data-state="active"[^>]*>有効</)
+    expect(html.indexOf('data-state')).toBeLessThan(html.indexOf('<dl'))
+    expect(html.indexOf('<dl')).toBeLessThan(html.indexOf('aria-label="取り消す"'))
+  })
   test('取り消しは 2 段階: 最初は「取り消す」だけ。押すと「取り消す(確定)」と「やめる」', () => {
     const first = row()
     expect(first).toContain('aria-label="取り消す"')
@@ -58,6 +66,10 @@ describe('AiTokenSettings', () => {
     expect(html).toContain('報告の下書き')
     expect(html).toContain('自分で完了にすることはできません')
   })
+  test('説明は、できること・できないこと・報告のラベルと値に分かれている', () => {
+    const labels = [...html.matchAll(/<dt[^>]*>([^<]+)<\/dt>/g)].map((m) => m[1])
+    expect(labels).toEqual(['できること', 'できないこと', '報告'])
+  })
   test('発行のフォーム: 名前と期限(日)、「発行」ボタン。名前が空のうちは押せない', () => {
     expect(html).toContain('新しいトークンを発行する')
     expect(html).toContain('名前(どの AI か)')
@@ -67,8 +79,8 @@ describe('AiTokenSettings', () => {
 })
 
 describe('ユーザー設定のカテゴリ', () => {
-  test('「AI のトークン」が足された。最初は外観のまま', () => {
-    expect(settingsSections.map((s) => s.id)).toEqual(['appearance', 'ai-token'])
-    expect(settingsSections[1]!.label).toBe('AI のトークン')
+  test('「一般」「外観」「AI のトークン」の順。最初は一般', () => {
+    expect(settingsSections.map((s) => s.id)).toEqual(['general', 'appearance', 'ai-token'])
+    expect(settingsSections[2]!.label).toBe('AI のトークン')
   })
 })
