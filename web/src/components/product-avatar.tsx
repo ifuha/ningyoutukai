@@ -3,7 +3,7 @@
 // 名前(`name`)は、画像の隣に文字で出るので、画像は読み上げない(`alt=""`)
 export function ProductAvatar({ src, name: _name }: { src: string | null | undefined; name: string }) {
   if (src) {
-    return <img src={src} alt="" className="size-6 shrink-0 rounded-[4px] object-cover" />
+    return <img src={src} alt="" className="size-6 shrink-0 rounded-full object-cover" />
   }
   return <span aria-hidden="true" data-avatar-fallback className="size-6 shrink-0" />
 }

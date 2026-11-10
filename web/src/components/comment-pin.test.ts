@@ -89,6 +89,38 @@ describe('CommentPin', () => {
   })
 })
 
+describe('拡大縮小に合わせた大きさ(セクションの名前と同じ)', () => {
+  const pinAt = (scale: number) =>
+    renderToStaticMarkup(
+      createElement(
+        CanvasViewContext.Provider,
+        { value: { ...view, scale } },
+        createElement(CommentPin, { comment: comment(), onUpdate: () => {}, onDelete: () => {} }),
+      ),
+    )
+  const draftAt = (scale: number) =>
+    renderToStaticMarkup(
+      createElement(
+        CanvasViewContext.Provider,
+        { value: { ...view, scale } },
+        createElement(CommentDraft, { x: 5, y: 6, onSubmit: async () => {}, onCancel: () => {} }),
+      ),
+    )
+  test('縮小(scale < 1)では、左上を起点に 1 / scale 倍にして、画面上の大きさを保つ。位置(左上)は変わらない', () => {
+    const pin = pinAt(0.5)
+    expect(pin).toContain('left:100px;top:200px')
+    expect(pin).toContain('transform:scale(2)')
+    expect(pin).toContain('transform-origin:top left')
+    expect(draftAt(0.5)).toContain('transform:scale(2)')
+  })
+  test('拡大・等倍では、何も掛けない(キャンバスの拡大に比例)', () => {
+    for (const scale of [1, 2]) {
+      expect(pinAt(scale)).not.toContain('transform:scale(')
+      expect(draftAt(scale)).not.toContain('transform:scale(')
+    }
+  })
+})
+
 describe('CommentDraft', () => {
   const renderDraft = () => renderToStaticMarkup(createElement(CommentDraft, { x: 5, y: 6, offsetX: 1, offsetY: 2, onSubmit: async () => {}, onCancel: () => {} }))
   test('置いた位置に、入力欄とボタンが出る。内容が空の間は「コメントする」が押せない', () => {

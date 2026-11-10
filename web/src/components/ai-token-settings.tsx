@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { IconButton } from '#/components/icon-button'
 import { createAiToken, listAiTokens, revokeAiToken, type AiTokenInfo } from '#/lib/document-api'
 import { formatDocDate } from '#/lib/document-tree'
-import { TOKEN_ACTIVE_MAX, TOKEN_DAYS_DEFAULT, TOKEN_NAME_MAX, activeCount, envLine, parseTokenDays, tokenNameError, tokenState, tokenStateLabel } from '#/lib/ai-token-ui'
+import { TOKEN_ACTIVE_MAX, TOKEN_DAYS_DEFAULT, TOKEN_NAME_MAX, activeCount, envLine, listedTokens, parseTokenDays, tokenNameError, tokenState, tokenStateLabel } from '#/lib/ai-token-ui'
 import { retryDelay, retryTransient } from '#/lib/query-retry'
 
 // ユーザー設定の「AI のトークン」。仕様は docs/v4.0/overview.md
@@ -13,6 +13,14 @@ import { retryDelay, retryTransient } from '#/lib/query-retry'
 // - 中身(pmai_…)は、発行したときに**一度だけ**表示する。取り消すと、すぐ使えなくなる。有効なトークンは 10 個まで
 
 const inputClass = 'h-10 min-w-0 shadow-box bg-panel px-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+// ラベル(左の列)と値(右)を揃えた項目。狭い画面では、ラベルの下に値を置く
+const itemRow = 'flex flex-col gap-1 py-2 sm:grid sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-4'
+const itemLabel = 'text-s opacity-60'
+const stateBadge: Record<string, string> = {
+  active: 'bg-ink text-surface',
+  expired: 'shadow-box opacity-70',
+  revoked: 'shadow-box opacity-70',
+}
 
 export function AiTokenSettings() {
   const queryClient = useQueryClient()
@@ -52,11 +60,33 @@ export function AiTokenSettings() {
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-m">
-        AI(Claude Code など)に、<strong className="font-bold">あなたのタスク</strong>と、そのタスクに<strong className="font-bold">渡された文書</strong>を読ませ、
-        <strong className="font-bold">報告の下書き</strong>を保存させるための鍵です。AI はあなたが使う道具で、できるのはそれだけです。プロダクトの変更や、文書の書き込み、タスクを自分で完了にすることはできません。下書きは、あなたが確認して、完了報告に出します。
-      </p>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <p className="text-m">AI(Claude Code など)に、あなたのタスクを任せるための鍵です。AI はあなたが使う道具です。</p>
+        <dl className="text-m">
+          <div className={itemRow}>
+            <dt className={itemLabel}>できること</dt>
+            <dd>
+              <ul className="list-disc space-y-1 pl-4">
+                <li>
+                  <strong className="font-bold">あなたのタスク</strong>と、そのタスクに<strong className="font-bold">渡された文書</strong>を読む
+                </li>
+                <li>
+                  <strong className="font-bold">報告の下書き</strong>を保存する
+                </li>
+              </ul>
+            </dd>
+          </div>
+          <div className={itemRow}>
+            <dt className={itemLabel}>できないこと</dt>
+            <dd>プロダクトの変更や、文書の書き込み、タスクを自分で完了にすることはできません</dd>
+          </div>
+          <div className={itemRow}>
+            <dt className={itemLabel}>報告</dt>
+            <dd>下書きは、あなたが確認して、完了報告に出します</dd>
+          </div>
+        </dl>
+      </div>
 
       {issued && (
         <div role="status" className="space-y-2 shadow-box bg-side-item p-3">
@@ -80,13 +110,13 @@ export function AiTokenSettings() {
       )}
 
       <form
-        className="space-y-2"
+        className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault()
           submit()
         }}
       >
-        <h3 className="text-m font-bold">新しいトークンを発行する</h3>
+        <h3 className="text-l font-bold">新しいトークンを発行する</h3>
         <div className="flex flex-wrap items-end gap-2">
           <label className="space-y-1">
             <span className="block text-s">名前(どの AI か)</span>
@@ -106,8 +136,8 @@ export function AiTokenSettings() {
         )}
       </form>
 
-      <section className="space-y-1" aria-label="発行したトークン">
-        <h3 className="text-m font-bold">
+      <section className="space-y-3" aria-label="発行したトークン">
+        <h3 className="text-l font-bold">
           発行したトークン <span className="text-s font-normal opacity-70">(有効 {active} 個)</span>
         </h3>
         {tokens.isPending ? (
@@ -116,11 +146,11 @@ export function AiTokenSettings() {
           <p role="alert" className="border-l border-line pl-3 text-m">
             ERR {tokens.error.message}
           </p>
-        ) : tokens.data.length === 0 ? (
+        ) : listedTokens(tokens.data).length === 0 ? (
           <p className="text-m opacity-70"># まだありません</p>
         ) : (
-          <ul className="divide-y divide-line">
-            {tokens.data.map((t) => (
+          <ul className="space-y-3">
+            {listedTokens(tokens.data).map((t) => (
               <TokenRow
                 key={t.tokenId}
                 token={t}
@@ -161,24 +191,40 @@ export function TokenRow({
 }) {
   const state = tokenState(token)
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 py-2">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-m font-medium" title={token.name}>
-          {token.name} <span className="font-mono text-s font-normal opacity-60">{token.tokenPrefix}…</span>
-        </p>
-        <p className="text-s opacity-70">
-          <span data-state={state}>{tokenStateLabel[state]}</span> · 期限 {formatDocDate(token.expiresAt)} · {token.lastUsedAt ? `最後に使った ${formatDocDate(token.lastUsedAt)}` : 'まだ使われていません'}
-        </p>
+    <li className="space-y-3 rounded-sm p-3 shadow-box">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-m font-bold" title={token.name}>
+            {token.name}
+          </p>
+          <p className="font-mono text-s opacity-60">{token.tokenPrefix}…</p>
+        </div>
+        <span data-state={state} className={`shrink-0 px-2 py-0.5 text-s ${stateBadge[state]}`}>
+          {tokenStateLabel[state]}
+        </span>
       </div>
-      {state === 'active' &&
-        (confirming ? (
-          <div className="flex gap-1">
-            <IconButton icon={Trash2} label="取り消す(確定)" showLabel size="sm" variant="danger-solid" disabled={pending} onClick={onRevoke} />
-            <IconButton icon={X} label="やめる" size="sm" variant="outline" disabled={pending} onClick={onCancel} />
-          </div>
-        ) : (
-          <IconButton icon={Trash2} label="取り消す" size="sm" side="left" variant="danger" onClick={onAskRevoke} />
-        ))}
+      <dl className="text-m">
+        <div className={itemRow}>
+          <dt className={itemLabel}>期限</dt>
+          <dd>{formatDocDate(token.expiresAt)}</dd>
+        </div>
+        <div className={itemRow}>
+          <dt className={itemLabel}>最後に使った</dt>
+          <dd>{token.lastUsedAt ? formatDocDate(token.lastUsedAt) : 'まだ使われていません'}</dd>
+        </div>
+      </dl>
+      {state === 'active' && (
+        <div className="flex justify-end gap-1">
+          {confirming ? (
+            <>
+              <IconButton icon={Trash2} label="取り消す(確定)" showLabel size="sm" variant="danger-solid" disabled={pending} onClick={onRevoke} />
+              <IconButton icon={X} label="やめる" size="sm" variant="outline" disabled={pending} onClick={onCancel} />
+            </>
+          ) : (
+            <IconButton icon={Trash2} label="取り消す" size="sm" side="left" variant="danger" onClick={onAskRevoke} />
+          )}
+        </div>
+      )}
     </li>
   )
 }

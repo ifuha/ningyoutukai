@@ -5,6 +5,7 @@ import { ContextMenu } from '#/components/context-menu'
 import { IconButton } from '#/components/icon-button'
 import type { ProductComment, ProductCommentPatch } from '#/lib/comment-api'
 import { commentMenuItems } from '#/lib/comment-menu'
+import { commentScaleStyle } from '#/lib/comment-scale'
 import { useCanvasView } from '#/lib/canvas-view'
 import { useLongPress } from '#/lib/use-long-press'
 
@@ -86,7 +87,7 @@ export function CommentPin({
       data-comment-pin=""
       aria-label="コメント"
       className="absolute z-20"
-      style={{ left: position.x + offsetX, top: position.y + offsetY }}
+      style={{ left: position.x + offsetX, top: position.y + offsetY, ...commentScaleStyle(scale) }}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
@@ -157,7 +158,7 @@ export function CommentPin({
         <div
           role="group"
           aria-label="コメントの内容"
-          className="comment-card-in absolute top-full left-0 z-10 mt-1 w-64 cursor-default shadow-box bg-panel p-3 text-ink"
+          className="comment-card-in absolute top-full left-0 z-10 mt-1 w-64 cursor-default rounded-sm shadow-box bg-panel p-3 text-ink"
         >
           <div className="mb-2 flex items-center gap-2">
             <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full shadow-box">

@@ -69,21 +69,21 @@ export function MemberCard({
     <article
       ref={ref}
       data-card-id={cardId}
-      className="relative w-[240px] shrink-0 shadow-box bg-panel text-left"
+      className="relative w-[240px] shrink-0 rounded-sm shadow-box bg-panel text-left"
     >
       <header
-        className={`flex items-center gap-2 border-b border-line p-2 ${isLeader ? 'bg-ink text-surface' : ''}`}
+        className={`flex items-center gap-2 rounded-t-sm border-b border-line p-2 ${isLeader ? 'bg-ink text-surface' : ''}`}
       >
         {member.avatarUrl ? (
           <img
             src={member.avatarUrl}
             alt=""
-            className="size-8 shrink-0 border border-current object-cover"
+            className="size-8 shrink-0 rounded-full border border-current object-cover"
           />
         ) : (
           <span
             aria-hidden="true"
-            className="flex size-8 shrink-0 items-center justify-center border border-current font-bold"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-current font-bold"
           >
             {[...member.userName][0] ?? '?'}
           </span>

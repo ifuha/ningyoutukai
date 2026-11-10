@@ -69,13 +69,13 @@ export function AvatarSettingsView({
             src={shownUrl}
             alt={url ? '選んだ画像のプレビュー' : '現在のアイコン'}
             data-avatar-preview-large
-            className="size-28 shrink-0 rounded-[4px] bg-panel object-cover shadow-box"
+            className="size-28 shrink-0 rounded-full bg-panel object-cover shadow-box"
           />
         ) : (
           <div
             aria-hidden="true"
             data-avatar-preview-empty
-            className="size-28 shrink-0 rounded-[4px] border border-dashed border-line bg-panel"
+            className="size-28 shrink-0 rounded-full border border-dashed border-line bg-panel"
           />
         )}
         <div className="min-w-0 space-y-1">

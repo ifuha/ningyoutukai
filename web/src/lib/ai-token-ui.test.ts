@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { TOKEN_ACTIVE_MAX, TOKEN_DAYS_MAX, activeCount, envLine, parseTokenDays, tokenNameError, tokenState, tokenStateLabel } from './ai-token-ui'
+import { TOKEN_ACTIVE_MAX, TOKEN_DAYS_MAX, activeCount, envLine, listedTokens, parseTokenDays, tokenNameError, tokenState, tokenStateLabel } from './ai-token-ui'
 
 describe('AI 用のトークンの画面(純粋な部分)', () => {
   test('名前: 空・空白だけ・61 文字は誤り。60 文字までよい', () => {
@@ -33,6 +33,14 @@ describe('AI 用のトークンの画面(純粋な部分)', () => {
       ]),
     ).toBe(2)
     expect(activeCount([])).toBe(0)
+  })
+  test('設定の一覧: 取り消し済みは出さない(取り消し済みは、期限内でも出さない)。期限切れと有効は出し、順番は保つ', () => {
+    const a = { id: 'a', revokedAt: null, active: true }
+    const b = { id: 'b', revokedAt: 'x', active: false }
+    const c = { id: 'c', revokedAt: null, active: false }
+    const d = { id: 'd', revokedAt: 'x', active: true }
+    expect(listedTokens([a, b, c, d]).map((t) => t.id)).toEqual(['a', 'c'])
+    expect(listedTokens([b, d])).toEqual([])
   })
   test('AI を動かす環境に設定する行は、環境変数 NINGYOUTUKAI_TOKEN', () => {
     expect(envLine('pmai_abc')).toBe('export NINGYOUTUKAI_TOKEN=pmai_abc')
