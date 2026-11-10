@@ -33,6 +33,11 @@ export function activeCount(tokens: Pick<AiTokenInfo, 'revokedAt' | 'active'>[])
   return tokens.filter((t) => tokenState(t) === 'active').length
 }
 
+/** 設定の一覧に出すトークン: 取り消し済みは出さない(使えず、もう必要ない)。期限切れは出す(いつ切れたか分かる) */
+export function listedTokens<T extends Pick<AiTokenInfo, 'revokedAt' | 'active'>>(tokens: T[]): T[] {
+  return tokens.filter((t) => tokenState(t) !== 'revoked')
+}
+
 /** AI を動かす環境に設定する行(CLI は環境変数のトークンを、ログインより優先して使う) */
 export function envLine(token: string): string {
   return `export NINGYOUTUKAI_TOKEN=${token}`

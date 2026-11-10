@@ -18,7 +18,8 @@ describe('settingsSections', () => {
     }
   })
 
-  test('最初のカテゴリは外観(開いたとき、最初に出る)', () => {
-    expect(settingsSections[0]!.id).toBe('appearance')
+  test('最初のカテゴリは一般(開いたとき、最初に出る)。外観・AI のトークンも、ある', () => {
+    expect(settingsSections[0]!.id).toBe('general')
+    expect(settingsSections.map((s) => s.id)).toEqual(expect.arrayContaining(['appearance', 'ai-token']))
   })
 })

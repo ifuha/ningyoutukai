@@ -55,7 +55,7 @@ export function CommentDraft({
       data-no-deselect
       data-comment-draft=""
       aria-label="コメントを書く"
-      className="absolute z-30 w-72 shadow-box bg-panel p-3 text-ink"
+      className="absolute z-30 w-72 rounded-sm shadow-box bg-panel p-3 text-ink"
       style={{ left: x + offsetX, top: y + offsetY, ...commentScaleStyle(scale) }}
       onPointerDown={(e) => e.stopPropagation()}
       onSubmit={(e) => {

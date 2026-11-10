@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Palette, User } from 'lucide-react'
 import { SettingsShell, resolveSection } from './settings-shell'
 import { SettingsDialog } from './settings-dialog'
@@ -70,11 +71,14 @@ describe('SettingsShell: 危険なカテゴリ(danger)', () => {
 })
 
 describe('SettingsDialog(ユーザー設定)', () => {
-  const html = renderToStaticMarkup(createElement(SettingsDialog, { open: true, onClose: () => {} }))
-  test('見出し「設定」・項目の nav・外観が選ばれている', () => {
+  // 最初のカテゴリ(一般)は、連携を取得するので、QueryClient が要る
+  const html = renderToStaticMarkup(
+    createElement(QueryClientProvider, { client: new QueryClient() }, createElement(SettingsDialog, { open: true, onClose: () => {} })),
+  )
+  test('見出し「設定」・項目の nav・一般が選ばれている', () => {
     expect(html).toContain('aria-label="設定の項目"')
     expect(html).toContain('>設定</p>')
-    expect(html).toContain('>外観</h2>')
+    expect(html).toContain('>一般</h2>')
     expect(html).toMatch(/aria-current="page"/)
   })
 })

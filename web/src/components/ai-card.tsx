@@ -34,7 +34,7 @@ export function AiCard({ ai, onOpen, onRevoke }: { ai: TreeAi; onOpen?: (ai: Tre
       </span>
     </>
   )
-  const className = 'flex h-12 w-[200px] items-center gap-2 shadow-box bg-panel px-2 text-left'
+  const className = 'flex h-12 w-[200px] items-center gap-2 rounded-sm shadow-box bg-panel px-2 text-left'
   const main = onOpen ? (
     <button
       type="button"
