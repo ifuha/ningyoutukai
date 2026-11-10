@@ -41,7 +41,7 @@ export function DirectoryPermissionList({
                 aria-pressed={m.level === level}
                 disabled={pendingMemberId === m.memberId}
                 onClick={() => m.level !== level && onChange(m.memberId, level)}
-                className={`h-8 cursor-pointer px-3 text-m shadow-box disabled:opacity-50 ${m.level === level ? 'bg-ink font-bold text-surface' : 'hover:bg-side-item'}`}
+                className={`h-8 cursor-pointer px-3 text-m shadow-box disabled:opacity-50 ${m.level === level ? 'bg-ink text-surface' : 'hover:bg-side-item'}`}
               >
                 {level === 'read' ? '読み取りのみ' : '読み取りと書き込み'}
               </button>
@@ -91,7 +91,7 @@ function Body({ productId, directory, onClose }: { productId: string; directory:
   return (
     <div className="space-y-3 bg-panel p-3 text-ink">
       <div className="flex items-start justify-between gap-2">
-        <h2 className="min-w-0 text-l font-bold break-words">「{directory.name}」の権限</h2>
+        <h2 className="min-w-0 text-l font-black break-words">「{directory.name}」の権限</h2>
         <IconButton icon={X} label="閉じる" size="sm" side="bottom" onClick={onClose} />
       </div>
       <p className="text-s opacity-80">

@@ -9,7 +9,7 @@ import { cleanup, insertTask, setupProduct } from "../task/helpers";
 // ツリーに出る、メンバーの AI のカード(有効なトークンごとに 1 枚。確認待ちの数は持ち主だけに返す)
 
 type Setup = Awaited<ReturnType<typeof setupProduct>>;
-type Ai = { tokenId: string; name: string; mine: boolean; lastDraftAt: string | null; pendingCount: number | null; pendingTaskIds: string[] | null };
+type Ai = { tokenId: string; name: string; mine: boolean; lastDraftAt: string | null; lastUsedAt: string | null; pendingCount: number | null; pendingTaskIds: string[] | null };
 type Tree = { leader: { ais: Ai[] }; members: { productMemberId: string; ais: Ai[] }[] };
 
 let a: Setup;
@@ -76,5 +76,14 @@ describe("AI のカード", () => {
     await db.update(taskReportDrafts).set({ status: "discarded" }).where(eq(taskReportDrafts.draftId, d1!.draftId));
     const after = (await tree(a.members[0]!.cookie)).members.find((m) => m.productMemberId === a.members[0]!.memberId)!.ais[0]!;
     expect(after.pendingCount).toBe(1);
+  });
+
+  test("最後に使われた日時: 使われるまで null。使われると、持ち主にも、他の人にも返る(動作中の印のため)", async () => {
+    const aiOf = async (cookie: string) => (await tree(cookie)).members.find((m) => m.productMemberId === a.members[0]!.memberId)!.ais[0]!;
+    expect((await aiOf(a.leader.cookie)).lastUsedAt).toBeNull();
+    const usedAt = new Date("2030-01-02T03:04:05.000Z");
+    await db.update(aiTokens).set({ lastUsedAt: usedAt }).where(eq(aiTokens.tokenId, memberTokenId));
+    expect((await aiOf(a.leader.cookie)).lastUsedAt).toBe(usedAt.toISOString());
+    expect((await aiOf(a.members[0]!.cookie)).lastUsedAt).toBe(usedAt.toISOString());
   });
 });

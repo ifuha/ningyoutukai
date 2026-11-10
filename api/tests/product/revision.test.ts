@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { app } from "../../src/app";
 import { db } from "../../src/db";
 import {
+  aiTokens,
   productMembers,
   products,
   sections,
@@ -12,6 +13,7 @@ import {
   users,
 } from "../../src/db/schema";
 import { computeProductRevision } from "../../src/routes/product-revision";
+import { createAiToken } from "../../src/lib/ai-token";
 import {
   cleanup,
   createOutsider,
@@ -180,6 +182,18 @@ describe("どこが変わっても、値が変わる", () => {
     await db.update(tasks).set({ taskName: "別の名前" }).where(eq(tasks.taskId, task.taskId));
     expect(await revisionOf(a.productId, a.leader.cookie)).not.toBe(before);
     await db.update(tasks).set({ taskName: "元の名前" }).where(eq(tasks.taskId, task.taskId));
+    expect(await revisionOf(a.productId, a.leader.cookie)).toBe(before);
+  });
+
+  test("メンバーの AI のトークン: 発行・使われた日時の更新・取り消しで変わる(AI のカードを取り直すため)。参加していない人のトークンでは変わらない", async () => {
+    let tokenId!: string;
+    await changes("発行", async () => {
+      tokenId = (await createAiToken(a.members[0]!.userId, "AI", 30)).row.tokenId;
+    });
+    await changes("使われた", () => db.update(aiTokens).set({ lastUsedAt: new Date() }).where(eq(aiTokens.tokenId, tokenId)));
+    await changes("取り消し", () => db.update(aiTokens).set({ revokedAt: new Date() }).where(eq(aiTokens.tokenId, tokenId)));
+    const before = await revisionOf(a.productId, a.leader.cookie);
+    await createAiToken(b.leader.userId, "別のプロダクトの人の AI", 30);
     expect(await revisionOf(a.productId, a.leader.cookie)).toBe(before);
   });
 });

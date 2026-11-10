@@ -51,6 +51,34 @@ export function editingCount(dir: Pick<DocDirectory, 'documents'>): number {
   return dir.documents.filter((d) => d.editingBy).length
 }
 
+/** メンバーごとの、いま編集中の文書の名前(ツリーのカードに、文書のパネルと同じ緑の点を出すため)。並びは、ディレクトリと文書の順 */
+export function editingDocumentsByMember(directories: Pick<DocDirectory, 'documents'>[]): Map<string, string[]> {
+  const byMember = new Map<string, string[]>()
+  for (const dir of directories) {
+    for (const doc of dir.documents) {
+      if (!doc.editingBy) continue
+      const names = byMember.get(doc.editingBy.memberId)
+      if (names) names.push(doc.name)
+      else byMember.set(doc.editingBy.memberId, [doc.name])
+    }
+  }
+  return byMember
+}
+
+/** カードに出す、編集中の表示。1 件なら「a.md を編集中」、複数なら「a.md ほか 1 件を編集中」 */
+export function memberEditingLabel(names: string[]): string | null {
+  if (names.length === 0) return null
+  return names.length === 1 ? `${names[0]} を編集中` : `${names[0]} ほか ${names.length - 1} 件を編集中`
+}
+
+/**
+ * 作ったばかりの文書への、最初の書き込みか: 版 1 で、本文が空(名前だけで作った直後)。
+ * このときは、「新しい版として残す / 上書き」を聞かず、版 1 を上書きする(空の版を、履歴に残さない)
+ */
+export function isFirstWrite(baseVersion: number, original: string): boolean {
+  return baseVersion === 1 && original === ''
+}
+
 /** 文書を開いたとき、編集の入口(ボタン)を出してよいか: そのディレクトリの書き込み権限があり、他の人が編集中ではない */
 export function canEditDocument(level: 'read' | 'write', editingBy: DocSummary['editingBy'], myMemberId: string | undefined): boolean {
   return level === 'write' && (!editingBy || editingBy.memberId === myMemberId)

@@ -230,7 +230,7 @@ export function TaskKindDialog({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="text-l font-bold">種類の管理</h2>
+      <h2 className="text-l font-black">種類の管理</h2>
       <AddForm productId={productId} />
       {kinds.isPending ? (
         <Loading />

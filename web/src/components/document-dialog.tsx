@@ -1,11 +1,13 @@
 import { Check, Pencil, Save, Timer, TimerOff, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { DocumentDeleteDialog } from '#/components/document-delete-dialog'
+import { EditingDot } from '#/components/editing-dot'
 import { IconButton } from '#/components/icon-button'
 import { LockNoticeBanner } from '#/components/lock-notice'
 import { MarkdownView } from '#/components/markdown-view'
 import { Modal } from '#/components/modal'
 import { SaveModeDialog, type SaveMode } from '#/components/save-mode-dialog'
-import { canEditDocument, canSave, contentTooLarge, editingLabel, formatDocDate, lockNotice, textareaEditable } from '#/lib/document-tree'
+import { canEditDocument, canSave, contentTooLarge, editingLabel, formatDocDate, isFirstWrite, lockNotice, textareaEditable } from '#/lib/document-tree'
 import { useEditLock } from '#/lib/use-edit-lock'
 import { useDocument, useDocumentActions, useDocumentTree, useDocumentVersions } from '#/lib/use-product-documents'
 
@@ -60,7 +62,9 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // 削除の確認(モーダル)を出しているか、削除の最中か
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const lock = useEditLock(productId, documentId, mode === 'edit')
   const notice = lockNotice(lock.state, lock.now)
@@ -116,12 +120,15 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
   }
   const remove = async () => {
     setError(null)
+    setDeleting(true)
     try {
       await actions.remove(documentId)
       onClose()
     } catch (e) {
       setConfirmDelete(false)
       setError(e instanceof Error ? e.message : '削除できませんでした')
+    } finally {
+      setDeleting(false)
     }
   }
   const toggleKeep = async () => {
@@ -140,7 +147,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
     <div className="flex h-full min-h-0 flex-col bg-panel text-ink">
       <header className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-l font-bold" title={current?.name}>
+          <h2 className="truncate text-l font-black" title={current?.name}>
             {directory ? `${directory.name}/` : ''}
             {current?.name ?? '文書'}
           </h2>
@@ -157,7 +164,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
             )}
             {others && (
               <span data-editing="" className="flex items-center gap-1">
-                <span aria-hidden="true" className="size-2 rounded-full bg-green-500" />
+                <EditingDot />
                 {others}
               </span>
             )}
@@ -169,15 +176,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
               {isLeader && current && (
                 <IconButton icon={current.keepForever ? Timer : TimerOff} label={current.keepForever ? '自動削除する設定に戻す' : '自動削除しない'} size="sm" side="bottom" onClick={() => void toggleKeep()} />
               )}
-              {level === 'write' &&
-                (confirmDelete ? (
-                  <>
-                    <IconButton icon={Trash2} label="削除する" showLabel size="sm" variant="danger-solid" onClick={() => void remove()} />
-                    <IconButton icon={X} label="やめる" size="sm" variant="outline" onClick={() => setConfirmDelete(false)} />
-                  </>
-                ) : (
-                  <IconButton icon={Trash2} label="削除" size="sm" side="bottom" variant="danger" onClick={() => setConfirmDelete(true)} />
-                ))}
+              {level === 'write' && <IconButton icon={Trash2} label="削除" size="sm" side="bottom" variant="danger" onClick={() => setConfirmDelete(true)} />}
               {mayEdit && <IconButton icon={Pencil} label="編集" showLabel size="sm" variant="solid" onClick={startEdit} />}
             </>
           )}
@@ -191,11 +190,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
           {error}
         </p>
       )}
-      {confirmDelete && mode === 'view' && (
-        <p role="alert" className="border-b border-line px-4 py-2 text-m text-danger">
-          「{current?.name}」を削除します。全ての版が消え、戻せません。
-        </p>
-      )}
+      <DocumentDeleteDialog name={confirmDelete ? (current?.name ?? '文書') : null} pending={deleting} onConfirm={() => void remove()} onClose={() => setConfirmDelete(false)} />
 
       <div className="flex min-h-0 flex-1">
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
@@ -209,7 +204,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
             <div className="flex h-full min-h-0 flex-col">
               <div className="flex gap-1 border-b border-line px-4 py-2 md:hidden" role="tablist" aria-label="編集とプレビュー">
                 {(['edit', 'preview'] as const).map((t) => (
-                  <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`cursor-pointer px-3 py-1 text-m ${tab === t ? 'bg-side-item font-bold' : ''}`}>
+                  <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`cursor-pointer px-3 py-1 text-m ${tab === t ? 'bg-side-item' : ''}`}>
                     {t === 'edit' ? '編集' : 'プレビュー'}
                   </button>
                 ))}
@@ -248,7 +243,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
 
         {mode === 'view' && (
           <aside aria-label="履歴" className="w-56 shrink-0 overflow-y-auto border-l border-line p-2">
-            <h3 className="px-2 pb-1 text-m font-bold">履歴</h3>
+            <h3 className="px-2 pb-1 text-m font-medium">履歴</h3>
             {versions.isPending ? (
               <p className="px-2 text-s opacity-60">読み込み中…</p>
             ) : versions.data === undefined ? (
@@ -261,7 +256,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
                       type="button"
                       aria-current={(viewVersion ?? current?.currentVersion) === v.version ? 'true' : undefined}
                       onClick={() => setViewVersion(v.version === current?.currentVersion ? undefined : v.version)}
-                      className={`w-full cursor-pointer px-2 py-1 text-left text-m hover:bg-side-item ${(viewVersion ?? current?.currentVersion) === v.version ? 'bg-side-item font-bold' : ''}`}
+                      className={`w-full cursor-pointer px-2 py-1 text-left text-m hover:bg-side-item ${(viewVersion ?? current?.currentVersion) === v.version ? 'bg-side-item' : ''}`}
                     >
                       版 {v.version}
                       <span className="block text-s font-normal opacity-70">
@@ -286,7 +281,15 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
           <div className="flex items-center gap-2">
             {tooLarge && <span role="alert" className="text-s text-danger">本文は 1MB までです</span>}
             <IconButton icon={X} label="編集をやめる" showLabel variant="outline" disabled={saving} onClick={cancelEdit} />
-            <IconButton icon={saving ? Check : Save} label={saving ? '保存中…' : '保存'} showLabel variant="solid" disabled={saving || !canSave(lock.state, draft, original)} onClick={() => setConfirmSave(true)} />
+            <IconButton
+              icon={saving ? Check : Save}
+              label={saving ? '保存中…' : '保存'}
+              showLabel
+              variant="solid"
+              disabled={saving || !canSave(lock.state, draft, original)}
+              // 作ったばかりの文書への最初の書き込みは、確認を出さず、そのまま保存する
+              onClick={() => (isFirstWrite(baseVersion, original) ? void save('overwrite') : setConfirmSave(true))}
+            />
           </div>
         </footer>
       )}

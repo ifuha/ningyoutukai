@@ -54,7 +54,7 @@ function Detail({
 
   return (
     <>
-      <h2 className="text-l font-bold break-words">{task.taskName}</h2>
+      <h2 className="text-l font-black break-words">{task.taskName}</h2>
       <dl className="space-y-2 text-m">
         <div>
           <dt className="text-s opacity-60">説明</dt>
@@ -85,7 +85,7 @@ function Detail({
       </dl>
       {handed.data && handed.data.documents.length > 0 && (
         <section aria-label="渡された文書" className="space-y-1">
-          <h3 className="text-m font-bold">
+          <h3 className="text-m font-medium">
             渡された文書 <span className="text-s font-normal opacity-70">({handed.data.documents.length} 件)</span>
           </h3>
           <ul className="space-y-0.5 text-m">

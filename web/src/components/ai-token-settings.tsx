@@ -69,10 +69,10 @@ export function AiTokenSettings() {
             <dd>
               <ul className="list-disc space-y-1 pl-4">
                 <li>
-                  <strong className="font-bold">あなたのタスク</strong>と、そのタスクに<strong className="font-bold">渡された文書</strong>を読む
+                  <strong className="font-medium">あなたのタスク</strong>と、そのタスクに<strong className="font-medium">渡された文書</strong>を読む
                 </li>
                 <li>
-                  <strong className="font-bold">報告の下書き</strong>を保存する
+                  <strong className="font-medium">報告の下書き</strong>を保存する
                 </li>
               </ul>
             </dd>
@@ -90,8 +90,8 @@ export function AiTokenSettings() {
 
       {issued && (
         <div role="status" className="space-y-2 shadow-box bg-side-item p-3">
-          <p className="text-m font-bold">「{issued.name}」のトークンを発行しました</p>
-          <p className="text-s">このトークンは、<strong className="font-bold">今回しか表示されません</strong>。AI を動かす環境に、次のように設定してください(`pm login` は要りません)。</p>
+          <p className="text-m font-medium">「{issued.name}」のトークンを発行しました</p>
+          <p className="text-s">このトークンは、<strong className="font-medium">今回しか表示されません</strong>。AI を動かす環境に、次のように設定してください(`pm login` は要りません)。</p>
           <pre className="overflow-x-auto bg-panel p-2 font-mono text-s select-all">{envLine(issued.token)}</pre>
           <div className="flex flex-wrap gap-2">
             <IconButton
@@ -116,7 +116,7 @@ export function AiTokenSettings() {
           submit()
         }}
       >
-        <h3 className="text-l font-bold">新しいトークンを発行する</h3>
+        <h3 className="text-l font-medium">新しいトークンを発行する</h3>
         <div className="flex flex-wrap items-end gap-2">
           <label className="space-y-1">
             <span className="block text-s">名前(どの AI か)</span>
@@ -137,7 +137,7 @@ export function AiTokenSettings() {
       </form>
 
       <section className="space-y-3" aria-label="発行したトークン">
-        <h3 className="text-l font-bold">
+        <h3 className="text-l font-medium">
           発行したトークン <span className="text-s font-normal opacity-70">(有効 {active} 個)</span>
         </h3>
         {tokens.isPending ? (
@@ -194,7 +194,7 @@ export function TokenRow({
     <li className="space-y-3 rounded-sm p-3 shadow-box">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-m font-bold" title={token.name}>
+          <p className="truncate text-m font-medium" title={token.name}>
             {token.name}
           </p>
           <p className="font-mono text-s opacity-60">{token.tokenPrefix}…</p>

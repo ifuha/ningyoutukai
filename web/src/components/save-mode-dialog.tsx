@@ -10,10 +10,7 @@ export function SaveModeDialog({ open, onChoose, onClose }: { open: boolean; onC
     <Modal open={open} onClose={onClose} padded={false}>
       {open && (
         <div className="space-y-2 p-2 text-ink">
-          <div className="flex items-start justify-between gap-2">
-            <h2 className="min-w-0 text-l font-bold">どちらで保存しますか?</h2>
-            <IconButton icon={X} label="閉じる" size="sm" side="bottom" onClick={onClose} />
-          </div>
+          <h2 className="text-l font-black">どちらで保存しますか?</h2>
           <ul className="flex flex-wrap gap-x-4 text-s opacity-80">
             <li>新しい版として残す: 前の版は履歴に残ります</li>
             <li>いまの版を上書き: 版は増えません。置き換える前の本文には戻せません</li>

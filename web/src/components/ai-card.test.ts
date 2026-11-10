@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AiCard, AiCards, aiCardSummary } from './ai-card'
+import { AI_ACTIVE_MS, AiCard, AiCards, aiCardSummary, aiWorking } from './ai-card'
 import { aiBox } from '#/lib/ai-connector'
 import { connectorPath } from '#/lib/tree-layout'
 import { MemberCard } from './member-card'
@@ -15,6 +15,7 @@ const ai = (over: Partial<TreeAi> = {}): TreeAi => ({
   mine: false,
   lastDraftAt: null,
   pendingCount: 0,
+  lastUsedAt: null,
   pendingTaskIds: [],
   offsetX: null,
   offsetY: null,
@@ -34,6 +35,32 @@ const member = (over: Partial<TreeMember> = {}): TreeMember =>
     ais: [],
     ...over,
   }) as TreeMember
+
+describe('動作中の印(文書の編集中と同じ緑の点)', () => {
+  const NOW = Date.parse('2030-01-01T12:00:00.000Z')
+  const usedAgo = (ms: number) => ai({ lastUsedAt: new Date(NOW - ms).toISOString() })
+  test('最後に使われてから 10 分未満なら動作中。10 分ちょうど・使われていない・読めない日時は、動作中ではない', () => {
+    expect(aiWorking(usedAgo(0), NOW)).toBe(true)
+    expect(aiWorking(usedAgo(AI_ACTIVE_MS - 1), NOW)).toBe(true)
+    expect(aiWorking(usedAgo(AI_ACTIVE_MS), NOW)).toBe(false)
+    expect(aiWorking(ai({ lastUsedAt: null }), NOW)).toBe(false)
+    expect(aiWorking(ai({ lastUsedAt: 'x' }), NOW)).toBe(false)
+  })
+  test('動作中は、緑の点と「動作中」。確認待ちがあれば、点は出したまま、件数を優先する', () => {
+    const working = renderToStaticMarkup(createElement(AiCard, { ai: usedAgo(60_000), now: NOW }))
+    expect(working).toContain('data-working')
+    expect(working).toContain('動作中')
+    const waiting = renderToStaticMarkup(createElement(AiCard, { ai: { ...usedAgo(60_000), pendingCount: 1, pendingTaskIds: ['t1'] }, now: NOW }))
+    expect(waiting).toContain('data-working')
+    expect(waiting).toContain('確認待ち 1 件')
+    expect(waiting).not.toContain('動作中')
+  })
+  test('動作中でなければ、点は出ない', () => {
+    const idle = renderToStaticMarkup(createElement(AiCard, { ai: usedAgo(AI_ACTIVE_MS + 1), now: NOW }))
+    expect(idle).not.toContain('data-working')
+    expect(idle).toContain('下書きなし')
+  })
+})
 
 describe('aiCardSummary', () => {
   test('確認待ちがあれば件数。なければ最後の下書きの日時。下書きがなければ「下書きなし」', () => {

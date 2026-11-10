@@ -29,6 +29,8 @@ export const TreeAiSchema = t.Object({
   mine: t.Boolean(),
   // このプロダクトで、最後に下書きを出した日時(なければ null)
   lastDraftAt: nullableDate,
+  // トークンが最後に使われた日時(なければ null)。画面は、最近使われた AI に「動作中」の印を出す。使われている間、5 分おきに更新される
+  lastUsedAt: nullableDate,
   // 確認待ちの下書きの数。持ち主本人にだけ数を返す(他の人には null)
   pendingCount: t.Union([t.Number(), t.Null()]),
   // 確認待ちの下書きがあるタスクの ID(古い下書きから順。持ち主本人にだけ返す。他の人には null)

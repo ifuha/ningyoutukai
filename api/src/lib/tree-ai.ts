@@ -19,7 +19,7 @@ export async function loadTreeAis(
   if (members.length === 0) return result;
 
   const tokens = await db
-    .select({ tokenId: aiTokens.tokenId, userId: aiTokens.userId, name: aiTokens.name })
+    .select({ tokenId: aiTokens.tokenId, userId: aiTokens.userId, name: aiTokens.name, lastUsedAt: aiTokens.lastUsedAt })
     .from(aiTokens)
     .where(and(inArray(aiTokens.userId, members.map((m) => m.userId)), isNull(aiTokens.revokedAt), gt(aiTokens.expiresAt, now)))
     .orderBy(asc(aiTokens.createdAt), asc(aiTokens.tokenId));
@@ -80,6 +80,7 @@ export async function loadTreeAis(
       name: token.name,
       mine: token.userId === viewerUserId,
       lastDraftAt: stat?.lastDraftAt ? new Date(stat.lastDraftAt) : null,
+      lastUsedAt: token.lastUsedAt,
       pendingCount: token.userId === viewerUserId ? (pendingByToken.get(token.tokenId)?.length ?? 0) : null,
       offsetX: offsetByToken.get(token.tokenId)?.offsetX ?? null,
       offsetY: offsetByToken.get(token.tokenId)?.offsetY ?? null,
