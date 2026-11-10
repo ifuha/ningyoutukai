@@ -78,8 +78,8 @@ export function DocumentsPanelView({
       <header className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
         <h2 className="text-l font-black">文書</h2>
         <div className="flex items-center gap-1">
-          {isLeader && onAddDirectory && <IconButton icon={FolderPlus} label="ディレクトリを追加" size="sm" side="bottom" onClick={() => setAdding((a) => !a)} />}
-          <IconButton icon={X} label="閉じる" size="sm" side="bottom" onClick={onClose} />
+          {isLeader && onAddDirectory && <IconButton icon={FolderPlus} label="ディレクトリを追加" size="xs" side="bottom" onClick={() => setAdding((a) => !a)} />}
+          <IconButton icon={X} label="閉じる" size="xs" side="bottom" onClick={onClose} />
         </div>
       </header>
 
@@ -115,7 +115,7 @@ export function DocumentsPanelView({
         </p>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div className="min-h-0 flex-1 overflow-hidden p-2">
         {error ? (
           <p role="alert" className="border-l border-line pl-3 text-m">
             ERR {error}
@@ -165,7 +165,7 @@ export function DocumentsPanelView({
                     <IconButton
                       icon={FilePlus}
                       label="文書を追加"
-                      size="sm"
+                      size="xs"
                       side="bottom"
                       pressed={addingDocIn === dir.directoryId}
                       onClick={() => {
@@ -180,12 +180,12 @@ export function DocumentsPanelView({
                       }}
                     />
                   )}
-                  {isLeader && onOpenPermissions && <IconButton icon={ShieldCheck} label="権限" size="sm" side="bottom" onClick={() => onOpenPermissions(dir)} />}
+                  {isLeader && onOpenPermissions && <IconButton icon={ShieldCheck} label="権限" size="xs" side="bottom" onClick={() => onOpenPermissions(dir)} />}
                   {isLeader && onRenameDirectory && renamingId !== dir.directoryId && (
                     <IconButton
                       icon={Pencil}
                       label="名前を変える"
-                      size="sm"
+                      size="xs"
                       side="bottom"
                       onClick={() => {
                         setRenamingId(dir.directoryId)
@@ -194,7 +194,7 @@ export function DocumentsPanelView({
                     />
                   )}
                   {isLeader && onDeleteDirectory && (
-                    <IconButton icon={Trash2} label="ディレクトリを削除" size="sm" side="bottom" variant={confirmDeleteId === dir.directoryId ? 'danger-solid' : 'plain'} onClick={() => {
+                    <IconButton icon={Trash2} label="ディレクトリを削除" size="xs" side="bottom" variant={confirmDeleteId === dir.directoryId ? 'danger-solid' : 'plain'} onClick={() => {
                       if (confirmDeleteId !== dir.directoryId) return setConfirmDeleteId(dir.directoryId)
                       void run(() => onDeleteDirectory(dir), () => setConfirmDeleteId(null))
                     }} />
