@@ -158,7 +158,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <h2 className="text-l font-bold">{heading}</h2>
+      <h2 className="text-l font-black">{heading}</h2>
 
       <div className="space-y-1">
         <label htmlFor="task-name" className="block text-m font-medium">
@@ -340,7 +340,7 @@ export function TaskForm({ productId, members, edit, initialMemberId, onDone }: 
           )}
           {confirmingRemove ? (
             <>
-              <p className="text-m font-bold">
+              <p className="text-m font-medium">
                 「{initial.taskName}」を削除しますか? 元に戻せません
               </p>
               <div className="flex gap-3">

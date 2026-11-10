@@ -76,7 +76,7 @@ export function DocumentsPanelView({
   return (
     <aside aria-label="文書" className="flex h-full min-h-0 flex-col bg-panel text-ink shadow-box">
       <header className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
-        <h2 className="text-l font-bold">文書</h2>
+        <h2 className="text-l font-black">文書</h2>
         <div className="flex items-center gap-1">
           {isLeader && onAddDirectory && <IconButton icon={FolderPlus} label="ディレクトリを追加" size="sm" side="bottom" onClick={() => setAdding((a) => !a)} />}
           <IconButton icon={X} label="閉じる" size="sm" side="bottom" onClick={onClose} />

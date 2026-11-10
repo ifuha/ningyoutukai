@@ -88,7 +88,7 @@ export function AppShell({
             aria-controls="app-sidebar"
           />
         </span>
-        <p className="text-l font-semibold">人形使い</p>
+        <p className="text-l font-black">人形使い</p>
       </header>
       {drawer.open && (
         <div

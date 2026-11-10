@@ -53,7 +53,7 @@ export function SettingsShell({
           aria-label={ariaLabel}
           className="shrink-0 border-b border-line bg-side md:w-60 md:overflow-y-auto md:border-r md:border-b-0"
         >
-          <p className="hidden px-4 pt-4 pb-2 text-l font-semibold md:block">{title}</p>
+          <p className="hidden px-4 pt-4 pb-2 text-l font-black md:block">{title}</p>
           <ul className="flex gap-1 overflow-x-auto p-2 md:flex-col">
             {sections.map((s) => (
               <li key={s.id} className="shrink-0 md:shrink">
@@ -72,7 +72,7 @@ export function SettingsShell({
         </nav>
         <section aria-labelledby={headingId} className="flex min-h-0 min-w-0 flex-1 flex-col">
           <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-3 py-3">
-            <h2 id={headingId} className={`text-l font-bold${active.danger ? ' text-danger' : ''}`}>
+            <h2 id={headingId} className={`text-l font-black${active.danger ? ' text-danger' : ''}`}>
               {active.label}
             </h2>
             <IconButton

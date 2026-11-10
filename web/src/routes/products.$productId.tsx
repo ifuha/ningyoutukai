@@ -150,7 +150,7 @@ function Product() {
           <Loading />
         ) : (
           <>
-            <h1 className="text-l font-bold break-words">
+            <h1 className="text-l font-black break-words">
               {product.data.productName}
             </h1>
             <p className="text-m opacity-70">

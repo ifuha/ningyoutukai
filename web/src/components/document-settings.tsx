@@ -33,7 +33,7 @@ export function DocumentSettings({ productId, days }: { productId: string; days?
         if (parsed !== null) save.mutate(parsed)
       }}
     >
-      <label htmlFor="document-auto-delete-days" className="block text-m font-bold">
+      <label htmlFor="document-auto-delete-days" className="block text-m font-medium">
         文書の自動削除(最後に呼び出されてから)
       </label>
       <div className="flex flex-wrap items-center gap-2">
@@ -68,7 +68,7 @@ export function DocumentSettings({ productId, days }: { productId: string; days?
       {save.isSuccess && <p className="text-m">変更しました(いまは {describeDays(current)})</p>}
       <div id="document-auto-delete-help" className="space-y-1 text-s opacity-80">
         <p>
-          いまの設定: <strong className="font-bold">{describeDays(current)}</strong> 呼び出されない文書を、自動で削除します(1〜3650 日)。AI が取る・人が画面で開く、のどちらも「呼び出し」です。毎日 1 回(日本時間の 3:00)に動きます。
+          いまの設定: <strong className="font-medium">{describeDays(current)}</strong> 呼び出されない文書を、自動で削除します(1〜3650 日)。AI が取る・人が画面で開く、のどちらも「呼び出し」です。毎日 1 回(日本時間の 3:00)に動きます。
         </p>
         <p>削除すると、プロダクトの参加者全員にメールで知らせます。ごみ箱はないので、戻せません。</p>
         <p>消えない文書: 文書ごとに「自動削除しない」を付けたもの / 未完了のタスクに渡している文書 / 編集中の文書。</p>

@@ -51,13 +51,13 @@ function MemberRow({
         ) : (
           <span
             aria-hidden="true"
-            className="flex size-8 shrink-0 items-center justify-center border border-current font-bold"
+            className="flex size-8 shrink-0 items-center justify-center border border-current font-medium"
           >
             {[...member.userName][0] ?? '?'}
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="font-bold break-words">{member.userName}</p>
+          <p className="font-medium break-words">{member.userName}</p>
           <p className="text-s opacity-60">
             {roleLabel[member.role]} / タスク {count} 件
           </p>
@@ -131,7 +131,7 @@ export function MemberManageDialog({
   const members = [tree.leader, ...tree.members]
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="text-l font-bold">メンバー({members.length} 人)</h2>
+      <h2 className="text-l font-black">メンバー({members.length} 人)</h2>
       <ul className="space-y-4">
         {members.map((m) => (
           <MemberRow

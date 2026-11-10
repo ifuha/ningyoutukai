@@ -42,7 +42,7 @@ export function Sidebar({
       {/* ロゴ・招待・プロダクト一覧だけがスクロールし、「プロダクト作成」と「設定」は下に固定する */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-4">
       <div className="flex items-center justify-between px-2">
-        <p className="text-l leading-normal font-semibold">
+        <p className="text-l leading-normal font-black">
           人形使い
         </p>
         {onCollapse && (

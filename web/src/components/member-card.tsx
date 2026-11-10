@@ -83,7 +83,7 @@ export function MemberCard({
         ) : (
           <span
             aria-hidden="true"
-            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-current font-bold"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-current font-medium"
           >
             {[...member.userName][0] ?? '?'}
           </span>

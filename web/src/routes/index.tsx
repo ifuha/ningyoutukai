@@ -40,7 +40,7 @@ function Login() {
   return (
     <main className="dot-grid flex h-screen items-center justify-center px-4">
       <Terminal title="~/ningyoutukai — login">
-        <h1 className="text-[clamp(2.25rem,7vw,3.5rem)] leading-tight font-bold tracking-tight">
+        <h1 className="text-[clamp(2.25rem,7vw,3.5rem)] leading-tight font-black tracking-tight">
           人形使い
         </h1>
         <div className="space-y-1">

@@ -61,12 +61,12 @@ describe('SettingsShell: 危険なカテゴリ(danger)', () => {
   })
   test('danger のカテゴリを選んでいるとき(先頭にして試す)は、右の見出しも赤にする', () => {
     const html = render({ sections: [withDanger[1], withDanger[0]] })
-    expect(html).toMatch(/<h2 [^>]*class="text-l font-bold text-danger">プロダクトの削除<\/h2>/)
+    expect(html).toMatch(/<h2 [^>]*class="[^"]*text-danger[^"]*">プロダクトの削除<\/h2>/)
     // 項目(1)と見出し(1)
     expect(html.match(/text-danger/g)?.length).toBe(2)
   })
   test('danger でないカテゴリを選んでいるとき、見出しは赤くない', () => {
-    expect(render({ sections: withDanger })).toMatch(/<h2 [^>]*class="text-l font-bold">外観<\/h2>/)
+    expect(render({ sections: withDanger })).toMatch(/<h2 [^>]*class="(?![^"]*text-danger)[^"]*">外観<\/h2>/)
   })
 })
 

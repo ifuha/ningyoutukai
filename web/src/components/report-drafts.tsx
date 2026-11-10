@@ -48,7 +48,7 @@ export function ReportDraftCard({
     <article aria-label="報告の下書き" data-draft={draft.draftId} className="flex h-full min-h-0 flex-col bg-panel text-ink">
       <header className="space-y-1 border-b border-line px-4 py-3">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="min-w-0 text-l font-bold">AI「{draft.aiName}」の下書き</h2>
+          <h2 className="min-w-0 text-l font-black">AI「{draft.aiName}」の下書き</h2>
           <div className="flex shrink-0 items-center gap-2">
             <p className="text-s opacity-70">{formatDocDate(draft.createdAt)}</p>
             {onClose && <IconButton icon={X} label="閉じる" size="sm" side="bottom" onClick={onClose} />}
@@ -158,7 +158,7 @@ export function ReportDrafts({ productId, taskId, onAdopted }: { productId: stri
 
   return (
     <section aria-label="AI からの報告の下書き" className="space-y-1">
-      <h3 className="text-m font-bold">
+      <h3 className="text-m font-medium">
         AI からの報告の下書き <span className="text-s font-normal opacity-70">({drafts.data.length} 件)</span>
       </h3>
       <ul className="space-y-1">

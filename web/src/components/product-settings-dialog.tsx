@@ -49,7 +49,7 @@ function RenameBlock({
         rename.mutate()
       }}
     >
-      <label htmlFor="product-name" className="block text-m font-bold">
+      <label htmlFor="product-name" className="block text-m font-medium">
         プロダクト名
       </label>
       <div className="flex flex-wrap items-center gap-2">
@@ -105,7 +105,7 @@ function DeleteBlock({
       <p className="text-m">
         このプロダクトを削除すると、
         {memberCount === undefined ? 'メンバー' : `メンバー(${memberCount} 人)`}
-        、タスク、招待、タスクの種類が、すべて消えます。<strong className="font-bold">元に戻せません。</strong>
+        、タスク、招待、タスクの種類が、すべて消えます。<strong className="font-medium">元に戻せません。</strong>
       </p>
       {confirming ? (
         <div className="space-y-2">

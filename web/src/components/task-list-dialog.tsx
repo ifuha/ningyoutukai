@@ -21,7 +21,7 @@ export function TaskListDialog({
     <Modal open={member !== null} onClose={onClose}>
       {member && (
         <>
-          <h2 className="text-l font-bold break-words">
+          <h2 className="text-l font-black break-words">
             {member.userName} のタスク({member.tasks.length} 件)
           </h2>
           <ul className="space-y-2">

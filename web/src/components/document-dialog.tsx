@@ -140,7 +140,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
     <div className="flex h-full min-h-0 flex-col bg-panel text-ink">
       <header className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-l font-bold" title={current?.name}>
+          <h2 className="truncate text-l font-black" title={current?.name}>
             {directory ? `${directory.name}/` : ''}
             {current?.name ?? '文書'}
           </h2>
@@ -209,7 +209,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
             <div className="flex h-full min-h-0 flex-col">
               <div className="flex gap-1 border-b border-line px-4 py-2 md:hidden" role="tablist" aria-label="編集とプレビュー">
                 {(['edit', 'preview'] as const).map((t) => (
-                  <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`cursor-pointer px-3 py-1 text-m ${tab === t ? 'bg-side-item font-bold' : ''}`}>
+                  <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`cursor-pointer px-3 py-1 text-m ${tab === t ? 'bg-side-item' : ''}`}>
                     {t === 'edit' ? '編集' : 'プレビュー'}
                   </button>
                 ))}
@@ -248,7 +248,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
 
         {mode === 'view' && (
           <aside aria-label="履歴" className="w-56 shrink-0 overflow-y-auto border-l border-line p-2">
-            <h3 className="px-2 pb-1 text-m font-bold">履歴</h3>
+            <h3 className="px-2 pb-1 text-m font-medium">履歴</h3>
             {versions.isPending ? (
               <p className="px-2 text-s opacity-60">読み込み中…</p>
             ) : versions.data === undefined ? (
@@ -261,7 +261,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
                       type="button"
                       aria-current={(viewVersion ?? current?.currentVersion) === v.version ? 'true' : undefined}
                       onClick={() => setViewVersion(v.version === current?.currentVersion ? undefined : v.version)}
-                      className={`w-full cursor-pointer px-2 py-1 text-left text-m hover:bg-side-item ${(viewVersion ?? current?.currentVersion) === v.version ? 'bg-side-item font-bold' : ''}`}
+                      className={`w-full cursor-pointer px-2 py-1 text-left text-m hover:bg-side-item ${(viewVersion ?? current?.currentVersion) === v.version ? 'bg-side-item' : ''}`}
                     >
                       版 {v.version}
                       <span className="block text-s font-normal opacity-70">

@@ -27,7 +27,7 @@ export function AiCard({ ai, onOpen, onRevoke }: { ai: TreeAi; onOpen?: (ai: Tre
     <>
       <Bot size={16} aria-hidden="true" className="shrink-0" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-bold" title={ai.name}>
+        <span className="block truncate font-medium" title={ai.name}>
           {ai.name}
         </span>
         <span className={`block truncate text-s ${waiting ? '' : 'opacity-70'}`}>{aiCardSummary(ai)}</span>

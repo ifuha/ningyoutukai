@@ -36,7 +36,7 @@ export function AccountInfo({ user, providers }: { user: AccountUser; providers:
         {user.image ? (
           <img src={user.image} alt="" referrerPolicy="no-referrer" data-account-avatar className="size-24 rounded-full object-cover shadow-box" />
         ) : (
-          <span aria-hidden="true" data-account-avatar-fallback className="flex size-24 items-center justify-center rounded-full text-[40px] leading-none font-bold shadow-box">
+          <span aria-hidden="true" data-account-avatar-fallback className="flex size-24 items-center justify-center rounded-full text-[40px] leading-none font-medium shadow-box">
             {[...user.name][0] ?? '?'}
           </span>
         )}
@@ -44,7 +44,7 @@ export function AccountInfo({ user, providers }: { user: AccountUser; providers:
       <dl>
         <div className={row}>
           <dt className={label}>名前</dt>
-          <dd className="text-l font-bold break-words">{user.name}</dd>
+          <dd className="text-l font-medium break-words">{user.name}</dd>
         </div>
         <div className={row}>
           <dt className={label}>メールアドレス</dt>
