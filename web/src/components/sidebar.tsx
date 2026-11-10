@@ -51,7 +51,7 @@ export function Sidebar({
               icon={PanelLeftClose}
               label="サイドバーをたたむ"
               side="left"
-              variant="outline"
+              size="sm"
               onClick={onCollapse}
               aria-expanded
               aria-controls="app-sidebar"

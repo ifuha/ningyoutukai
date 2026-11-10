@@ -106,7 +106,7 @@ export function AppShell({
           icon={PanelLeftOpen}
           label="サイドバーを開く"
           side="right"
-          variant="outline"
+          size="sm"
           onClick={() => sidebar.set(false)}
           tabIndex={sidebar.collapsed ? 0 : -1}
           aria-expanded={false}
