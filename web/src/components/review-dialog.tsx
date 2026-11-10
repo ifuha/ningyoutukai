@@ -144,7 +144,7 @@ export function ReviewDialog({
 }) {
   return (
     <Modal open={open} onClose={onClose}>
-      <h2 className="text-l font-bold">確認待ち({items.length} 件)</h2>
+      <h2 className="text-l font-black">確認待ち({items.length} 件)</h2>
       {items.length === 0 ? (
         <p className="text-m">確認待ちはありません</p>
       ) : (

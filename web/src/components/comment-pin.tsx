@@ -254,7 +254,7 @@ function CommentAvatar({ name, src, fallback }: { name: string | null; src: stri
   if (src) return <img src={src} alt="" draggable={false} className="pointer-events-none size-full object-cover select-none" />
   const initial = name ? ([...name][0] ?? null) : null
   return initial ? (
-    <span aria-hidden="true" data-comment-initial="" className="text-s font-bold">
+    <span aria-hidden="true" data-comment-initial="" className="text-s font-medium">
       {initial}
     </span>
   ) : (

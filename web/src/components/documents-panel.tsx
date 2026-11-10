@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, FilePlus, FileText, Folder, FolderPlus, Pencil, ShieldCheck, TimerOff, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { IconButton } from '#/components/icon-button'
+import { EditingDot } from '#/components/editing-dot'
 import type { DocDirectory } from '#/lib/document-api'
 import { directoryNameError, documentNameError, editingLabel, ensureMdName } from '#/lib/document-tree'
 import { useDocumentActions, useDocumentTree } from '#/lib/use-product-documents'
@@ -76,10 +77,10 @@ export function DocumentsPanelView({
   return (
     <aside aria-label="文書" className="flex h-full min-h-0 flex-col bg-panel text-ink shadow-box">
       <header className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
-        <h2 className="text-l font-bold">文書</h2>
+        <h2 className="text-l font-black">文書</h2>
         <div className="flex items-center gap-1">
-          {isLeader && onAddDirectory && <IconButton icon={FolderPlus} label="ディレクトリを追加" size="sm" side="bottom" onClick={() => setAdding((a) => !a)} />}
-          <IconButton icon={X} label="閉じる" size="sm" side="bottom" onClick={onClose} />
+          {isLeader && onAddDirectory && <IconButton icon={FolderPlus} label="ディレクトリを追加" size="xs" side="bottom" onClick={() => setAdding((a) => !a)} />}
+          <IconButton icon={X} label="閉じる" size="xs" side="bottom" onClick={onClose} />
         </div>
       </header>
 
@@ -115,7 +116,7 @@ export function DocumentsPanelView({
         </p>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div className="min-h-0 flex-1 overflow-hidden p-2">
         {error ? (
           <p role="alert" className="border-l border-line pl-3 text-m">
             ERR {error}
@@ -157,7 +158,11 @@ export function DocumentsPanelView({
                       <button type="button" tabIndex={-1} onClick={() => toggleClosed(dir.directoryId)} className="min-w-0 flex-1 cursor-pointer truncate text-left font-medium" title={dir.name}>
                         {dir.name}
                       </button>
-                      {closedIds.has(dir.directoryId) && dir.documents.some((d) => d.editingBy) && <span data-editing="" title="編集中の文書があります" className="size-2 shrink-0 rounded-full bg-green-500" />}
+                      {closedIds.has(dir.directoryId) && dir.documents.some((d) => d.editingBy) && (
+                        <span data-editing="" title="編集中の文書があります" className="flex shrink-0">
+                          <EditingDot />
+                        </span>
+                      )}
                       <span className="shrink-0 text-s opacity-60">{dir.documents.length}</span>
                     </>
                   )}
@@ -165,7 +170,7 @@ export function DocumentsPanelView({
                     <IconButton
                       icon={FilePlus}
                       label="文書を追加"
-                      size="sm"
+                      size="xs"
                       side="bottom"
                       pressed={addingDocIn === dir.directoryId}
                       onClick={() => {
@@ -180,12 +185,12 @@ export function DocumentsPanelView({
                       }}
                     />
                   )}
-                  {isLeader && onOpenPermissions && <IconButton icon={ShieldCheck} label="権限" size="sm" side="bottom" onClick={() => onOpenPermissions(dir)} />}
+                  {isLeader && onOpenPermissions && <IconButton icon={ShieldCheck} label="権限" size="xs" side="bottom" onClick={() => onOpenPermissions(dir)} />}
                   {isLeader && onRenameDirectory && renamingId !== dir.directoryId && (
                     <IconButton
                       icon={Pencil}
                       label="名前を変える"
-                      size="sm"
+                      size="xs"
                       side="bottom"
                       onClick={() => {
                         setRenamingId(dir.directoryId)
@@ -194,7 +199,7 @@ export function DocumentsPanelView({
                     />
                   )}
                   {isLeader && onDeleteDirectory && (
-                    <IconButton icon={Trash2} label="ディレクトリを削除" size="sm" side="bottom" variant={confirmDeleteId === dir.directoryId ? 'danger-solid' : 'plain'} onClick={() => {
+                    <IconButton icon={Trash2} label="ディレクトリを削除" size="xs" side="bottom" variant={confirmDeleteId === dir.directoryId ? 'danger-solid' : 'plain'} onClick={() => {
                       if (confirmDeleteId !== dir.directoryId) return setConfirmDeleteId(dir.directoryId)
                       void run(() => onDeleteDirectory(dir), () => setConfirmDeleteId(null))
                     }} />
@@ -253,7 +258,7 @@ export function DocumentsPanelView({
                               </span>
                               {editing && (
                                 <span data-editing="" className="flex items-center gap-1 text-s">
-                                  <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-green-500" />
+                                  <EditingDot />
                                   {editing}
                                 </span>
                               )}

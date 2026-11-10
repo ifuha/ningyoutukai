@@ -66,7 +66,11 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      onClose={onClose}
+      // 自分が閉じたときだけ、閉じたと知らせる。中に重ねたモーダル(確認など)が閉じたときの知らせは、React では親にも届くので、無視する
+      // (無視しないと、確認の「やめる」で、このモーダルごと閉じる)
+      onClose={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
       // 外側(背景)を押したら閉じる。dialog 自体が押されたときだけ(余白は中の div 側なので、中身は押しても閉じない)
       onClick={(e) => {
         if (closeOnBackdrop && e.target === e.currentTarget) onClose()

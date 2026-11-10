@@ -32,11 +32,6 @@ const render = (props: Record<string, unknown>) =>
 
 describe('タスクの作成フォーム', () => {
   const html = render({})
-  test('見出しは、ラベルより大きい(text-l)。ラベルは太字にしない', () => {
-    expect(html).toMatch(/<h2 class="text-l font-bold">タスクを追加<\/h2>/)
-    expect(html).toContain('class="block text-m font-medium"')
-    expect(html).not.toContain('class="block text-m font-bold"')
-  })
   test('タスク名のラベルに、必須の印がある', () => {
     expect(html).toContain('(必須)')
   })

@@ -48,11 +48,11 @@ import { usePanZoom } from '#/lib/use-pan-zoom'
 // セクションがないときに渡す、空の配列(毎回新しい配列を作らない)
 const NO_SECTIONS: Section[] = []
 
-// 下に重ねる道具のバー(高さ 56px、下から 12px)の分の余白(px)。全体表示は、この分を避ける
-// 通知は、道具のバーと重ならないよう、その上に置く(下から 74px)。右下の倍率の表示は、置かない
+// 下に重ねる道具のバー(高さ 48px、下から 12px)の分の余白(px)。全体表示は、この分を避ける
+// 通知・検索は、道具のバーと重ならないよう、その上に置く(下から 66px)。右下の倍率の表示は、置かない
 // (拡大縮小は、ホイール・ピンチ・キー(+ -)、全体表示は、キー(0))
-const BOTTOM_INSET = 70
-const ABOVE_TOOLBAR = 'bottom-[74px]'
+const BOTTOM_INSET = 62
+const ABOVE_TOOLBAR = 'bottom-[66px]'
 
 /** 配置モードのカーソル: コメントのアイコン(lucide の message-square。枠は白、線は黒)。先端(ホットスポット)は、吹き出しの中心 */
 const COMMENT_CURSOR =
@@ -89,6 +89,7 @@ export function ProductTree({
   onOpenAi,
   onMoveAi,
   onRevokeAi,
+  editingByMember,
   onOpenMembers,
   canEditSections = false,
   sectionActions = NO_SECTION_ACTIONS,
@@ -114,6 +115,8 @@ export function ProductTree({
   onMoveAi?: (ai: TreeAi, offset: { offsetX: number; offsetY: number }) => Promise<void> | void
   /** 自分のトークンの AI のカードの「取り消す」が押されたとき */
   onRevokeAi?: (ai: TreeAi) => Promise<void> | void
+  /** メンバーごとの、いま編集中の文書の名前(カードに、緑の点と文書名を出す) */
+  editingByMember?: Map<string, string[]>
   onOpenMembers?: () => void
   /** 自分がリーダーか(セクションの作成・大きさの変更・削除・カードの移動ができる) */
   canEditSections?: boolean
@@ -562,6 +565,7 @@ export function ProductTree({
                   onOpenAi={onOpenAi}
                   onMoveAi={onMoveAi}
                   onRevokeAi={onRevokeAi}
+                  editingDocuments={editingByMember?.get(leader.productMemberId)}
                 />
               </DragSlot>
             )}
@@ -617,6 +621,7 @@ export function ProductTree({
                             onOpenAi={onOpenAi}
                             onMoveAi={onMoveAi}
                             onRevokeAi={onRevokeAi}
+                            editingDocuments={editingByMember?.get(m.productMemberId)}
                           />
                         </DragSlot>
                       </li>
@@ -646,6 +651,7 @@ export function ProductTree({
                   onOpenAi={onOpenAi}
                   onMoveAi={onMoveAi}
                   onRevokeAi={onRevokeAi}
+                  editingDocuments={editingByMember?.get(member.productMemberId)}
                 />
               </DragSlot>
             </div>
@@ -742,7 +748,7 @@ export function ProductTree({
         />
       </div>
       {searchOpen && (
-        <div className="absolute bottom-[74px] left-1/2 z-30 -translate-x-1/2">
+        <div className={`absolute ${ABOVE_TOOLBAR} left-1/2 z-30 -translate-x-1/2`}>
           <TreeSearchPanel
             query={searchQuery}
             results={searchResults}
@@ -752,13 +758,13 @@ export function ProductTree({
         </div>
       )}
       {memoError && (
-        <div role="alert" className="absolute bottom-[74px] left-1/2 z-40 -translate-x-1/2 border border-line bg-panel px-4 py-2 text-m shadow-box">
+        <div role="alert" className={`absolute ${ABOVE_TOOLBAR} left-1/2 z-40 -translate-x-1/2 border border-line bg-panel px-4 py-2 text-m shadow-box`}>
           メモ: {memoError}
           <button type="button" className="ml-3 underline" onClick={() => setMemoError(null)}>閉じる</button>
         </div>
       )}
       {commentError && (
-        <div role="alert" className="absolute bottom-[74px] left-1/2 z-40 -translate-x-1/2 border border-line bg-panel px-4 py-2 text-m shadow-box">
+        <div role="alert" className={`absolute ${ABOVE_TOOLBAR} left-1/2 z-40 -translate-x-1/2 border border-line bg-panel px-4 py-2 text-m shadow-box`}>
           コメント: {commentError}
           <button type="button" className="ml-3 underline" onClick={() => setCommentError(null)}>閉じる</button>
         </div>

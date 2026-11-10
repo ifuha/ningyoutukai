@@ -11,7 +11,7 @@ import type { LucideIcon } from 'lucide-react'
 //   文字が見えているので、ツールチップは出さない(`tip` を渡したときだけ出す)。`block` で横幅いっぱいにする
 
 export type IconButtonVariant = 'plain' | 'outline' | 'solid' | 'danger' | 'danger-solid'
-export type IconButtonSize = 'sm' | 'md' | 'lg'
+export type IconButtonSize = 'xs' | 'sm' | 'md' | 'lg'
 export type TipSide = 'top' | 'bottom' | 'left' | 'right'
 
 const variantClass: Record<IconButtonVariant, string> = {
@@ -31,6 +31,8 @@ const variantClass: Record<IconButtonVariant, string> = {
 const pressedClass = ''
 
 const sizeClass: Record<IconButtonSize, { box: string; labeled: string; icon: number }> = {
+  // 一覧の行の中など、文字(14px)の横に並べる小さいボタン
+  xs: { box: 'size-6', labeled: 'h-6 gap-1 px-2', icon: 16 },
   sm: { box: 'size-8', labeled: 'h-8 gap-2 px-3', icon: 20 },
   md: { box: 'size-10', labeled: 'h-10 gap-2 px-4', icon: 24 },
   lg: { box: 'size-12', labeled: 'h-12 gap-3 px-5', icon: 28 },

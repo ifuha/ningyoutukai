@@ -1,5 +1,6 @@
 import { Bot, Trash2 } from 'lucide-react'
 import { useContext, useEffect, useState } from 'react'
+import { EditingDot } from '#/components/editing-dot'
 import { IconButton } from '#/components/icon-button'
 import { formatDateTime } from '#/components/member-card'
 import { TreeConnectors } from '#/components/tree-connectors'
@@ -10,27 +11,52 @@ import { useOffsetDrag, type Offset } from '#/lib/use-offset-drag'
 
 // メンバーの AI のカード(ツリー)。AI はメンバーではなく、持ち主が使う道具。仕様は docs/v4.0/overview.md
 // - 名前は全員に見える。確認待ちの下書きの数は、持ち主本人にだけ出る(他の人には `pendingCount` が null)
+// - **動作中**(トークンが最近使われた)の AI には、文書の編集中と同じ緑の点を出す(全員に見える)
 // - `onOpen` を渡すと(持ち主で、確認待ちがあるとき)押せて、確認待ちのタスクの詳細を開く
 // - `onRevoke` を渡すと(自分のトークンのカードだけ)、カードに「取り消す」が出る(2 回押すと取り消す。取り消すとすぐ使えなくなり、カードも消える)
 // - **リーダーだけ**、カードをつかんで動かせる(メンバーのカードと同じ)。位置は、初めの置き場所からのずれ(px)。持ち主のカードに付いて動く。動かすロジックは `lib/use-offset-drag.ts`
 // - リーダーの AI はリーダーのカードの右に、メンバーの AI はそのメンバーのカードの下に置く(`MemberCard` が置く)
-// - **線は、メンバーのカードと同じ**(`connectorPath`: 持ち主のカードの下の中央から、AI のカードの上の中央まで、直角に曲がる破線 + 上向きの三角)。動かすと、端が付いていく。置き場所と線の入力の計算は `lib/ai-connector.ts`
+// - **線は、メンバーのカードと同じ**(`connectorPath`: 直角に曲がる破線 + 三角。出る辺は、AI のカードの位置で変わる: 右に置けば持ち主の右から、下に置けば下から)。動かすと、端が付いていく。置き場所と線の入力の計算は `lib/ai-connector.ts`
 
-export function aiCardSummary(ai: Pick<TreeAi, 'pendingCount' | 'lastDraftAt'>): string {
+/** 「動作中」と見なす時間(ms)。トークンの最後に使われた日時は、使われている間、5 分おきに更新されるので、その 2 倍 */
+export const AI_ACTIVE_MS = 10 * 60_000
+
+/** AI が動作中か: トークンが、最近(`AI_ACTIVE_MS` 以内)使われた */
+export function aiWorking(ai: Pick<TreeAi, 'lastUsedAt'>, now: number): boolean {
+  if (!ai.lastUsedAt) return false
+  const usedAt = new Date(ai.lastUsedAt).getTime()
+  return Number.isFinite(usedAt) && now - usedAt < AI_ACTIVE_MS
+}
+
+/** カードの 2 行目: 確認待ちがあれば件数(持ち主だけ)。なければ、動作中なら「動作中」、それ以外は最後の下書きの日時 */
+export function aiCardSummary(ai: Pick<TreeAi, 'pendingCount' | 'lastDraftAt'>, working = false): string {
   if (ai.pendingCount !== null && ai.pendingCount > 0) return `確認待ち ${ai.pendingCount} 件`
+  if (working) return '動作中'
   return ai.lastDraftAt ? `下書き ${formatDateTime(ai.lastDraftAt)}` : '下書きなし'
 }
 
-export function AiCard({ ai, onOpen, onRevoke }: { ai: TreeAi; onOpen?: (ai: TreeAi) => void; onRevoke?: (ai: TreeAi) => Promise<void> | void }) {
+/** `now` は、テストで時刻を固定するときだけ渡す。省略すると、いまの時刻を 30 秒おきに取り直す(動作中の印が、時間で消えるように) */
+export function AiCard({ ai, onOpen, onRevoke, now }: { ai: TreeAi; onOpen?: (ai: TreeAi) => void; onRevoke?: (ai: TreeAi) => Promise<void> | void; now?: number }) {
+  const [clock, setClock] = useState(() => Date.now())
+  useEffect(() => {
+    if (now !== undefined) return
+    const timer = setInterval(() => setClock(Date.now()), 30_000)
+    return () => clearInterval(timer)
+  }, [now])
   const waiting = ai.pendingCount !== null && ai.pendingCount > 0
+  const working = aiWorking(ai, now ?? clock)
   const body = (
     <>
       <Bot size={16} aria-hidden="true" className="shrink-0" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-bold" title={ai.name}>
+        <span className="block truncate font-medium" title={ai.name}>
           {ai.name}
         </span>
-        <span className={`block truncate text-s ${waiting ? '' : 'opacity-70'}`}>{aiCardSummary(ai)}</span>
+        {/* 動作中は、文書の編集中と同じ緑の点を出す */}
+        <span data-working={working ? '' : undefined} className={`flex items-center gap-1 text-s ${waiting || working ? '' : 'opacity-70'}`}>
+          {working && <EditingDot />}
+          <span className="truncate">{aiCardSummary(ai, working)}</span>
+        </span>
       </span>
     </>
   )

@@ -65,7 +65,7 @@ export function AppShell({
     retry: false,
   })
 
-  if (isPending || !session?.user) return <main className="dot-grid h-screen" />
+  if (isPending || !session?.user) return <main className="h-screen" />
 
   return (
     <div
@@ -88,7 +88,7 @@ export function AppShell({
             aria-controls="app-sidebar"
           />
         </span>
-        <p className="text-l font-semibold">人形使い</p>
+        <p className="text-l font-black">人形使い</p>
       </header>
       {drawer.open && (
         <div
@@ -106,7 +106,7 @@ export function AppShell({
           icon={PanelLeftOpen}
           label="サイドバーを開く"
           side="right"
-          variant="outline"
+          size="sm"
           onClick={() => sidebar.set(false)}
           tabIndex={sidebar.collapsed ? 0 : -1}
           aria-expanded={false}
@@ -145,11 +145,11 @@ export function AppShell({
         />
       </div>
       {align === 'full' ? (
-        <main className="dot-grid min-h-0 min-w-0 flex-1 overflow-hidden">
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
           {children({ user: session.user, products })}
         </main>
       ) : (
-      <main className="dot-grid flex min-h-0 min-w-0 flex-1 overflow-y-auto px-4">
+      <main className="flex min-h-0 min-w-0 flex-1 overflow-y-auto px-4">
         <div
           className={`${align === 'top' ? 'mx-auto' : 'm-auto'} flex w-full justify-center py-6`}
         >

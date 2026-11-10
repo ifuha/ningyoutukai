@@ -68,7 +68,7 @@ export function InviteMemberForm({ productId }: { productId: string }) {
 
   return (
     <form onSubmit={submit} className="space-y-2">
-      <label htmlFor="invite-member" className="block text-m font-bold">
+      <label htmlFor="invite-member" className="block text-m font-medium">
         メンバーを招待
       </label>
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -124,12 +124,12 @@ export function InviteMemberForm({ productId }: { productId: string }) {
                   ) : (
                     <span
                       aria-hidden="true"
-                      className="flex size-8 shrink-0 items-center justify-center border border-current font-bold"
+                      className="flex size-8 shrink-0 items-center justify-center border border-current font-medium"
                     >
                       {[...c.userName][0] ?? '?'}
                     </span>
                   )}
-                  <span className="font-bold">{c.userName}</span>
+                  <span className="font-medium">{c.userName}</span>
                   <span className="min-w-0 truncate font-mono">{candidateValue(c)}</span>
                 </li>
               ))}

@@ -1,5 +1,7 @@
 import { Plus } from 'lucide-react'
 import { AiCards } from '#/components/ai-card'
+import { EditingDot } from '#/components/editing-dot'
+import { memberEditingLabel } from '#/lib/document-tree'
 import { useElementHeight } from '#/lib/use-element-height'
 import type { TreeAi, TreeMember, TreeTask } from '#/lib/tree'
 
@@ -48,6 +50,7 @@ export function MemberCard({
   onOpenAi,
   onMoveAi,
   onRevokeAi,
+  editingDocuments,
 }: {
   member: TreeMember
   cardId?: string
@@ -57,6 +60,8 @@ export function MemberCard({
   onOpenAi?: (ai: TreeAi) => void
   onMoveAi?: (ai: TreeAi, offset: { offsetX: number; offsetY: number }) => Promise<void> | void
   onRevokeAi?: (ai: TreeAi) => Promise<void> | void
+  /** このメンバーが、いま編集中の文書の名前(なければ、出さない) */
+  editingDocuments?: string[]
 }) {
   const isLeader = member.role === 'leader'
   // AI のカードの線の端は、カードの実際の高さから決める
@@ -64,6 +69,7 @@ export function MemberCard({
   const shown = member.tasks.slice(0, MAX_TASKS)
   const rest = member.tasks.length - shown.length
   const pending = member.tasks.filter((t) => t.reportedAt).length
+  const editing = memberEditingLabel(editingDocuments ?? [])
 
   return (
     <article
@@ -83,14 +89,22 @@ export function MemberCard({
         ) : (
           <span
             aria-hidden="true"
-            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-current font-bold"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full border border-current font-medium"
           >
             {[...member.userName][0] ?? '?'}
           </span>
         )}
         <div className="min-w-0">
-          <p className="truncate font-bold">{member.userName}</p>
-          <p className="text-s opacity-70">{roleLabel[member.role]}</p>
+          <p className="truncate font-medium">{member.userName}</p>
+          {/* 文書を編集中なら、役割の代わりに、文書のパネルと同じ緑の点と文書名を出す(行は増やさない: カードの高さを変えない) */}
+          {editing ? (
+            <p data-editing="" className="flex items-center gap-1 text-s" title={editing}>
+              <EditingDot />
+              <span className="truncate">{editing}</span>
+            </p>
+          ) : (
+            <p className="text-s opacity-70">{roleLabel[member.role]}</p>
+          )}
         </div>
       </header>
       <div className="p-2">

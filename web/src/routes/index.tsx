@@ -35,12 +35,12 @@ function Login() {
 
   // ログイン状態を確認している間と、ホームへ移している間は、背景だけを出す
   // (ログイン画面が一瞬見えるのを避ける)
-  if (isPending || session?.user) return <main className="dot-grid h-screen" />
+  if (isPending || session?.user) return <main className="h-screen" />
 
   return (
-    <main className="dot-grid flex h-screen items-center justify-center px-4">
+    <main className="flex h-screen items-center justify-center px-4">
       <Terminal title="~/ningyoutukai — login">
-        <h1 className="text-[clamp(2.25rem,7vw,3.5rem)] leading-tight font-bold tracking-tight">
+        <h1 className="text-[clamp(2.25rem,7vw,3.5rem)] leading-tight font-black tracking-tight">
           人形使い
         </h1>
         <div className="space-y-1">

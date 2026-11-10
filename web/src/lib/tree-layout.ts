@@ -21,8 +21,6 @@ export const CARD_HEIGHT_ESTIMATE = 240
 /** 矢印の三角の、幅と高さ(px)。`product-tree.tsx` の自動配置の矢印(幅 10、高さ 7)と同じ */
 export const ARROW_WIDTH = 10
 export const ARROW_HEIGHT = 7
-/** リーダーの真下に、まっすぐ下げてから横へ曲げるまでの最小の距離(px) */
-export const CONNECTOR_DROP = 24
 
 export type Positioned = {
   positionX: number | null
@@ -131,24 +129,54 @@ export function connectorKind(
   return leaderPlaced || memberPlaced ? 'svg' : 'css'
 }
 
+/** 辺と辺の間に、線と三角を描くのに要る最小の隙間(px)。これより近い向きには、線を出さない */
+export const CONNECTOR_MIN_GAP = ARROW_HEIGHT + 4
+
+export type ConnectorSide = 'bottom' | 'top' | 'right' | 'left'
+
 /**
- * 親(リーダー)の下の中央から、子の上の中央までの、直角に曲がる線(`d`)と、子の上の辺に置く三角(`arrow`: points)
- * 子が親より下にあれば、2 点の中間の高さで横へ曲がる。同じ高さか上にあるときは、親の真下へ最小の距離だけ下げてから曲がる
- * 矢印は、これまでと同じく、子から親へ向く(上向きの三角)。線は、三角の頂点で終わる
+ * 親の、どの辺から線を出すか。**子の位置で変わる**(子は、向かい合う辺で受ける)
+ * - 子が下にあれば下、上にあれば上(縦を優先: 木は、上から下へ並ぶのが基本)
+ * - 縦に重なっていて、右にあれば右、左にあれば左
+ * - **重なっている(どの向きにも、線を描く隙間がない)ときは、null(線を出さない)**
  */
-export function connectorPath(
-  parent: Box,
-  child: Pick<Box, 'left' | 'top' | 'width'>,
-): { d: string; arrow: string } {
-  const px = parent.left + parent.width / 2
-  const py = parent.top + parent.height
-  const cx = child.left + child.width / 2
-  const cy = child.top
-  const midY = cy > py ? py + (cy - py) / 2 : py + CONNECTOR_DROP
-  const tipY = cy - ARROW_HEIGHT
+export function connectorSide(parent: Box, child: Box): ConnectorSide | null {
+  if (child.top - (parent.top + parent.height) >= CONNECTOR_MIN_GAP) return 'bottom'
+  if (parent.top - (child.top + child.height) >= CONNECTOR_MIN_GAP) return 'top'
+  if (child.left - (parent.left + parent.width) >= CONNECTOR_MIN_GAP) return 'right'
+  if (parent.left - (child.left + child.width) >= CONNECTOR_MIN_GAP) return 'left'
+  return null
+}
+
+/**
+ * 親から子への、直角に曲がる線(`d`)と、子の辺に置く三角(`arrow`: points)。
+ * 線は、親の辺の中央(`connectorSide` で決まる辺)から出て、2 点の中間で曲がり、子の向かい合う辺の中央に入る。
+ * 三角は、子の辺に底を置き、子から親へ向く。線は、三角の頂点で終わる。
+ * カードが重なっているときは、どちらも空文字(線も三角も描かれない。要素は残るので、ドラッグ中に離れれば、また出る)
+ */
+export function connectorPath(parent: Box, child: Box): { d: string; arrow: string } {
+  const side = connectorSide(parent, child)
+  if (side === null) return { d: '', arrow: '' }
   const half = ARROW_WIDTH / 2
+  if (side === 'right' || side === 'left') {
+    const px = side === 'right' ? parent.left + parent.width : parent.left
+    const py = parent.top + parent.height / 2
+    const cx = side === 'right' ? child.left : child.left + child.width
+    const cy = child.top + child.height / 2
+    const tipX = side === 'right' ? cx - ARROW_HEIGHT : cx + ARROW_HEIGHT
+    return {
+      d: `M ${px} ${py} H ${px + (cx - px) / 2} V ${cy} H ${tipX}`,
+      arrow: `${cx},${cy - half} ${cx},${cy + half} ${tipX},${cy}`,
+    }
+  }
+  const px = parent.left + parent.width / 2
+  const cx = child.left + child.width / 2
+  // 下: 親の下の辺 → 子の上の辺 / 上: 親の上の辺 → 子の下の辺
+  const py = side === 'bottom' ? parent.top + parent.height : parent.top
+  const cy = side === 'bottom' ? child.top : child.top + child.height
+  const tipY = side === 'bottom' ? cy - ARROW_HEIGHT : cy + ARROW_HEIGHT
   return {
-    d: `M ${px} ${py} V ${midY} H ${cx} V ${tipY}`,
+    d: `M ${px} ${py} V ${py + (cy - py) / 2} H ${cx} V ${tipY}`,
     arrow: `${cx - half},${cy} ${cx + half},${cy} ${cx},${tipY}`,
   }
 }

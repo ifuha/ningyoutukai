@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, ClipboardCheck } from 'lucide-react'
@@ -32,6 +32,8 @@ import { revokeAiToken } from '#/lib/document-api'
 import { eden, edenData } from '#/lib/eden'
 import { canEditSections } from '#/lib/section-permissions'
 import { useSectionActions } from '#/lib/use-section-actions'
+import { editingDocumentsByMember } from '#/lib/document-tree'
+import { useDocumentTree } from '#/lib/use-product-documents'
 import { treeQueryKey, useSections } from '#/lib/use-sections'
 import { parseProductSearch } from '#/lib/product-search'
 import { useProductCommentActions, useProductComments } from '#/lib/use-product-comments'
@@ -65,6 +67,9 @@ function Product() {
   const [docsOpen, setDocsOpen] = useState(false)
   // 他の人の変更を、数秒ごとに見に行って、変わったときだけ取り直す(ドラッグの最中は待つ)
   useProductRevision(productId)
+  // 文書の一覧を、一定の間隔で取り直す(だれが編集中かを、文書のパネルを閉じていても、ツリーのカードに出すため)
+  const documentTree = useDocumentTree(productId, { poll: true })
+  const editingByMember = useMemo(() => editingDocumentsByMember(documentTree.data ?? []), [documentTree.data])
   const queryClient = useQueryClient()
   const product = useQuery({
     queryKey: ['products', productId],
@@ -150,7 +155,7 @@ function Product() {
           <Loading />
         ) : (
           <>
-            <h1 className="text-l font-bold break-words">
+            <h1 className="text-l font-black break-words">
               {product.data.productName}
             </h1>
             <p className="text-m opacity-70">
@@ -235,6 +240,7 @@ function Product() {
                       }
                     : undefined
                 }
+                editingByMember={editingByMember}
                 onRevokeAi={async (ai) => {
                   try {
                     await revokeAiToken(ai.tokenId)
