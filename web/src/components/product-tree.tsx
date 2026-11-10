@@ -89,6 +89,7 @@ export function ProductTree({
   onOpenAi,
   onMoveAi,
   onRevokeAi,
+  editingByMember,
   onOpenMembers,
   canEditSections = false,
   sectionActions = NO_SECTION_ACTIONS,
@@ -114,6 +115,8 @@ export function ProductTree({
   onMoveAi?: (ai: TreeAi, offset: { offsetX: number; offsetY: number }) => Promise<void> | void
   /** 自分のトークンの AI のカードの「取り消す」が押されたとき */
   onRevokeAi?: (ai: TreeAi) => Promise<void> | void
+  /** メンバーごとの、いま編集中の文書の名前(カードに、緑の点と文書名を出す) */
+  editingByMember?: Map<string, string[]>
   onOpenMembers?: () => void
   /** 自分がリーダーか(セクションの作成・大きさの変更・削除・カードの移動ができる) */
   canEditSections?: boolean
@@ -562,6 +565,7 @@ export function ProductTree({
                   onOpenAi={onOpenAi}
                   onMoveAi={onMoveAi}
                   onRevokeAi={onRevokeAi}
+                  editingDocuments={editingByMember?.get(leader.productMemberId)}
                 />
               </DragSlot>
             )}
@@ -617,6 +621,7 @@ export function ProductTree({
                             onOpenAi={onOpenAi}
                             onMoveAi={onMoveAi}
                             onRevokeAi={onRevokeAi}
+                            editingDocuments={editingByMember?.get(m.productMemberId)}
                           />
                         </DragSlot>
                       </li>
@@ -646,6 +651,7 @@ export function ProductTree({
                   onOpenAi={onOpenAi}
                   onMoveAi={onMoveAi}
                   onRevokeAi={onRevokeAi}
+                  editingDocuments={editingByMember?.get(member.productMemberId)}
                 />
               </DragSlot>
             </div>

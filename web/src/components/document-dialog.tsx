@@ -1,5 +1,6 @@
 import { Check, Pencil, Save, Timer, TimerOff, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { EditingDot } from '#/components/editing-dot'
 import { IconButton } from '#/components/icon-button'
 import { LockNoticeBanner } from '#/components/lock-notice'
 import { MarkdownView } from '#/components/markdown-view'
@@ -157,7 +158,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
             )}
             {others && (
               <span data-editing="" className="flex items-center gap-1">
-                <span aria-hidden="true" className="size-2 rounded-full bg-green-500" />
+                <EditingDot />
                 {others}
               </span>
             )}

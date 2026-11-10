@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, FilePlus, FileText, Folder, FolderPlus, Pencil, ShieldCheck, TimerOff, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { IconButton } from '#/components/icon-button'
+import { EditingDot } from '#/components/editing-dot'
 import type { DocDirectory } from '#/lib/document-api'
 import { directoryNameError, documentNameError, editingLabel, ensureMdName } from '#/lib/document-tree'
 import { useDocumentActions, useDocumentTree } from '#/lib/use-product-documents'
@@ -157,7 +158,11 @@ export function DocumentsPanelView({
                       <button type="button" tabIndex={-1} onClick={() => toggleClosed(dir.directoryId)} className="min-w-0 flex-1 cursor-pointer truncate text-left font-medium" title={dir.name}>
                         {dir.name}
                       </button>
-                      {closedIds.has(dir.directoryId) && dir.documents.some((d) => d.editingBy) && <span data-editing="" title="編集中の文書があります" className="size-2 shrink-0 rounded-full bg-green-500" />}
+                      {closedIds.has(dir.directoryId) && dir.documents.some((d) => d.editingBy) && (
+                        <span data-editing="" title="編集中の文書があります" className="flex shrink-0">
+                          <EditingDot />
+                        </span>
+                      )}
                       <span className="shrink-0 text-s opacity-60">{dir.documents.length}</span>
                     </>
                   )}
@@ -253,7 +258,7 @@ export function DocumentsPanelView({
                               </span>
                               {editing && (
                                 <span data-editing="" className="flex items-center gap-1 text-s">
-                                  <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-green-500" />
+                                  <EditingDot />
                                   {editing}
                                 </span>
                               )}
