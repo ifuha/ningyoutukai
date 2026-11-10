@@ -5,6 +5,7 @@ import { ContextMenu } from '#/components/context-menu'
 import { IconButton } from '#/components/icon-button'
 import type { ProductComment, ProductCommentPatch } from '#/lib/comment-api'
 import { commentMenuItems } from '#/lib/comment-menu'
+import { commentScaleStyle } from '#/lib/comment-scale'
 import { useCanvasView } from '#/lib/canvas-view'
 import { useLongPress } from '#/lib/use-long-press'
 
@@ -86,7 +87,7 @@ export function CommentPin({
       data-comment-pin=""
       aria-label="コメント"
       className="absolute z-20"
-      style={{ left: position.x + offsetX, top: position.y + offsetY }}
+      style={{ left: position.x + offsetX, top: position.y + offsetY, ...commentScaleStyle(scale) }}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}

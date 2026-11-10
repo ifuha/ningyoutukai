@@ -1,6 +1,8 @@
 import { Send } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { IconButton } from '#/components/icon-button'
+import { CanvasViewContext } from '#/lib/canvas-view'
+import { commentScaleStyle } from '#/lib/comment-scale'
 
 // コメントを書く入力欄。ツールバーからコメントを画面に置いた(ドロップした)位置に出る。
 // Enter か「コメントする」で保存する(Shift + Enter は改行。日本語の変換中の Enter は、確定なので送らない)。Esc で、保存せずに閉じる(「やめる」のボタンは置かない)
@@ -23,6 +25,8 @@ export function CommentDraft({
   onCancel: () => void
   onEditingChange?: (editing: boolean) => void
 }) {
+  // 拡大率(キャンバスの外、たとえばテストでは 1)。縮小しても読める大きさを保つ
+  const scale = useContext(CanvasViewContext)?.scale ?? 1
   const [content, setContent] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,7 +56,7 @@ export function CommentDraft({
       data-comment-draft=""
       aria-label="コメントを書く"
       className="absolute z-30 w-72 shadow-box bg-panel p-3 text-ink"
-      style={{ left: x + offsetX, top: y + offsetY }}
+      style={{ left: x + offsetX, top: y + offsetY, ...commentScaleStyle(scale) }}
       onPointerDown={(e) => e.stopPropagation()}
       onSubmit={(e) => {
         e.preventDefault()
