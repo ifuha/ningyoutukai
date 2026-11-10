@@ -15,6 +15,7 @@ import { CommentDraft } from '#/components/comment-draft'
 import { CommentPin } from '#/components/comment-pin'
 import { StickyNote } from '#/components/sticky-note'
 import type { NewProductComment, ProductComment, ProductCommentPatch } from '#/lib/comment-api'
+import { commentPlaceOffset } from '#/lib/comment-scale'
 import type { ProductNote, ProductNotePatch } from '#/lib/memo-api'
 import { boxToCanvasRect, CanvasViewContext, clientToCanvas } from '#/lib/canvas-view'
 import type { CanvasView } from '#/lib/section-interaction-types'
@@ -52,8 +53,7 @@ const NO_SECTIONS: Section[] = []
 // (拡大縮小は、ホイール・ピンチ・キー(+ -)、全体表示は、キー(0))
 const BOTTOM_INSET = 70
 const ABOVE_TOOLBAR = 'bottom-[74px]'
-/** コメントのピンの大きさ(px。`CommentPin` の `size-8`)。置いた位置が、ピンの中心になるよう、左上をずらすのに使う */
-const COMMENT_PIN_PX = 32
+
 /** 配置モードのカーソル: コメントのアイコン(lucide の message-square。枠は白、線は黒)。先端(ホットスポット)は、吹き出しの中心 */
 const COMMENT_CURSOR =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z' stroke='%23fff' stroke-width='4.5'/%3E%3Cpath d='M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E\") 14 14, crosshair"
@@ -268,7 +268,8 @@ export function ProductTree({
     const at = toCanvas(client)
     setCommentError(null)
     setCommentMode(false)
-    setCommentDraft({ x: at.x - COMMENT_PIN_PX / 2 / scale, y: at.y - COMMENT_PIN_PX / 2 / scale })
+    const half = commentPlaceOffset(scale)
+    setCommentDraft({ x: at.x - half, y: at.y - half })
   }
   // 配置モード中の Esc でやめる。ほかの道具を押したときも、やめる(下の `leaveComment`)
   useEffect(() => {
