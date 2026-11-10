@@ -6,7 +6,7 @@ import { LockNoticeBanner } from '#/components/lock-notice'
 import { MarkdownView } from '#/components/markdown-view'
 import { Modal } from '#/components/modal'
 import { SaveModeDialog, type SaveMode } from '#/components/save-mode-dialog'
-import { canEditDocument, canSave, contentTooLarge, editingLabel, formatDocDate, lockNotice, textareaEditable } from '#/lib/document-tree'
+import { canEditDocument, canSave, contentTooLarge, editingLabel, formatDocDate, isFirstWrite, lockNotice, textareaEditable } from '#/lib/document-tree'
 import { useEditLock } from '#/lib/use-edit-lock'
 import { useDocument, useDocumentActions, useDocumentTree, useDocumentVersions } from '#/lib/use-product-documents'
 
@@ -287,7 +287,15 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
           <div className="flex items-center gap-2">
             {tooLarge && <span role="alert" className="text-s text-danger">本文は 1MB までです</span>}
             <IconButton icon={X} label="編集をやめる" showLabel variant="outline" disabled={saving} onClick={cancelEdit} />
-            <IconButton icon={saving ? Check : Save} label={saving ? '保存中…' : '保存'} showLabel variant="solid" disabled={saving || !canSave(lock.state, draft, original)} onClick={() => setConfirmSave(true)} />
+            <IconButton
+              icon={saving ? Check : Save}
+              label={saving ? '保存中…' : '保存'}
+              showLabel
+              variant="solid"
+              disabled={saving || !canSave(lock.state, draft, original)}
+              // 作ったばかりの文書への最初の書き込みは、確認を出さず、そのまま保存する
+              onClick={() => (isFirstWrite(baseVersion, original) ? void save('overwrite') : setConfirmSave(true))}
+            />
           </div>
         </footer>
       )}

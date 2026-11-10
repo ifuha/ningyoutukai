@@ -70,6 +70,15 @@ export function memberEditingLabel(names: string[]): string | null {
   if (names.length === 0) return null
   return names.length === 1 ? `${names[0]} を編集中` : `${names[0]} ほか ${names.length - 1} 件を編集中`
 }
+
+/**
+ * 作ったばかりの文書への、最初の書き込みか: 版 1 で、本文が空(名前だけで作った直後)。
+ * このときは、「新しい版として残す / 上書き」を聞かず、版 1 を上書きする(空の版を、履歴に残さない)
+ */
+export function isFirstWrite(baseVersion: number, original: string): boolean {
+  return baseVersion === 1 && original === ''
+}
+
 /** 文書を開いたとき、編集の入口(ボタン)を出してよいか: そのディレクトリの書き込み権限があり、他の人が編集中ではない */
 export function canEditDocument(level: 'read' | 'write', editingBy: DocSummary['editingBy'], myMemberId: string | undefined): boolean {
   return level === 'write' && (!editingBy || editingBy.memberId === myMemberId)

@@ -11,6 +11,7 @@ import {
   editingLabel,
   memberEditingLabel,
   ensureMdName,
+  isFirstWrite,
   lockNotice,
   textareaEditable,
 } from './document-tree'
@@ -60,7 +61,6 @@ describe('編集中の表示(緑の点と名前)', () => {
     expect(editingCount({ documents: [doc(true), doc(false), doc(true)] })).toBe(2)
     expect(editingCount({ documents: [] })).toBe(0)
   })
-  test('編集の入口: write があり、他の人が編集中でなければ出す', () => {
   test('メンバーごとの編集中の文書: 編集中の文書だけを、メンバーごとに、並びの順で集める', () => {
     const doc = (name: string, memberId: string | null) => ({ name, editingBy: memberId ? { memberId, userName: memberId } : null }) as never
     const byMember = editingDocumentsByMember([{ documents: [doc('a.md', 'm1'), doc('b.md', null)] }, { documents: [doc('c.md', 'm2'), doc('d.md', 'm1')] }])
@@ -75,6 +75,12 @@ describe('編集中の表示(緑の点と名前)', () => {
     expect(memberEditingLabel(['a.md'])).toBe('a.md を編集中')
     expect(memberEditingLabel(['a.md', 'b.md', 'c.md'])).toBe('a.md ほか 2 件を編集中')
   })
+  test('最初の書き込み: 版 1 で、本文が空のときだけ(確認を出さずに保存する)', () => {
+    expect(isFirstWrite(1, '')).toBe(true)
+    expect(isFirstWrite(1, '本文')).toBe(false)
+    expect(isFirstWrite(2, '')).toBe(false)
+  })
+  test('編集の入口: write があり、他の人が編集中でなければ出す', () => {
     expect(canEditDocument('write', null, 'me')).toBe(true)
     expect(canEditDocument('write', { memberId: 'me', userName: '私' }, 'me')).toBe(true)
     expect(canEditDocument('write', { memberId: 'm2', userName: '田中' }, 'me')).toBe(false)
