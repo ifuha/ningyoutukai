@@ -101,15 +101,6 @@ body {
   font-family: var(--font-sans);
 }
 
-/* ログイン画面の背景: 点のグリッド(方眼紙のような、開発者向けの雰囲気) */
-.dot-grid {
-  background-image: radial-gradient(
-    color-mix(in srgb, var(--color-ink) 16%, transparent) 1px,
-    transparent 1px
-  );
-  background-size: 24px 24px;
-}
-
 /* ターミナルのカーソル: 点滅する(動きを減らす設定のときは、点灯のまま) */
 @keyframes blink {
   0%,
