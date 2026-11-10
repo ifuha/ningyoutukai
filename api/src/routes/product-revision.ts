@@ -3,6 +3,7 @@ import { and, eq, sql, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { db } from "../db";
 import {
+  aiTokens,
   productMembers,
   products,
   productNotes,
@@ -20,7 +21,7 @@ import { visibleNoteFilter } from "./product-note";
 // プロダクトの「版(リビジョン)」GET /api/product/:productId/revision(プロダクトのメンバーなら誰でも)
 //
 // 他の人の変更を、画面に届けるための入口。画面は、数秒ごとにこれを呼び、値が変わったときだけ、ツリーなどを取り直す。
-// 値は、プロダクトの画面が依存するデータ(プロダクト、メンバー、メンバーのユーザー情報、セクション、タスク、種類、メッセージ)の
+// 値は、プロダクトの画面が依存するデータ(プロダクト、メンバー、メンバーのユーザー情報、セクション、タスク、種類、メッセージ、メンバーの AI のトークン)の
 // 全行から計算した指紋(md5)。**各行の全列**から計算するので、どの API で、どの列が変わっても(追加・更新・削除)値が変わる。
 // 変更のたびに、版を上げる処理を足す必要がない(新しい列や API を足しても、自動で拾う)。
 //
@@ -51,7 +52,8 @@ export async function computeProductRevision(productId: string, viewerUserId: st
       ${digest(productNotes, productNotes.noteId, and(eq(productNotes.productId, productId), visibleNoteFilter(viewerUserId))!)},
       ${digest(tasks, tasks.taskId, sql`${tasks.productMemberId} in ${memberIds}`)},
       ${digest(taskTypes, taskTypes.taskTypeId, eq(taskTypes.productId, productId))},
-      ${digest(taskMessages, taskMessages.messageId, sql`${taskMessages.taskId} in ${taskIds}`)}
+      ${digest(taskMessages, taskMessages.messageId, sql`${taskMessages.taskId} in ${taskIds}`)},
+      ${digest(aiTokens, aiTokens.tokenId, sql`${aiTokens.userId} in ${memberUserIds}`)}
     )) as revision
   `);
   const row = result.rows[0] as { revision?: unknown } | undefined;
