@@ -3,7 +3,7 @@ import { IconButton } from '#/components/icon-button'
 import type { CanvasTool } from '#/lib/section-interaction-types'
 
 // ツリーの画面の下の中央に置く、道具のバー(Figma の `nav` を、ユーザーの指示で小さく、アイコンだけにした)
-// 寸法: 高さ 56(枠線 1px)、ボタン 40 × 40(アイコン 24px)、ボタンと区切り線の間隔 6px、左右の余白 6px、区切り線 2 × 24
+// 寸法: 高さ 48(枠線 1px)、ボタン 40 × 40(アイコン 24px)、ボタンと区切り線の間隔 6px、左右の余白 6px、区切り線 2 × 24
 //   幅は中身で決まる(ボタン 5 × 40 + 区切り線 2 × 2 + 間隔 6 × 6 + 余白 12 + 枠線 2 = 254。リーダーは「コメント」が増えて、ボタン 6 × 40、間隔 6 × 7 で 300)
 //   文字(ラベル)は出さない。名前は、ホバー(とキーボードのフォーカス)のツールチップと、`aria-label` で示す
 //   ツールチップが切れないよう、このバーには `overflow` を付けない
@@ -68,7 +68,7 @@ export function TreeToolbar({
     <div
       role="toolbar"
       aria-label="ツリーの道具"
-      className="flex h-14 max-w-[calc(100vw-1.5rem)] items-center gap-1.5 shadow-box bg-panel/90 px-1.5"
+      className="flex h-12 max-w-[calc(100vw-1.5rem)] items-center gap-1.5 shadow-box bg-panel/90 px-1.5"
     >
       <IconButton
         icon={MousePointer2}

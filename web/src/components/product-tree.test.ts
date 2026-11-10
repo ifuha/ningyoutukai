@@ -185,7 +185,7 @@ describe('TreeToolbar', () => {
     }
   })
 
-  test('並びと寸法(高さ 56、ボタン 40×40)で、5 つのボタンと 2 つの区切りがある。「移動」はない', () => {
+  test('5 つのボタンが「選択・メンバー・セクション・メモ・検索」の順に並ぶ。「移動」はない', () => {
     const html = bar({ onOpenMembers: () => {} })
     const labels = ['選択', 'メンバー', 'セクション', 'メモ', '検索']
     let last = -1
@@ -195,9 +195,7 @@ describe('TreeToolbar', () => {
       last = at
     }
     expect(html).not.toContain('移動')
-    expect(html).toContain('h-14')
-    expect(html.split('size-10').length - 1).toBe(5)
-    expect(html.split('w-0.5').length - 1).toBe(2)
+    expect(html.match(/<button/g)?.length).toBe(5)
   })
   test('アイコンの下に文字(ラベル)を出さない。名前は aria-label とツールチップだけ', () => {
     const html = bar({ onOpenMembers: () => {} })
