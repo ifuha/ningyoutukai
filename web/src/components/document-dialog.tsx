@@ -1,5 +1,6 @@
 import { Check, Pencil, Save, Timer, TimerOff, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { DocumentDeleteDialog } from '#/components/document-delete-dialog'
 import { EditingDot } from '#/components/editing-dot'
 import { IconButton } from '#/components/icon-button'
 import { LockNoticeBanner } from '#/components/lock-notice'
@@ -61,7 +62,9 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // 削除の確認(モーダル)を出しているか、削除の最中か
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const lock = useEditLock(productId, documentId, mode === 'edit')
   const notice = lockNotice(lock.state, lock.now)
@@ -117,12 +120,15 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
   }
   const remove = async () => {
     setError(null)
+    setDeleting(true)
     try {
       await actions.remove(documentId)
       onClose()
     } catch (e) {
       setConfirmDelete(false)
       setError(e instanceof Error ? e.message : '削除できませんでした')
+    } finally {
+      setDeleting(false)
     }
   }
   const toggleKeep = async () => {
@@ -170,15 +176,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
               {isLeader && current && (
                 <IconButton icon={current.keepForever ? Timer : TimerOff} label={current.keepForever ? '自動削除する設定に戻す' : '自動削除しない'} size="sm" side="bottom" onClick={() => void toggleKeep()} />
               )}
-              {level === 'write' &&
-                (confirmDelete ? (
-                  <>
-                    <IconButton icon={Trash2} label="削除する" showLabel size="sm" variant="danger-solid" onClick={() => void remove()} />
-                    <IconButton icon={X} label="やめる" size="sm" variant="outline" onClick={() => setConfirmDelete(false)} />
-                  </>
-                ) : (
-                  <IconButton icon={Trash2} label="削除" size="sm" side="bottom" variant="danger" onClick={() => setConfirmDelete(true)} />
-                ))}
+              {level === 'write' && <IconButton icon={Trash2} label="削除" size="sm" side="bottom" variant="danger" onClick={() => setConfirmDelete(true)} />}
               {mayEdit && <IconButton icon={Pencil} label="編集" showLabel size="sm" variant="solid" onClick={startEdit} />}
             </>
           )}
@@ -192,11 +190,7 @@ function Body({ productId, documentId, isLeader, myMemberId, onClose }: { produc
           {error}
         </p>
       )}
-      {confirmDelete && mode === 'view' && (
-        <p role="alert" className="border-b border-line px-4 py-2 text-m text-danger">
-          「{current?.name}」を削除します。全ての版が消え、戻せません。
-        </p>
-      )}
+      <DocumentDeleteDialog name={confirmDelete ? (current?.name ?? '文書') : null} pending={deleting} onConfirm={() => void remove()} onClose={() => setConfirmDelete(false)} />
 
       <div className="flex min-h-0 flex-1">
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
