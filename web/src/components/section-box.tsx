@@ -39,7 +39,9 @@ export function SectionBox({
       data-section-id={section.sectionId}
       data-selected={selected || undefined}
       data-highlighted={highlighted || undefined}
-      className={`pointer-events-none absolute border-2 border-dashed ${highlighted ? 'ring-4 ring-ink/40' : ''}`}
+      className={`pointer-events-none absolute border-2 border-dashed ${
+        highlighted ? 'ring-4 ring-ink/40' : selected ? 'ring-2 ring-ink' : ''
+      }`}
       style={{
         left: section.x + offsetX,
         top: section.y + offsetY,
