@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { Menu, PanelLeftOpen } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { Logo } from '#/components/logo'
 import { Sidebar } from '#/components/sidebar'
+import { SidebarRail } from '#/components/sidebar-rail'
 import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
 import { resetSessionExpired } from '#/lib/session-expired'
@@ -66,6 +67,18 @@ export function AppShell({
     retry: false,
   })
 
+  // サイドバーと、たたんだときの帯で、同じ一覧と移動を使う
+  const sidebarProducts = (products.data ?? []).map((p) => ({
+    id: p.productId,
+    name: p.productName,
+    avatarUrl: p.avatarUrl,
+    isLeader: p.role === 'leader',
+  }))
+  const selectProduct = (productId: string) => {
+    drawer.close()
+    void navigate({ to: '/products/$productId', params: { productId } })
+  }
+
   if (isPending || !session?.user) return <main className="h-screen" />
 
   return (
@@ -101,17 +114,14 @@ export function AppShell({
       {/* PC 幅: たたむと、サイドバーの幅が 0 に縮み、幅の狭い帯の幅が広がる(どちらも幅のアニメーション)。帯の一番上に「開く」ボタンを置く(メイン領域は帯の右から始まるので、重ならない) */}
       <div
         aria-hidden={!sidebar.collapsed}
-        className={`hidden shrink-0 flex-col items-center bg-side pt-4 transition-[width,visibility] duration-200 ease-out motion-reduce:transition-none md:flex ${sidebar.collapsed ? 'md:visible md:w-14' : 'md:invisible md:w-0'}`}
+        className={`hidden shrink-0 h-screen flex-col items-center bg-side pt-4 transition-[width,visibility] duration-200 ease-out motion-reduce:transition-none md:flex ${sidebar.collapsed ? 'md:visible md:w-14' : 'md:invisible md:w-0'}`}
       >
-        <IconButton
-          icon={PanelLeftOpen}
-          label="サイドバーを開く"
-          side="right"
-          size="sm"
-          onClick={() => sidebar.set(false)}
-          tabIndex={sidebar.collapsed ? 0 : -1}
-          aria-expanded={false}
-          aria-controls="app-sidebar"
+        <SidebarRail
+          products={sidebarProducts}
+          activeProductId={activeProductId}
+          collapsed={sidebar.collapsed}
+          onExpand={() => sidebar.set(false)}
+          onSelectProduct={selectProduct}
         />
       </div>
       {/* スマホ幅: 画面の外に隠し、開くと左から重ねる。md 以上: 左に表示(たたむと消える) */}
@@ -120,20 +130,12 @@ export function AppShell({
         className={`fixed inset-y-0 left-0 z-40 max-w-[80vw] transition-[transform,width,visibility] duration-200 ease-out motion-reduce:transition-none md:static md:max-w-none md:translate-x-0 md:overflow-hidden ${sidebar.collapsed ? 'md:invisible md:w-0' : 'md:visible md:w-60'} ${drawer.open ? 'translate-x-0' : 'invisible -translate-x-full'}`}
       >
         <Sidebar
-          products={(products.data ?? []).map((p) => ({
-            id: p.productId,
-            name: p.productName,
-            avatarUrl: p.avatarUrl,
-            isLeader: p.role === 'leader',
-          }))}
+          products={sidebarProducts}
           invitations={invitations.data}
           onCollapse={() => sidebar.set(true)}
           isLoading={products.isPending}
           activeProductId={activeProductId}
-          onSelectProduct={(productId) => {
-            drawer.close()
-            void navigate({ to: '/products/$productId', params: { productId } })
-          }}
+          onSelectProduct={selectProduct}
           onOpenProductSettings={(productId) => {
             drawer.close()
             // 移動して、ページが開いたら「プロダクト設定」を開く(すでに開いているプロダクトでも同じ)
