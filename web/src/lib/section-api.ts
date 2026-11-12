@@ -35,6 +35,11 @@ export type SectionApiUpdatePatch = NonNullable<Parameters<SectionRoute['patch']
  */
 export type SectionApiMoveInput = NonNullable<Parameters<MemberRoute['position']['patch']>[0]>
 
+/** `POST .../move` の本文。選択したセクション・カード・メモの、移動先の絶対位置 */
+export type SectionApiMoveSelectionInput = NonNullable<
+  Parameters<ProductRoute['move']['post']>[0]
+>
+
 /** `GET /api/product/{productId}/section`(メンバーなら誰でも) */
 export function listSections(productId: string, client: Client = eden()) {
   return edenData(client.api.product({ productId }).section.get())
@@ -89,6 +94,18 @@ export function moveMember(
   const body: SectionApiMoveInput =
     sectionId === undefined ? { positionX, positionY } : { positionX, positionY, sectionId }
   return edenData(client.api.product({ productId }).member({ memberId }).position.patch(body))
+}
+
+/**
+ * `POST /api/product/{productId}/move`(セクション・カードはリーダーのみ。メモは変更できるものだけ)。
+ * 選択したものを、1 つのトランザクションでまとめて動かす。成功は本文なし(204)
+ */
+export function moveSelection(
+  productId: string,
+  input: SectionApiMoveSelectionInput,
+  client: Client = eden(),
+) {
+  return edenData(client.api.product({ productId }).move.post(input))
 }
 
 /** 値が `undefined` のキーを取り除く(`null` は残す。送らないキーは、本文に含めない) */

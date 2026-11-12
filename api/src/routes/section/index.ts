@@ -3,6 +3,7 @@ import { createSection } from "./create-section";
 import { deleteSection } from "./delete-section";
 import { listSections } from "./list-sections";
 import { moveMember } from "./move-member";
+import { moveSelection } from "./move-selection";
 import { updateSection } from "./update-section";
 
 /**
@@ -15,4 +16,5 @@ export const sectionRoutes = new Elysia({ name: "section-routes" })
   .use(createSection)
   .use(updateSection)
   .use(deleteSection)
-  .use(moveMember);
+  .use(moveMember)
+  .use(moveSelection);

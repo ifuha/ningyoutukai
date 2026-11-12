@@ -6,6 +6,7 @@ import {
   SIZE_MAX,
   applyDeltaToMembers,
   clampCardPosition,
+  clampMoveDelta,
   isSameRect,
   membersInsideRect,
   moveRect,
@@ -41,6 +42,19 @@ describe('clampCardPosition', () => {
   })
   test('NaN は 0', () => {
     expect(clampCardPosition({ x: NaN, y: 5 })).toEqual({ x: 0, y: 5 })
+  })
+})
+
+describe('clampMoveDelta(まとめて動かす差分を、全項目の上限に収める)', () => {
+  test('どの項目も上限を超えない範囲で、同じ差分を返す', () => {
+    expect(clampMoveDelta([{ x: 0, y: 0 }, { x: 10, y: 20 }], { x: 5, y: -5 })).toEqual({ x: 5, y: -5 })
+  })
+  test('いちばん近い項目で止まる(選択全体の相対位置は保つ)', () => {
+    expect(clampMoveDelta([{ x: 999_990, y: 0 }, { x: 0, y: 0 }], { x: 100, y: 100 })).toEqual({ x: 10, y: 100 })
+    expect(clampMoveDelta([{ x: 0, y: -999_990 }], { x: 0, y: -100 })).toEqual({ x: 0, y: -10 })
+  })
+  test('項目がなければ、差分をそのまま返す', () => {
+    expect(clampMoveDelta([], { x: 1_000_000, y: -1_000_000 })).toEqual({ x: 1_000_000, y: -1_000_000 })
   })
 })
 

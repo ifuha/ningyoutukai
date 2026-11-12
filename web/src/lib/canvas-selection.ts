@@ -22,7 +22,7 @@ export type Selectable = {
 /** 範囲選択の判定。'touch' は触れたもの(重なり)、'contain' は完全に入ったものだけ */
 export type MarqueeMode = 'touch' | 'contain'
 
-/** 次にまとめて動かす候補(今回の PR では使わない。次の PR の一括移動で使う) */
+/** まとめて動かす候補(複数選択の移動で使う) */
 export type MoveCandidate = {
   kind: ItemKind
   id: string
@@ -80,6 +80,14 @@ export function itemsInRect(
   return items
     .filter((item) => (mode === 'contain' ? rectContains(marquee, item.rect) : rectsIntersect(marquee, item.rect)))
     .map((item) => itemKey(item.kind, item.id))
+}
+
+/**
+ * 範囲選択に入れるメモ。**変更できないメモ(他の人のメモ)は、まとめて動かせないので、範囲選択では選ばない**
+ * (押したときは、これまでどおり選べる。動かせないだけ)
+ */
+export function notesForMarquee<N extends { canEdit: boolean }>(notes: readonly N[]): N[] {
+  return notes.filter((note) => note.canEdit)
 }
 
 /** Shift を押しながらの、1 つの選択の切り替え */
@@ -149,7 +157,7 @@ export function reconcileItemSelection(
 }
 
 /**
- * まとめて動かす候補から、二重に動かさないものを除く(次の PR で使う)。
+ * まとめて動かす候補から、二重に動かさないものを除く(複数選択の移動で使う)。
  * セクションを選んでいるとき、その所属カードのうち位置を持つものは、セクションの移動で一緒に動くので、除く。
  * 位置を持たないカード(自動配置)は、もともと動かない。カード単体の選択は、そのまま残す。
  */

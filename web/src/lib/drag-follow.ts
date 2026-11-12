@@ -43,6 +43,49 @@ export function collectFollowers(
   return Array.from(root.querySelectorAll(selector))
 }
 
+/** まとめて動かすときに、一緒に動かすもの。`sections[].memberIds` は、セクションと一緒に動く(明示しない)カードだけ */
+export type GroupFollowPlan = {
+  sections: { sectionId: string; memberIds: readonly string[] }[]
+  /** 選択したカード。カードの枠(`data-card-slot-id`)を動かす(選択の輪郭も一緒に動く) */
+  cardIds: readonly string[]
+  noteIds: readonly string[]
+}
+
+/**
+ * まとめて動かすときに、一緒に動かす要素のセレクター。
+ * - セクション: 四角・編集枠・所属する位置持ちのカード(この一括移動で明示しないもの)
+ * - カード: `DragSlot` の `data-card-slot-id`
+ * - メモ: `data-note-id`
+ */
+export function groupFollowSelectors(plan: GroupFollowPlan): string {
+  const selectors = new Set<string>()
+  for (const section of plan.sections) {
+    if (!SAFE_VALUE.test(section.sectionId)) continue
+    selectors.add(`[data-section-id="${section.sectionId}"]`)
+    selectors.add(`[data-section-editor="${section.sectionId}"]`)
+    for (const id of section.memberIds) {
+      if (SAFE_VALUE.test(id)) selectors.add(`[data-card-id="${id}"]`)
+    }
+  }
+  for (const id of plan.cardIds) {
+    if (SAFE_VALUE.test(id)) selectors.add(`[data-card-slot-id="${id}"]`)
+  }
+  for (const id of plan.noteIds) {
+    if (SAFE_VALUE.test(id)) selectors.add(`[data-note-id="${id}"]`)
+  }
+  return [...selectors].join(', ')
+}
+
+/** まとめて動かす要素を集める(ドラッグが確定したときに 1 回。動かすたびには探さない) */
+export function collectGroupFollowers(
+  root: FollowRoot,
+  plan: GroupFollowPlan,
+): FollowElement[] {
+  const selector = groupFollowSelectors(plan)
+  if (selector === '') return []
+  return Array.from(root.querySelectorAll(selector))
+}
+
 export type Follower = {
   /** すべての要素を、元の位置から (dx, dy) だけ動かして見せる(キャンバスの座標の差分) */
   apply(dx: number, dy: number): void

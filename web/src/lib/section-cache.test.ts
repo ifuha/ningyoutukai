@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
   applyMemberMove,
+  applyBatchMove,
   applySectionCreate,
   applySectionDelete,
   applySectionUpdate,
@@ -185,5 +186,128 @@ describe('applySectionCreate / 既定の名前と色', () => {
   test('既定の色は、6 色を作った数に応じて順に使う', () => {
     const colors = [0, 1, 2, 3, 4, 5, 6, 7].map((n) => nextSectionColor(new Array(n).fill(0)))
     expect(colors).toEqual(['red', 'yellow', 'green', 'purple', 'lightblue', 'blue', 'red', 'yellow'])
+  })
+})
+
+describe('applyBatchMove(まとめて動かす)', () => {
+  const note = (id: string, x: number, y: number) => ({ noteId: id, x, y, content: 'メモ' })
+
+  test('セクションと所属カードを同じ差分で動かし、明示されたカードは絶対位置で上書きする(二重に動かさない)', () => {
+    const t = tree(member('L', null, null), [
+      member('M1', 's1', [150, 150]),
+      member('M2', 's1', [200, 120]),
+    ])
+    const r = applyBatchMove(
+      [section()],
+      t,
+      undefined,
+      {
+        sections: [{ sectionId: 's1', x: 130, y: 90 }],
+        members: [{ memberId: 'M1', positionX: 500, positionY: 300 }],
+        notes: [],
+      },
+    )
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.sections[0]).toMatchObject({ x: 130, y: 90 })
+    expect(r.tree?.members[0]).toMatchObject({ positionX: 500, positionY: 300 })
+    expect(r.tree?.members[1]).toMatchObject({ positionX: 230, positionY: 110 })
+  })
+
+  test('位置を持たないカードは、セクションと一緒には動かない。明示されれば、その位置を持つ', () => {
+    const t = tree(member('L', null, null), [member('M1', 's1', null)])
+    const r = applyBatchMove(
+      [section()],
+      t,
+      undefined,
+      {
+        sections: [{ sectionId: 's1', x: 200, y: 200 }],
+        members: [{ memberId: 'M1', positionX: 10, positionY: 20 }],
+        notes: [],
+      },
+    )
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.tree?.members[0]).toMatchObject({ positionX: 10, positionY: 20 })
+  })
+
+  test('メモの位置を変え、ほかの項目はそのまま残す', () => {
+    const r = applyBatchMove(
+      [],
+      undefined,
+      [note('n1', 1, 2), note('n2', 3, 4)],
+      { sections: [], members: [], notes: [{ noteId: 'n2', x: 30, y: 40 }] },
+    )
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.notes).toEqual([note('n1', 1, 2), note('n2', 30, 40)])
+    expect((r.notes?.[1] as { content?: string }).content).toBe('メモ')
+  })
+
+  test('見つからないセクション・カード・メモは、何も変えずに not-found', () => {
+    const t = tree(member('L', null, null), [member('M1', 's1', [150, 150])])
+    expect(
+      applyBatchMove([section()], t, [note('n1', 0, 0)], {
+        sections: [{ sectionId: 'zz', x: 0, y: 0 }],
+        members: [],
+        notes: [],
+      }),
+    ).toEqual({ ok: false, reason: 'not-found' })
+    expect(
+      applyBatchMove([section()], t, [note('n1', 0, 0)], {
+        sections: [],
+        members: [{ memberId: 'zz', positionX: 0, positionY: 0 }],
+        notes: [],
+      }),
+    ).toEqual({ ok: false, reason: 'not-found' })
+    expect(
+      applyBatchMove([section()], t, [note('n1', 0, 0)], {
+        sections: [],
+        members: [],
+        notes: [{ noteId: 'zz', x: 0, y: 0 }],
+      }),
+    ).toEqual({ ok: false, reason: 'not-found' })
+  })
+
+  test('座標の上限を超える移動は、何も変えずに out-of-range', () => {
+    const t = tree(member('L', null, null), [member('M1', 's1', [150, 150])])
+    expect(
+      applyBatchMove([section()], t, undefined, {
+        sections: [],
+        members: [{ memberId: 'M1', positionX: 1_000_001, positionY: 0 }],
+        notes: [],
+      }),
+    ).toEqual({ ok: false, reason: 'out-of-range' })
+    expect(
+      applyBatchMove([section()], t, undefined, {
+        sections: [{ sectionId: 's1', x: 1_000_000, y: 0 }],
+        members: [],
+        notes: [],
+      }),
+    ).toEqual({ ok: false, reason: 'out-of-range' })
+  })
+
+  test('メモの一覧が読み込まれていないのにメモを動かそうとしたら、失敗する', () => {
+    expect(
+      applyBatchMove([], undefined, undefined, {
+        sections: [],
+        members: [],
+        notes: [{ noteId: 'n1', x: 1, y: 1 }],
+      }),
+    ).toEqual({ ok: false, reason: 'not-found' })
+  })
+
+  test('元のデータは書き換えない', () => {
+    const s = section()
+    const t = tree(member('L', null, null), [member('M1', 's1', [150, 150])])
+    const n = note('n1', 1, 2)
+    applyBatchMove([s], t, [n], {
+      sections: [{ sectionId: 's1', x: 50, y: 50 }],
+      members: [{ memberId: 'M1', positionX: 1, positionY: 1 }],
+      notes: [{ noteId: 'n1', x: 9, y: 9 }],
+    })
+    expect(s.x).toBe(100)
+    expect(t.members[0].positionX).toBe(150)
+    expect(n.x).toBe(1)
   })
 })

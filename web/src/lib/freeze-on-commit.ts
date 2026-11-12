@@ -23,5 +23,9 @@ export function freezeBeforeCommit(actions: SectionActions, freeze: () => void):
       freeze()
       return actions.moveMember(memberId, position, sectionId)
     },
+    moveSelection: (move) => {
+      freeze()
+      return actions.moveSelection(move)
+    },
   }
 }

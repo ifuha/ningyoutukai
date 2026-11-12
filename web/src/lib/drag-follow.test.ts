@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test'
-import { collectFollowers, createFollower, followSelectors, type FollowElement } from '#/lib/drag-follow'
+import {
+  collectFollowers,
+  collectGroupFollowers,
+  createFollower,
+  followSelectors,
+  groupFollowSelectors,
+  type FollowElement,
+} from '#/lib/drag-follow'
 
 const el = (): FollowElement => ({ style: { transform: '' } })
 
@@ -83,5 +90,69 @@ describe('createFollower', () => {
     const f = createFollower([])
     f.apply(1, 2)
     f.reset()
+  })
+})
+
+describe('groupFollowSelectors(まとめて動かす)', () => {
+  test('セクション・明示しない所属カード・選択したカードの枠・メモを、1 つのセレクターにする', () => {
+    expect(
+      groupFollowSelectors({
+        sections: [{ sectionId: 's1', memberIds: ['m1'] }],
+        cardIds: ['c1'],
+        noteIds: ['n1'],
+      }),
+    ).toBe(
+      '[data-section-id="s1"], [data-section-editor="s1"], [data-card-id="m1"], [data-card-slot-id="c1"], [data-note-id="n1"]',
+    )
+  })
+
+  test('同じ値が重なっても、1 回だけ入れる', () => {
+    expect(
+      groupFollowSelectors({
+        sections: [{ sectionId: 's1', memberIds: ['m1'] }, { sectionId: 's1', memberIds: ['m1'] }],
+        cardIds: ['c1', 'c1'],
+        noteIds: [],
+      }),
+    ).toBe(
+      '[data-section-id="s1"], [data-section-editor="s1"], [data-card-id="m1"], [data-card-slot-id="c1"]',
+    )
+  })
+
+  test('セレクターを壊す値(引用符・括弧など)は、探さない', () => {
+    expect(
+      groupFollowSelectors({
+        sections: [{ sectionId: 'bad"]', memberIds: ['ok'] }],
+        cardIds: ['c"1'],
+        noteIds: ['n1'],
+      }),
+    ).toBe('[data-note-id="n1"]')
+  })
+})
+
+describe('collectGroupFollowers', () => {
+  test('root に、組み立てたセレクターで 1 回だけ問い合わせる', () => {
+    const calls: string[] = []
+    const found = [el()]
+    const root = {
+      querySelectorAll: (s: string) => {
+        calls.push(s)
+        return found
+      },
+    }
+    const result = collectGroupFollowers(root, { sections: [], cardIds: ['c1'], noteIds: [] })
+    expect(calls).toEqual(['[data-card-slot-id="c1"]'])
+    expect(result).toEqual(found)
+  })
+
+  test('探せる値が 1 つもなければ、問い合わせない', () => {
+    let called = 0
+    const root = {
+      querySelectorAll: () => {
+        called++
+        return []
+      },
+    }
+    expect(collectGroupFollowers(root, { sections: [], cardIds: ['bad"'], noteIds: [] })).toEqual([])
+    expect(called).toBe(0)
   })
 })
