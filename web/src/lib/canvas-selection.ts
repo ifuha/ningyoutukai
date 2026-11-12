@@ -170,3 +170,28 @@ export function itemsToMove(candidates: readonly MoveCandidate[]): MoveCandidate
     return !(c.sectionId && selectedSections.has(c.sectionId))
   })
 }
+
+/** まとめて削除するものを、セクションとメモに分けたもの(api の本文と同じ形) */
+export type DeletableBatch = {
+  sectionIds: string[]
+  noteIds: string[]
+}
+
+/**
+ * 選択のうち、削除できるものだけを、セクションとメモに分ける(複数選択の削除で使う)。
+ * `deletable` に入っていないもの(カード、他の人のメモ)は、黙って飛ばす。順序は、選択の順のまま。
+ */
+export function splitDeletable(
+  selected: Iterable<ItemKey>,
+  deletable: ReadonlySet<ItemKey>,
+): DeletableBatch {
+  const sectionIds: string[] = []
+  const noteIds: string[] = []
+  for (const key of selected) {
+    if (!deletable.has(key)) continue
+    const { kind, id } = parseKey(key)
+    if (kind === 'section') sectionIds.push(id)
+    else if (kind === 'note') noteIds.push(id)
+  }
+  return { sectionIds, noteIds }
+}

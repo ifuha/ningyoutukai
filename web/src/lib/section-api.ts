@@ -40,6 +40,11 @@ export type SectionApiMoveSelectionInput = NonNullable<
   Parameters<ProductRoute['move']['post']>[0]
 >
 
+/** `POST .../delete-selection` の本文。まとめて削除するセクション・メモの ID */
+export type SectionApiDeleteSelectionInput = NonNullable<
+  Parameters<ProductRoute['delete-selection']['post']>[0]
+>
+
 /** `GET /api/product/{productId}/section`(メンバーなら誰でも) */
 export function listSections(productId: string, client: Client = eden()) {
   return edenData(client.api.product({ productId }).section.get())
@@ -106,6 +111,18 @@ export function moveSelection(
   client: Client = eden(),
 ) {
   return edenData(client.api.product({ productId }).move.post(input))
+}
+
+/**
+ * `POST /api/product/{productId}/delete-selection`(セクションはリーダーのみ。メモは変更できるものだけ)。
+ * 選択したセクションとメモを、1 つのトランザクションでまとめて削除する。成功は本文なし(204)
+ */
+export function deleteSelection(
+  productId: string,
+  input: SectionApiDeleteSelectionInput,
+  client: Client = eden(),
+) {
+  return edenData(client.api.product({ productId })['delete-selection'].post(input))
 }
 
 /** 値が `undefined` のキーを取り除く(`null` は残す。送らないキーは、本文に含めない) */
