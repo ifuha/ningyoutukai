@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { MemberCard } from '#/components/member-card'
 import { CardGhost, DragSlot } from '#/components/member-card-drag'
@@ -23,10 +24,12 @@ import {
   applyMarquee,
   itemKey,
   itemsInRect,
+  itemsToMove,
   NOTE_SIZE,
+  parseKey,
   pressItem,
 } from '#/lib/canvas-selection'
-import type { ItemKey, ItemKind, Selectable } from '#/lib/canvas-selection'
+import type { ItemKey, ItemKind, MoveCandidate, Selectable } from '#/lib/canvas-selection'
 import { decideDragAction } from '#/lib/canvas-gesture'
 import type { DragTarget } from '#/lib/canvas-gesture'
 import type { CanvasTool, CanvasView } from '#/lib/section-interaction-types'
@@ -56,6 +59,14 @@ import { useCardDrag } from '#/lib/use-card-drag'
 import { boxWithin, useCardBoxes } from '#/lib/use-card-boxes'
 import { collectConnectorTargets, createConnectorFollower } from '#/lib/connector-follow'
 import type { ConnectorFollower } from '#/lib/connector-follow'
+import { collectGroupFollowers } from '#/lib/drag-follow'
+import type { GroupFollowPlan } from '#/lib/drag-follow'
+import { clampMoveDelta } from '#/lib/section-edit-geometry'
+import type { Point } from '#/lib/section-edit-geometry'
+import {
+  createSelectionDragController,
+  type SelectionDragController,
+} from '#/lib/selection-drag-controller'
 import { usePanZoom } from '#/lib/use-pan-zoom'
 
 // セクションがないときに渡す、空の配列(毎回新しい配列を作らない)
@@ -125,6 +136,26 @@ const COMMENT_CURSOR =
 // カードの位置(`positionX` / `positionY`): **カードの左上の座標**(中心ではない)。両方の値があるカードだけ、その座標に置く。
 //   NULL のカードは、これまでどおり自動配置のまま(一部だけ位置を持っていても、崩れない)
 //   位置を持つカードへの親子の線は、測ったカードの実際の位置に合わせて、SVG で描く(自動配置どうしは、これまでの CSS の線)
+// まとめて動かすときの、動かす前の位置(ドラッグを始めた瞬間に 1 回だけ作る)
+type GroupSectionBase = {
+  sectionId: string
+  x: number
+  y: number
+  /** セクションと一緒に動く、明示しない所属カード(位置を持つもの) */
+  implicitIds: string[]
+}
+type GroupMoveBase = {
+  sections: GroupSectionBase[]
+  cards: { memberId: string; x: number; y: number }[]
+  notes: { noteId: string; x: number; y: number }[]
+  /** 座標の上限を調べる、動くもの全部の位置 */
+  positions: Point[]
+  /** 一緒に動かす要素(セクションの四角・編集枠・カード・メモ)のセレクター */
+  follow: GroupFollowPlan
+  /** 親子の線を動かすカードの ID */
+  movingIds: string[]
+}
+
 export function ProductTree({
   header,
   tree,
@@ -529,14 +560,160 @@ export function ProductTree({
     const handlers = cardDrag.getDragHandlers(memberId)
     return {
       onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
-        // 中ボタン・Space のときは、動かさずパンに譲る(押下は止めない)
-        if (e.button !== 0 || spaceHeld.ref.current) return
+        // 中ボタン・Space・まとめて動かすドラッグのときは、単体のドラッグを始めない
+        if (e.button !== 0 || spaceHeld.ref.current || groupDraggingRef.current) return
         handlers.onPointerDown(e)
       },
     }
   }
-  // ドラッグの最中かを、Esc の優先順位(土台)に知らせる(ドラッグ中の Esc は、選択を外さず、ドラッグの取り消しだけ)
   const { setCardDragging } = interaction
+  // まとめて動かすドラッグ(選択が 2 つ以上で、動かせるものを押したとき)。単体のドラッグは、この間は止める
+  const groupBaseRef = useRef<GroupMoveBase | null>(null)
+  const groupDraggingRef = useRef(false)
+  const groupActionsRef = useRef(guardedActions)
+  groupActionsRef.current = guardedActions
+  const groupScaleRef = useRef(scale)
+  groupScaleRef.current = scale
+  const setCardDraggingRef = useRef(setCardDragging)
+  setCardDraggingRef.current = setCardDragging
+
+  // ドラッグを始めた瞬間の、選択の全部の位置を 1 回だけ作る。ドラッグ中は、この位置に共通の差分を足す
+  const buildGroupMoveBase = (selected: ReadonlySet<ItemKey>): GroupMoveBase | null => {
+    const byId = new Map([leader, ...members].map((m) => [m.productMemberId, m]))
+    const candidates: MoveCandidate[] = []
+    for (const key of selected) {
+      const { kind, id } = parseKey(key)
+      if (kind === 'card') {
+        const m = byId.get(id)
+        if (m) candidates.push({ kind, id, sectionId: m.sectionId, hasPosition: hasPosition(m) })
+      } else if (kind === 'section') {
+        if (sections.some((s) => s.sectionId === id)) candidates.push({ kind, id })
+      } else if (notes.some((n) => n.noteId === id && n.canEdit)) {
+        candidates.push({ kind, id })
+      }
+    }
+    // 選択したカードは、所属するセクションも選んでいるときも、カードの枠(選択の輪郭)ごと動かす。
+    // 位置は、位置を持つカードはその値、自動配置のカードは DOM から測る
+    const selectedCardBases = new Map<string, { x: number; y: number }>()
+    for (const key of selected) {
+      const { kind, id } = parseKey(key)
+      if (kind !== 'card') continue
+      const m = byId.get(id)
+      if (!m) continue
+      const base = hasPosition(m)
+        ? { x: m.positionX as number, y: m.positionY as number }
+        : (() => {
+            const rect = getCardRect(id)
+            return rect ? { x: rect.x, y: rect.y } : null
+          })()
+      if (base) selectedCardBases.set(id, base)
+    }
+    const selectedCards = new Set(selectedCardBases.keys())
+
+    const moves = itemsToMove(candidates)
+    const sectionIds = moves.filter((m) => m.kind === 'section').map((m) => m.id)
+    const cardIds = moves.filter((m) => m.kind === 'card').map((m) => m.id)
+    const noteIds = moves.filter((m) => m.kind === 'note').map((m) => m.id)
+
+    const sectionsBase: GroupSectionBase[] = []
+    const positions: Point[] = []
+    const movingIds = new Set(selectedCards)
+    for (const sectionId of sectionIds) {
+      const s = sections.find((v) => v.sectionId === sectionId)
+      if (!s) continue
+      const implicitIds: string[] = []
+      for (const c of placedCards) {
+        if (c.member.sectionId !== sectionId) continue
+        if (selectedCards.has(c.member.productMemberId)) continue
+        implicitIds.push(c.member.productMemberId)
+        movingIds.add(c.member.productMemberId)
+        positions.push({ x: c.x, y: c.y })
+      }
+      sectionsBase.push({ sectionId, x: s.x, y: s.y, implicitIds })
+      positions.push({ x: s.x, y: s.y })
+    }
+
+    const cardsBase: GroupMoveBase['cards'] = []
+    for (const memberId of cardIds) {
+      const base = selectedCardBases.get(memberId)
+      if (!base) continue
+      cardsBase.push({ memberId, x: base.x, y: base.y })
+    }
+    // 明示しないカード(選んだセクションの中の位置持ち)も、セクションと同じ差分で動くので、上限の判定に入れる
+    for (const base of selectedCardBases.values()) positions.push(base)
+
+    const notesBase: GroupMoveBase['notes'] = []
+    for (const noteId of noteIds) {
+      const n = notes.find((v) => v.noteId === noteId && v.canEdit)
+      if (!n) continue
+      notesBase.push({ noteId, x: n.x, y: n.y })
+      positions.push({ x: n.x, y: n.y })
+    }
+
+    if (sectionsBase.length + cardsBase.length + notesBase.length === 0) return null
+    return {
+      sections: sectionsBase,
+      cards: cardsBase,
+      notes: notesBase,
+      positions,
+      follow: {
+        sections: sectionsBase.map((s) => ({ sectionId: s.sectionId, memberIds: s.implicitIds })),
+        cardIds: [...selectedCards],
+        noteIds: notesBase.map((n) => n.noteId),
+      },
+      movingIds: [...movingIds],
+    }
+  }
+
+  const groupDrag = useMemo<SelectionDragController>(
+    () =>
+      createSelectionDragController({
+        getTarget: () => window,
+        getLock: (cursor) =>
+          typeof document === 'undefined' ? undefined : { body: document.body, cursor },
+        getScale: () => groupScaleRef.current,
+        getFollowers: () => {
+          const content = contentRef.current
+          const base = groupBaseRef.current
+          return content && base ? collectGroupFollowers(content, base.follow) : []
+        },
+        getConnectors: () => {
+          const base = groupBaseRef.current
+          return base ? makeConnectors(base.movingIds) : null
+        },
+        clampDelta: (delta) => clampMoveDelta(groupBaseRef.current?.positions ?? [], delta),
+        batch: (fn) => flushSync(fn),
+        onCommit: (delta) => {
+          const base = groupBaseRef.current
+          if (!base) return
+          void groupActionsRef.current.moveSelection({
+            sections: base.sections.map((s) => ({
+              sectionId: s.sectionId,
+              x: s.x + delta.x,
+              y: s.y + delta.y,
+            })),
+            members: base.cards.map((c) => ({
+              memberId: c.memberId,
+              positionX: c.x + delta.x,
+              positionY: c.y + delta.y,
+            })),
+            notes: base.notes.map((n) => ({
+              noteId: n.noteId,
+              x: n.x + delta.x,
+              y: n.y + delta.y,
+            })),
+          })
+        },
+        onActive: (active) => {
+          groupDraggingRef.current = active
+          if (!active) groupBaseRef.current = null
+          setCardDraggingRef.current(active)
+        },
+      }),
+    [contentRef, makeConnectors],
+  )
+
+  // ドラッグの最中かを、Esc の優先順位(土台)に知らせる(ドラッグ中の Esc は、選択を外さず、ドラッグの取り消しだけ)
   useEffect(() => {
     setCardDragging(cardDrag.draggingId !== null)
   }, [cardDrag.draggingId])
@@ -547,8 +724,11 @@ export function ProductTree({
       : undefined
   const mode = interaction.tool
   toolRef.current = mode
-  // カード・セクション・メモの単体ドラッグを始めてよいか。Space を押している間は、パンに譲る
-  const canStartDragItem = useCallback(() => !spaceHeld.ref.current, [spaceHeld.ref])
+  // カード・セクション・メモの単体ドラッグを始めてよいか。Space と、まとめて動かすドラッグの間は、譲る
+  const canStartDragItem = useCallback(
+    () => !spaceHeld.ref.current && !groupDraggingRef.current,
+    [spaceHeld.ref],
+  )
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase()
   const searchResults: TreeSearchResult[] = []
   if (normalizedQuery) {
@@ -676,6 +856,20 @@ export function ProductTree({
             pendingCollapseRef.current = pressed.collapseOnRelease
               ? { key: item.key, x: e.clientX, y: e.clientY }
               : null
+            // 複数選択を、押したものからまとめて動かす。動かせないもの(他の人のメモ)だけなら、始めない
+            if (
+              e.isPrimary &&
+              pressed.selected.size > 1 &&
+              pressed.selected.has(item.key) &&
+              movableKeys.has(item.key)
+            ) {
+              const base = buildGroupMoveBase(pressed.selected)
+              if (base) {
+                groupBaseRef.current = base
+                groupDraggingRef.current = true
+                groupDrag.start(e)
+              }
+            }
             return
           }
           pendingCollapseRef.current = null
@@ -809,6 +1003,7 @@ export function ProductTree({
           >
             {!leaderPlaced && (
               <DragSlot
+                cardId={leader.productMemberId}
                 handlers={dragHandlersFor(leader.productMemberId)}
                 dragging={cardDrag.draggingId === leader.productMemberId}
                 selected={interaction.selected.has(itemKey('card', leader.productMemberId))}
@@ -866,6 +1061,7 @@ export function ProductTree({
                           </span>
                         )}
                         <DragSlot
+                          cardId={m.productMemberId}
                           handlers={dragHandlersFor(m.productMemberId)}
                           dragging={cardDrag.draggingId === m.productMemberId}
                           selected={interaction.selected.has(itemKey('card', m.productMemberId))}
@@ -897,6 +1093,7 @@ export function ProductTree({
               style={{ left: x + bounds.offsetX, top: y + bounds.offsetY }}
             >
               <DragSlot
+                cardId={member.productMemberId}
                 handlers={dragHandlersFor(member.productMemberId)}
                 dragging={cardDrag.draggingId === member.productMemberId}
                 selected={interaction.selected.has(itemKey('card', member.productMemberId))}

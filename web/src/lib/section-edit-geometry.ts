@@ -31,6 +31,28 @@ export function clampCardPosition(position: Point): Point {
   return { x: clampCoord(position.x), y: clampCoord(position.y) }
 }
 
+/**
+ * まとめて動かすときの差分を、どの項目も座標の上限(±1,000,000)を超えない範囲に収める。
+ * 選択の全項目(セクションの x・y、カードの位置、メモの位置)の位置を受け取り、共通の差分を返す。
+ * 1 つでも上限を超えるなら、その項目で止まる(選択全体の相対位置は保つ)。
+ */
+export function clampMoveDelta(
+  positions: readonly Point[],
+  delta: Point,
+): Point {
+  let minX = Number.NEGATIVE_INFINITY
+  let maxX = Number.POSITIVE_INFINITY
+  let minY = Number.NEGATIVE_INFINITY
+  let maxY = Number.POSITIVE_INFINITY
+  for (const p of positions) {
+    minX = Math.max(minX, -COORD_MAX - p.x)
+    maxX = Math.min(maxX, COORD_MAX - p.x)
+    minY = Math.max(minY, -COORD_MAX - p.y)
+    maxY = Math.min(maxY, COORD_MAX - p.y)
+  }
+  return { x: clamp(delta.x, minX, maxX), y: clamp(delta.y, minY, maxY) }
+}
+
 // 2 つの四角が、まったく同じか
 export function isSameRect(a: Rect, b: Rect): boolean {
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height

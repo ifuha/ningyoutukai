@@ -170,7 +170,7 @@ describe('reconcileItemSelection(消えた・選べないものを外す)', () =
   })
 })
 
-describe('itemsToMove(まとめて動かす候補。次の PR で使う)', () => {
+describe('itemsToMove(まとめて動かす候補)', () => {
   const section: ItemKey = 'section:s1'
   test('セクションと、その所属カード(位置を持つ)は、二重に動かさないようカードを除く', () => {
     expect(
