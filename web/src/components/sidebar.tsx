@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PanelLeftClose, Plus, SlidersHorizontal } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
 import { Loading } from '#/components/loading'
+import { Logo } from '#/components/logo'
 import { SettingsDialog } from '#/components/settings-dialog'
 import { SidebarProductRow } from '#/components/sidebar-product-row'
 import { SidebarInvitation } from '#/components/sidebar-invitation'
@@ -42,9 +43,7 @@ export function Sidebar({
       {/* ロゴ・招待・プロダクト一覧だけがスクロールし、「プロダクト作成」と「設定」は下に固定する */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-4">
       <div className="flex items-center justify-between px-2">
-        <p className="text-l leading-normal font-black">
-          人形使い
-        </p>
+        <Logo className="h-14" />
         {onCollapse && (
           <span className="hidden md:block">
             <IconButton

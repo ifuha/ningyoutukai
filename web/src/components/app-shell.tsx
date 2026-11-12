@@ -3,6 +3,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Menu, PanelLeftOpen } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
+import { Logo } from '#/components/logo'
 import { Sidebar } from '#/components/sidebar'
 import { eden, edenData } from '#/lib/eden'
 import { authClient } from '#/lib/auth-client'
@@ -88,7 +89,7 @@ export function AppShell({
             aria-controls="app-sidebar"
           />
         </span>
-        <p className="text-l font-black">人形使い</p>
+        <Logo className="h-7" />
       </header>
       {drawer.open && (
         <div

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { LoginButtons } from '#/components/login-buttons'
+import { Logo } from '#/components/logo'
 import { Prompt, Terminal } from '#/components/terminal'
 import { authClient } from '#/lib/auth-client'
 
@@ -40,8 +41,8 @@ function Login() {
   return (
     <main className="flex h-screen items-center justify-center px-4">
       <Terminal title="~/ningyoutukai — login">
-        <h1 className="text-[clamp(2.25rem,7vw,3.5rem)] leading-tight font-black tracking-tight">
-          人形使い
+        <h1>
+          <Logo className="h-24" />
         </h1>
         <div className="space-y-1">
           <Prompt>
