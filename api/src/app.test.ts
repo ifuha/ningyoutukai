@@ -82,6 +82,7 @@ const EXPECTED_ROUTES = [
   "POST /api/product/:productId/directory/:directoryId/document",
   "POST /api/product/:productId/document/:documentId/lock",
   "POST /api/product/:productId/invitation",
+  "POST /api/product/:productId/move",
   "POST /api/product/:productId/note",
   "POST /api/product/:productId/section",
   "POST /api/product/:productId/task",
