@@ -32,6 +32,7 @@ const sectionUrl = (productId: string, sectionId?: string) =>
 const positionUrl = (productId: string, memberId: string) =>
   `/api/product/${productId}/member/${memberId}/position`;
 const moveUrl = (productId: string) => `/api/product/${productId}/move`;
+const deleteUrl = (productId: string) => `/api/product/${productId}/delete-selection`;
 
 async function insertSection(productId: string, values: Partial<typeof sections.$inferInsert> = {}) {
   const [row] = await db
@@ -755,6 +756,152 @@ describe("POST /move(まとめて移動)", () => {
     expect((await req("POST", moveUrl(productId), { body })).status).toBe(401);
     const outsider = await createOutsider();
     expect((await req("POST", moveUrl(productId), { cookie: outsider.cookie, body })).status).toBe(404);
+  });
+});
+
+describe("POST /delete(まとめて削除)", () => {
+  test("セクションと自分のメモをまとめて削除する。所属していたカードは無所属に戻り、位置は残る", async () => {
+    const { productId, leader, members } = await setupProduct();
+    const target = await insertSection(productId, { sectionName: "消す" });
+    const keep = await insertSection(productId, { sectionName: "残す" });
+    await setMember(leader.memberId, { sectionId: target.sectionId, positionX: 10, positionY: 20 });
+    await setMember(members[0].memberId, { sectionId: target.sectionId, positionX: 30, positionY: 40 });
+    await setMember(members[1].memberId, { sectionId: keep.sectionId, positionX: 50, positionY: 60 });
+    const own = await insertNote(productId, { createdBy: leader.userId, x: 1, y: 2 });
+    const other = await insertNote(productId, { createdBy: members[0].userId, isPublic: true, x: 3, y: 4 });
+
+    const res = await req("POST", deleteUrl(productId), {
+      cookie: leader.cookie,
+      body: { sections: [target.sectionId], notes: [own.noteId] },
+    });
+    expect(res.status).toBe(204);
+
+    expect(await findSection(target.sectionId)).toBeUndefined();
+    expect(await findNote(own.noteId)).toBeUndefined();
+    // 消していないセクション・メモは残る
+    expect(await findSection(keep.sectionId)).toMatchObject({ sectionId: keep.sectionId });
+    expect(await findNote(other.noteId)).toMatchObject({ noteId: other.noteId });
+    // カードは消えず、所属だけが外れる(位置は残る)
+    expect(await findMember(leader.memberId)).toMatchObject({ sectionId: null, positionX: 10, positionY: 20 });
+    expect(await findMember(members[0].memberId)).toMatchObject({ sectionId: null, positionX: 30, positionY: 40 });
+    // 別のセクションのカードは、そのまま
+    expect(await findMember(members[1].memberId)).toMatchObject({ sectionId: keep.sectionId, positionX: 50, positionY: 60 });
+  });
+
+  test("メンバーは自分のメモだけを削除できる。セクションや他の人のメモを含むと 403 で、何も消えない", async () => {
+    const { productId, leader, members } = await setupProduct();
+    const section = await insertSection(productId);
+    const own = await insertNote(productId, { createdBy: members[0].userId, isPublic: false });
+    const othersPublic = await insertNote(productId, { createdBy: members[1].userId, isPublic: true });
+    const othersPrivate = await insertNote(productId, { createdBy: members[1].userId, isPublic: false });
+
+    const forbidden = await req("POST", deleteUrl(productId), {
+      cookie: members[0].cookie,
+      body: { sections: [section.sectionId], notes: [own.noteId] },
+    });
+    expect(forbidden.status).toBe(403);
+    expect(await findSection(section.sectionId)).toMatchObject({ sectionId: section.sectionId });
+    expect(await findNote(own.noteId)).toMatchObject({ noteId: own.noteId });
+
+    const otherPublic = await req("POST", deleteUrl(productId), {
+      cookie: members[0].cookie,
+      body: { notes: [othersPublic.noteId] },
+    });
+    expect(otherPublic.status).toBe(403);
+    expect(await findNote(othersPublic.noteId)).toMatchObject({ noteId: othersPublic.noteId });
+
+    // 他の人の非公開メモは、見えないので 404(存在を漏らさない)
+    const otherPrivate = await req("POST", deleteUrl(productId), {
+      cookie: members[0].cookie,
+      body: { notes: [othersPrivate.noteId] },
+    });
+    expect(otherPrivate.status).toBe(404);
+    expect(await findNote(othersPrivate.noteId)).toMatchObject({ noteId: othersPrivate.noteId });
+
+    // リーダーでも、他の人のメモは削除できない(セクションは消せる)
+    const leaderOther = await req("POST", deleteUrl(productId), {
+      cookie: leader.cookie,
+      body: { notes: [othersPublic.noteId] },
+    });
+    expect(leaderOther.status).toBe(403);
+    expect(await findNote(othersPublic.noteId)).toMatchObject({ noteId: othersPublic.noteId });
+
+    const ok = await req("POST", deleteUrl(productId), {
+      cookie: members[0].cookie,
+      body: { notes: [own.noteId] },
+    });
+    expect(ok.status).toBe(204);
+    expect(await findNote(own.noteId)).toBeUndefined();
+  });
+
+  test("後ろの項目が権限エラーなら、前のセクションも消えない(1 つのトランザクション)", async () => {
+    const { productId, leader, members } = await setupProduct();
+    const section = await insertSection(productId);
+    const othersNote = await insertNote(productId, { createdBy: members[0].userId, isPublic: true });
+
+    const res = await req("POST", deleteUrl(productId), {
+      cookie: leader.cookie,
+      body: { sections: [section.sectionId], notes: [othersNote.noteId] },
+    });
+    expect(res.status).toBe(403);
+    expect(await findSection(section.sectionId)).toMatchObject({ sectionId: section.sectionId });
+    expect(await findNote(othersNote.noteId)).toMatchObject({ noteId: othersNote.noteId });
+  });
+
+  test("見つからない・別プロダクトのセクションやメモは 404 で、何も消えない", async () => {
+    const { productId, leader } = await setupProduct();
+    const other = await setupProduct();
+    const section = await insertSection(productId);
+    const note = await insertNote(productId, { createdBy: leader.userId });
+    const foreignSection = await insertSection(other.productId);
+    const foreignNote = await insertNote(other.productId, { createdBy: other.leader.userId, isPublic: true });
+
+    for (const body of [
+      { sections: [section.sectionId, crypto.randomUUID()] },
+      { sections: [section.sectionId, foreignSection.sectionId] },
+      { notes: [note.noteId, foreignNote.noteId] },
+    ]) {
+      expect((await req("POST", deleteUrl(productId), { cookie: leader.cookie, body })).status).toBe(404);
+    }
+    expect(await findSection(section.sectionId)).toMatchObject({ sectionId: section.sectionId });
+    expect(await findNote(note.noteId)).toMatchObject({ noteId: note.noteId });
+    expect(await findSection(foreignSection.sectionId)).toMatchObject({ sectionId: foreignSection.sectionId });
+    expect(await findNote(foreignNote.noteId)).toMatchObject({ noteId: foreignNote.noteId });
+  });
+
+  test("空の指定・重複した ID・uuid でない ID は 422。cookie なしは 401、所属していないユーザーは 404", async () => {
+    const { productId, leader } = await setupProduct();
+    const section = await insertSection(productId);
+    const note = await insertNote(productId, { createdBy: leader.userId });
+    const body = { sections: [section.sectionId], notes: [note.noteId] };
+
+    expect((await req("POST", deleteUrl(productId), { cookie: leader.cookie, body: {} })).status).toBe(422);
+    expect((await req("POST", deleteUrl(productId), { cookie: leader.cookie, body: { sections: [] } })).status).toBe(422);
+    expect(
+      (
+        await req("POST", deleteUrl(productId), {
+          cookie: leader.cookie,
+          body: { sections: [section.sectionId, section.sectionId] },
+        })
+      ).status,
+    ).toBe(422);
+    expect(
+      (
+        await req("POST", deleteUrl(productId), {
+          cookie: leader.cookie,
+          body: { notes: [note.noteId, note.noteId] },
+        })
+      ).status,
+    ).toBe(422);
+    expect(
+      (await req("POST", deleteUrl(productId), { cookie: leader.cookie, body: { notes: ["not-a-uuid"] } })).status,
+    ).toBe(422);
+    expect((await req("POST", deleteUrl(productId), { body })).status).toBe(401);
+    const outsider = await createOutsider();
+    expect((await req("POST", deleteUrl(productId), { cookie: outsider.cookie, body })).status).toBe(404);
+    // 何も消えていない
+    expect(await findSection(section.sectionId)).toMatchObject({ sectionId: section.sectionId });
+    expect(await findNote(note.noteId)).toMatchObject({ noteId: note.noteId });
   });
 });
 

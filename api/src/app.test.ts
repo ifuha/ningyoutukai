@@ -78,6 +78,7 @@ const EXPECTED_ROUTES = [
   "POST /api/me/ai-token",
   "POST /api/product/",
   "POST /api/product/:productId/comment",
+  "POST /api/product/:productId/delete-selection",
   "POST /api/product/:productId/directory",
   "POST /api/product/:productId/directory/:directoryId/document",
   "POST /api/product/:productId/document/:documentId/lock",
