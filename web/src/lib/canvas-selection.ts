@@ -82,6 +82,14 @@ export function itemsInRect(
     .map((item) => itemKey(item.kind, item.id))
 }
 
+/**
+ * 範囲選択に入れるメモ。**変更できないメモ(他の人のメモ)は、まとめて動かせないので、範囲選択では選ばない**
+ * (押したときは、これまでどおり選べる。動かせないだけ)
+ */
+export function notesForMarquee<N extends { canEdit: boolean }>(notes: readonly N[]): N[] {
+  return notes.filter((note) => note.canEdit)
+}
+
 /** Shift を押しながらの、1 つの選択の切り替え */
 export function toggleKey(selected: ReadonlySet<ItemKey>, key: ItemKey): Set<ItemKey> {
   const next = new Set(selected)

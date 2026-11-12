@@ -5,6 +5,7 @@ import {
   itemKey,
   itemsInRect,
   itemsToMove,
+  notesForMarquee,
   parseKey,
   pressItem,
   reconcileItemSelection,
@@ -97,6 +98,23 @@ describe('itemsInRect(範囲選択)', () => {
   test('既定は touch。幅・高さが 0 の範囲選択は、何も選ばない', () => {
     expect(itemsInRect(items, { x: 50, y: 50, width: 30, height: 30 })).toEqual(['card:a'])
     expect(itemsInRect(items, { x: 50, y: 50, width: 0, height: 0 })).toEqual([])
+  })
+})
+
+describe('notesForMarquee(範囲選択に入れるメモ)', () => {
+  test('変更できるメモだけを返す(他の人のメモは、範囲選択では選ばない)', () => {
+    const mine = { noteId: 'mine', canEdit: true }
+    const others = { noteId: 'others', canEdit: false }
+    expect(notesForMarquee([mine, others])).toEqual([mine])
+    expect(notesForMarquee([others])).toEqual([])
+  })
+  test('入力の配列は変えない', () => {
+    const notes = [
+      { noteId: 'mine', canEdit: true },
+      { noteId: 'others', canEdit: false },
+    ]
+    notesForMarquee(notes)
+    expect(notes.map((n) => n.noteId)).toEqual(['mine', 'others'])
   })
 })
 

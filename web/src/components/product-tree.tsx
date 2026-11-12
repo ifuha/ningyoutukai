@@ -26,6 +26,7 @@ import {
   itemsInRect,
   itemsToMove,
   NOTE_SIZE,
+  notesForMarquee,
   parseKey,
   pressItem,
 } from '#/lib/canvas-selection'
@@ -241,7 +242,8 @@ export function ProductTree({
   // Space + ドラッグのパン(Figma と同じ)。イベントの中から最新の値を読む
   const spaceHeld = useSpaceHeld()
   // いま選べるもの(カード・セクション・メモ)と、実際に動かせるもののキー。カードとセクションはリーダーだけ。
-  // メモは、変更できないもの(他の人のメモ)も選べる(動かせるのは、変更できるものだけ)
+  // メモは、変更できないもの(他の人のメモ)も押せば選べる(動かせるのは、変更できるものだけ)。
+  // 範囲選択では、変更できないメモは選ばない(`notesForMarquee`)
   const { selectable: selectableKeys, movable: movableKeys } = useMemo(() => {
     const selectable = new Set<ItemKey>()
     const movable = new Set<ItemKey>()
@@ -481,7 +483,8 @@ export function ProductTree({
         }
       }
     }
-    for (const n of notes) {
+    // 変更できないメモ(他の人のメモ)は、まとめて動かせないので、範囲選択では選ばない
+    for (const n of notesForMarquee(notes)) {
       items.push({
         kind: 'note',
         id: n.noteId,
