@@ -14,10 +14,13 @@ import type { TreeMember } from '#/lib/tree'
 export function DragSlot({
   handlers,
   dragging,
+  selected = false,
   children,
 }: {
   handlers?: CardDragHandlers
   dragging: boolean
+  /** 選択中(選択の輪郭を付ける)。複数選択のときも、それぞれに付く */
+  selected?: boolean
   children: ReactNode
 }) {
   if (!handlers) return <>{children}</>
@@ -25,7 +28,10 @@ export function DragSlot({
     <div
       {...handlers}
       data-drag-slot=""
-      className={`pointer-events-auto touch-none ${dragging ? 'opacity-40' : ''}`}
+      data-selected={selected || undefined}
+      className={`pointer-events-auto touch-none ${dragging ? 'opacity-40' : ''} ${
+        selected ? 'outline outline-2 outline-ink outline-offset-2' : ''
+      }`}
     >
       {children}
     </div>

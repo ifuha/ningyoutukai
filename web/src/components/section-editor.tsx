@@ -85,6 +85,8 @@ export type SectionEditorProps = {
   getConnectors?: () => ConnectorFollower | null
   /** 名前の入力欄を、最初から開いた状態で描く(ダブルクリックしたあとの見た目を、サーバー描画のテストで確かめるため)。省略は false(普通は閉じている) */
   startRenaming?: boolean
+  /** この押しで、ドラッグを始めてよいか。Space を押している間は false にして、パンに譲る。省略は、いつでも始める */
+  canStartDrag?: () => boolean
 }
 
 type Latest = {
@@ -98,6 +100,7 @@ type Latest = {
   onChange: (rect: Rect) => void
   onPreview?: (rect: Rect | null) => void
   onDelete: () => void
+  canStartDrag?: () => boolean
 }
 
 // セクションの枠の太さ(section-box.tsx の border-2。キャンバスの単位)
@@ -120,6 +123,7 @@ export function SectionEditor({
   followMemberIds,
   getConnectors,
   startRenaming = false,
+  canStartDrag,
 }: SectionEditorProps) {
   const base: Rect = { x: section.x, y: section.y, width: section.width, height: section.height }
 
@@ -135,6 +139,7 @@ export function SectionEditor({
     onChange,
     onPreview,
     onDelete,
+    canStartDrag,
   })
   latest.current = {
     base,
@@ -147,6 +152,7 @@ export function SectionEditor({
     onChange,
     onPreview,
     onDelete,
+    canStartDrag,
   }
 
   // 大きさの変更の、見た目の四角(1 フレームに 1 回だけ更新される。移動は、transform で動かすので、ここには入らない)
@@ -297,6 +303,8 @@ export function SectionEditor({
   const grab = (kind: DragKind) => ({
     onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
       if (e.button !== 0 || !e.isPrimary) return
+      // Space を押している間は、動かさない(パンに譲る。押下を止めない)
+      if (latest.current.canStartDrag && !latest.current.canStartDrag()) return
       downPoint.current = { x: e.clientX, y: e.clientY }
       e.stopPropagation()
       e.preventDefault()

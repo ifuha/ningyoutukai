@@ -36,6 +36,10 @@ type Gesture =
 export function usePanZoom(
   containerRef: RefObject<HTMLElement | null>,
   size: Size | null,
+  options: {
+    /** この押しで、画面を動かしてよいか(背景・Space・中ボタン)。false なら、範囲選択や、ものの移動に譲る */
+    canPanDrag?: (event: PointerEvent<HTMLElement>) => boolean
+  } = {},
 ) {
   const [user, setUser] = useState<View | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -45,6 +49,8 @@ export function usePanZoom(
   // イベントの処理は、最新の値を ref から読む(同じフレームで複数のイベントが来ても、取りこぼさない)
   const viewRef = useRef(view)
   viewRef.current = view
+  const canPanDragRef = useRef(options.canPanDrag)
+  canPanDragRef.current = options.canPanDrag
   const userRef = useRef(user)
   userRef.current = user
   const sizeRef = useRef(size)
@@ -176,8 +182,21 @@ export function usePanZoom(
 
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {
     const v = viewRef.current
-    if (!v || (e.pointerType === 'mouse' && e.button !== 0)) return
+    if (!v) return
+    // 左(トラックパッドの 1 本指)と中ボタンだけ。右ボタンなどは、コンテキストメニューに任せる
+    if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 1) return
+    // 背景・Space + ドラッグ・中ボタンだけが、画面を動かす。ものの上(動かす・選択する)は、そちらに譲る。
+    // ただし、2 本目以降の指は、ピンチを始めるために受ける(1 本目が画面の移動なら、指がものの上でもピンチにする)
+    if (
+      canPanDragRef.current &&
+      !canPanDragRef.current(e) &&
+      pointers.current.size === 0
+    ) {
+      return
+    }
     if (pointers.current.size >= 2) return
+    // 中ボタンは、ブラウザの自動スクロールを始めない
+    if (e.button === 1) e.preventDefault()
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     if (pointers.current.size === 1) {
       gesture.current = {
@@ -282,6 +301,11 @@ export function usePanZoom(
     e.currentTarget.scrollLeft = 0
     e.currentTarget.scrollTop = 0
   }
+  // 中ボタンの押しで、ブラウザの自動スクロール(マウスのアイコンが出る)を始めない。
+  // pointerdown の preventDefault だけでは、mousedown の既定の動作が残ることがある
+  const onMouseDown = (e: MouseEvent<HTMLElement>) => {
+    if (e.button === 1) e.preventDefault()
+  }
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return
     const v = viewRef.current
@@ -329,6 +353,7 @@ export function usePanZoom(
     freeze,
     shiftOrigin,
     handlers: {
+      onMouseDown,
       onPointerDown,
       onPointerMove,
       onPointerUp: end,

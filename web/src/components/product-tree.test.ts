@@ -332,10 +332,12 @@ describe('SectionNotice', () => {
 describe('SectionBox(選択・ドロップ先の見た目)', () => {
   const box = (props: Record<string, unknown>) =>
     renderToStaticMarkup(createElement(SectionBox, { section: section() as never, ...props } as never))
-  test('選択中は、data-selected が付く(外側の輪郭は付けない。選択中の枠は SectionEditor が重ねる)', () => {
+  test('選択中は、data-selected と選択の輪(ring)が付く(外側の outline は付けない。選択中の枠は SectionEditor が重ねる)', () => {
     expect(box({ selected: true })).toContain('data-selected="true"')
+    expect(box({ selected: true })).toContain('ring-2')
     expect(box({ selected: true })).not.toContain('outline-ink')
     expect(box({})).not.toContain('data-selected')
+    expect(box({})).not.toContain('ring-2')
   })
   test('カードのドロップ先(highlighted)は、輪を足して塗りを濃くし、data-highlighted が付く', () => {
     expect(box({ highlighted: true })).toContain('data-highlighted="true"')

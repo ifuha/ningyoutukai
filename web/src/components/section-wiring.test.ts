@@ -155,6 +155,14 @@ describe('DragSlot(カードを包む要素)', () => {
     expect(slot({ handlers, dragging: true })).toContain('opacity-40')
     expect(slot({ handlers, dragging: false })).not.toContain('opacity-40')
   })
+  test('選択中は、data-selected と選択の輪郭を付ける', () => {
+    const html = slot({ handlers, selected: true })
+    expect(html).toContain('data-selected')
+    expect(html).toContain('outline-ink')
+  })
+  test('選択していなければ、data-selected は付かない', () => {
+    expect(slot({ handlers, selected: false })).not.toContain('data-selected')
+  })
   test('ハンドラがなければ、何も包まない(子だけが出る)', () => {
     expect(slot({ handlers: undefined })).toBe('<p>カード</p>')
   })
@@ -217,6 +225,10 @@ describe('SectionLayer(選択とドロップ先の見た目)', () => {
     const html = layer({ selectedSectionId: 's1' })
     expect(html.match(/data-selected/g)?.length).toBe(1)
     expect(html.indexOf('data-selected')).toBeLessThan(html.indexOf('data-section-id="s2"'))
+  })
+  test('複数選択(selectedSectionIds)は、複数のセクションに選択の見た目を付ける', () => {
+    const html = layer({ selectedSectionIds: new Set(['s1', 's2']) })
+    expect(html.match(/data-selected/g)?.length).toBe(2)
   })
   test('どちらも無ければ、強調も選択もない', () => {
     const html = layer({})
