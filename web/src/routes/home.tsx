@@ -1,48 +1,15 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { CalendarPlus, LogOut } from 'lucide-react'
-import { IconButton } from '#/components/icon-button'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { DotField } from '#/components/dot-field'
 import { Loading } from '#/components/loading'
-import { eden, edenData } from '#/lib/eden'
-import { authClient } from '#/lib/auth-client'
 
 // ホーム(`/home`)。ログイン必須。未ログインなら、ログイン画面(`/`)へ戻す(`AppShell` が行う)。
-// 上にユーザー名・Google カレンダーの連携・ログアウトの細いバー、その下に番号つきのプロダクトの一覧。配色と枠は、アプリ全体のもの(ライト / ダークに追従、太い枠、角丸なし)
+// 上にユーザー名、その下に番号つきのプロダクトの一覧(カレンダーの連携とログアウトは、設定の「一般」)。配色と枠は、アプリ全体のもの(ライト / ダークに追従、太い枠、角丸なし)
 export const Route = createFileRoute('/home')({ component: Home })
 
 const roleLabel = { leader: 'リーダー', member: 'メンバー' } as const
 
 function Home() {
-  const navigate = useNavigate()
-  const { data: session } = authClient.useSession()
-  const [calendarLinkError, setCalendarLinkError] = useState(false)
-  const calendar = useQuery({
-    queryKey: ['google-calendar-status'],
-    queryFn: () => edenData(eden().api.calendar.status.get()),
-    enabled: Boolean(session?.user),
-    retry: false,
-  })
-
-  async function signOut() {
-    await authClient.signOut()
-    void navigate({ to: '/', replace: true })
-  }
-
-  async function connectGoogleCalendar() {
-    setCalendarLinkError(false)
-    const { error } = await authClient.linkSocial({
-      provider: 'google',
-      scopes: ['https://www.googleapis.com/auth/calendar.events'],
-      callbackURL: `${window.location.origin}/home`,
-      errorCallbackURL: `${window.location.origin}/home`,
-      additionalParams: { access_type: 'offline', prompt: 'consent' },
-    })
-    if (error) setCalendarLinkError(true)
-  }
-
   return (
     <AppShell align="top">
       {({ user, products }) => {
@@ -52,38 +19,7 @@ function Home() {
           <section aria-label="プロダクト" className="relative z-10 w-full max-w-2xl">
             {/* 背景。サイドバーの右側いっぱいに敷く(アプリ共通のドットの上に重ねる) */}
             <DotField shape="char" className="pointer-events-none fixed inset-y-0 right-0 left-0 -z-10 h-full w-full md:left-(--sidebar-w) md:w-[calc(100%-var(--sidebar-w))]" />
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 font-mono text-s">
-              <span className="min-w-0 truncate opacity-70">&gt; {user.name}</span>
-              <span className="flex items-center gap-6">
-                {calendar.isPending ? (
-                  <span className="opacity-60">カレンダー確認中…</span>
-                ) : calendar.data?.connected ? (
-                  <span className="opacity-70">Googleカレンダー: 連携済み</span>
-                ) : (
-                  <IconButton
-                    icon={CalendarPlus}
-                    label="Googleカレンダーを連携"
-                    showLabel
-                    size="sm"
-                    side="bottom"
-                    onClick={() => void connectGoogleCalendar()}
-                  />
-                )}
-                <IconButton
-                  icon={LogOut}
-                  label="ログアウト"
-                  variant="outline"
-                  size="sm"
-                  side="bottom"
-                  onClick={() => void signOut()}
-                />
-              </span>
-            </div>
-            {calendarLinkError && (
-              <p role="alert" className="-mt-6 mb-8 border-l border-line pl-3 text-m">
-                Googleカレンダーを連携できませんでした。もう一度お試しください。
-              </p>
-            )}
+            <p className="mb-6 truncate font-mono text-s opacity-70">&gt; {user.name}</p>
             <h1 className="font-mono text-s opacity-70">01 / プロダクト</h1>
             {products.isPending ? (
               <Loading className="mt-4" />

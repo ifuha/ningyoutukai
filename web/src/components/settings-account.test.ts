@@ -51,6 +51,30 @@ describe('AccountInfo', () => {
   })
 })
 
+describe('AccountInfo: カレンダーの連携とログアウト', () => {
+  const calendar = (state: 'checking' | 'connected' | 'disconnected', error = false) => ({ state, onConnect: () => {}, error })
+  test('渡さなければ、カレンダーの行もログアウトも出ない(表示だけの使い方)', () => {
+    const html = render()
+    expect(html).not.toContain('data-account-calendar')
+    expect(html).not.toContain('ログアウト')
+  })
+  test('カレンダー: 確認中は文字だけ、連携済みは「連携済み」、未連携は「連携する」ボタン', () => {
+    expect(render({ calendar: calendar('checking') })).toContain('確認中…')
+    const connected = render({ calendar: calendar('connected') })
+    expect(connected).toContain('連携済み')
+    expect(connected).not.toContain('aria-label="連携する"')
+    expect(render({ calendar: calendar('disconnected') })).toContain('aria-label="連携する"')
+  })
+  test('連携に失敗したときは、理由を出す。そうでなければ出さない', () => {
+    expect(render({ calendar: calendar('disconnected', true) })).toContain('連携できませんでした')
+    expect(render({ calendar: calendar('disconnected') })).not.toContain('連携できませんでした')
+  })
+  test('ログアウトのボタンは、項目の一覧の後ろに出る', () => {
+    const html = render({ onSignOut: () => {}, calendar: calendar('connected') })
+    expect(html.indexOf('</dl>')).toBeLessThan(html.indexOf('aria-label="ログアウト"'))
+  })
+})
+
 describe('providerLabel / formatJoined', () => {
   test('知っている連携は名前にし、知らないものは、そのまま出す', () => {
     expect(providerLabel('google')).toBe('Google')
