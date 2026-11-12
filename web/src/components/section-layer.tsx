@@ -10,6 +10,7 @@ import type { Section } from '#/lib/section'
 export function SectionLayer({
   sections,
   selectedSectionId,
+  selectedSectionIds,
   hoverSectionId,
   offsetX = 0,
   offsetY = 0,
@@ -17,6 +18,8 @@ export function SectionLayer({
 }: {
   sections: Section[]
   selectedSectionId: string | null
+  /** 複数選択のときの、選ばれているセクション。渡すと、`selectedSectionId` より優先する */
+  selectedSectionIds?: ReadonlySet<string>
   hoverSectionId: string | null
   offsetX?: number
   offsetY?: number
@@ -30,7 +33,11 @@ export function SectionLayer({
           section={s}
           offsetX={offsetX}
           offsetY={offsetY}
-          selected={s.sectionId === selectedSectionId}
+          selected={
+            selectedSectionIds
+              ? selectedSectionIds.has(s.sectionId)
+              : s.sectionId === selectedSectionId
+          }
           highlighted={s.sectionId === hoverSectionId}
           scale={scale}
         />

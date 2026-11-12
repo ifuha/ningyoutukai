@@ -17,6 +17,18 @@ describe('escapeOwner(1 回の Esc で、受けるのは 1 つだけ)', () => {
   test('セクションを選択中なら、選択の解除', () => {
     expect(escapeOwner({ ...idle, selectedSectionId: 's1' })).toBe('selection')
   })
+  test('カード・メモも、選択中なら、選択の解除(hasSelection)', () => {
+    expect(escapeOwner({ ...idle, hasSelection: true })).toBe('selection')
+    expect(escapeOwner({ ...idle, hasSelection: false })).toBe('none')
+  })
+  test('範囲選択の最中は、選択の取り消し。選択は外さない', () => {
+    expect(escapeOwner({ ...idle, marqueeDragging: true, hasSelection: true })).toBe('marquee')
+  })
+  test('範囲選択の最中は、編集枠のドラッグや入力より先(範囲選択を始めた時点で、ほかは動いていない)', () => {
+    expect(
+      escapeOwner({ ...idle, marqueeDragging: true, editorDragging: true, typing: true, menuOpen: true }),
+    ).toBe('marquee')
+  })
   test('道具が「セクション」(描いている)なら、描く層。選択があっても、選択は外さない', () => {
     expect(escapeOwner({ ...idle, tool: 'section', selectedSectionId: 's1' })).toBe('draw')
   })
@@ -32,16 +44,34 @@ describe('escapeOwner(1 回の Esc で、受けるのは 1 つだけ)', () => {
   test('メニューが開いているときは、メニューを閉じる(選択は外さない)', () => {
     expect(escapeOwner({ ...idle, menuOpen: true, selectedSectionId: 's1' })).toBe('menu')
   })
-  test('優先順位: 描く > カードのドラッグ > 編集枠のドラッグ > 名前の入力 > メニュー > 選択', () => {
-    const all = { ...idle, selectedSectionId: 's1', typing: true, cardDragging: true, editorDragging: true, menuOpen: true }
+  test('優先順位: 描く > カードのドラッグ > 範囲選択 > 編集枠のドラッグ > 名前の入力 > メニュー > 選択', () => {
+    const all = {
+      ...idle,
+      selectedSectionId: 's1',
+      typing: true,
+      cardDragging: true,
+      marqueeDragging: true,
+      editorDragging: true,
+      menuOpen: true,
+    }
     expect(escapeOwner({ ...all, tool: 'section' })).toBe('draw')
     expect(escapeOwner(all)).toBe('card-drag')
-    expect(escapeOwner({ ...all, cardDragging: false })).toBe('editor-drag')
-    expect(escapeOwner({ ...all, cardDragging: false, editorDragging: false })).toBe('typing')
-    expect(escapeOwner({ ...all, cardDragging: false, editorDragging: false, typing: false })).toBe('menu')
-    expect(escapeOwner({ ...all, cardDragging: false, editorDragging: false, typing: false, menuOpen: false })).toBe(
-      'selection',
-    )
+    expect(escapeOwner({ ...all, cardDragging: false })).toBe('marquee')
+    expect(escapeOwner({ ...all, cardDragging: false, marqueeDragging: false })).toBe('editor-drag')
+    expect(escapeOwner({ ...all, cardDragging: false, marqueeDragging: false, editorDragging: false })).toBe('typing')
+    expect(
+      escapeOwner({ ...all, cardDragging: false, marqueeDragging: false, editorDragging: false, typing: false }),
+    ).toBe('menu')
+    expect(
+      escapeOwner({
+        ...all,
+        cardDragging: false,
+        marqueeDragging: false,
+        editorDragging: false,
+        typing: false,
+        menuOpen: false,
+      }),
+    ).toBe('selection')
   })
 })
 
@@ -51,7 +81,7 @@ describe('isOwnedByFoundation(土台が自分で動くのは、描く・選択�
     expect(isOwnedByFoundation('selection')).toBe(true)
   })
   test('ドラッグ・入力・メニュー・何もなしは、土台は動かない(それぞれの部品が受ける)', () => {
-    for (const o of ['card-drag', 'editor-drag', 'typing', 'menu', 'none'] as const) {
+    for (const o of ['card-drag', 'marquee', 'editor-drag', 'typing', 'menu', 'none'] as const) {
       expect(isOwnedByFoundation(o)).toBe(false)
     }
   })

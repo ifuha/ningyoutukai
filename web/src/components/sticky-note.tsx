@@ -13,7 +13,7 @@ import { labelTextRect, labelTypography, titleFactor } from '#/lib/section-label
 const NOTE_WIDTH_PX = 224
 const NOTE_BORDER_PX = 1
 
-export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete, onEditingChange, autoEdit = false }: { note: ProductNote; offsetX?: number; offsetY?: number; onUpdate: (id: string, patch: ProductNotePatch) => void; onDelete: (id: string) => void; onEditingChange?: (editing: boolean) => void; autoEdit?: boolean }) {
+export function StickyNote({ note, offsetX = 0, offsetY = 0, selected = false, canStartDrag, onUpdate, onDelete, onEditingChange, autoEdit = false }: { note: ProductNote; offsetX?: number; offsetY?: number; /** 選択中(選択の輪を付ける) */ selected?: boolean; /** この押しで、動かしてよいか。Space を押している間は false にして、パンに譲る */ canStartDrag?: () => boolean; onUpdate: (id: string, patch: ProductNotePatch) => void; onDelete: (id: string) => void; onEditingChange?: (editing: boolean) => void; autoEdit?: boolean }) {
   const { scale } = useCanvasView()
   // 内容を編集中(文字入力欄にフォーカスがある間)を親に伝える。編集中は、セクションなど他の操作を止める。メモが消えるときも、編集中を終わらせる
   const editingRef = useRef(onEditingChange)
@@ -60,9 +60,13 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete,
       <article
         data-no-deselect
         data-sticky-note=""
+        data-note-id={note.noteId}
+        data-selected={selected || undefined}
         tabIndex={0}
         aria-label="メモ"
-        className={`absolute z-20 flex h-52 w-56 ${canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} touch-none select-none flex-col border border-white/25 bg-black p-2 text-white outline-none focus-visible:border-white/60 [-webkit-touch-callout:none]`}
+        className={`absolute z-20 flex h-52 w-56 ${canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'} touch-none select-none flex-col border border-white/25 bg-black p-2 text-white outline-none focus-visible:border-white/60 [-webkit-touch-callout:none] ${
+          selected ? 'ring-2 ring-ink' : ''
+        }`}
         style={{ left: position.x + offsetX, top: position.y + offsetY }}
         onContextMenu={(e) => {
           // ブラウザ標準のメニューは出さない
@@ -76,13 +80,16 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, onUpdate, onDelete,
           setMenu({ x: keyboard ? rect.left : e.clientX, y: keyboard ? rect.top : e.clientY })
         }}
         onPointerDown={(e) => {
-          e.stopPropagation()
-          // 変更できないメモ(他の人のメモ)は、動かさない・長押しのメニューも出さない
+          // 変更できないメモ(他の人のメモ)は、動かさない・長押しのメニューも出さない。
+          // 押下は止めない(範囲選択・パンに譲る)
           if (!canEdit) return
           // 右ボタンは、メニュー(contextmenu)のためで、動かさない
           if (e.button !== 0) return
           // 編集中の入力欄の中は、文字の選択のために、動かさない
           if (editing && e.target instanceof HTMLTextAreaElement) return
+          // Space を押している間は、動かさない(パンに譲る。押下を止めない)
+          if (canStartDrag && !canStartDrag()) return
+          e.stopPropagation()
           e.currentTarget.setPointerCapture(e.pointerId)
           drag.current = { x: position.x, y: position.y, startX: e.clientX, startY: e.clientY }
           // タッチは、長押しでメニューを開く(指が動いたら取り消す)

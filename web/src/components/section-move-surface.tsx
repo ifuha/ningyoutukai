@@ -25,7 +25,7 @@ import { createSectionDragController, type SectionDragController } from '#/lib/s
 
 export type SectionMoveSurfaceProps = Pick<
   SectionEditorProps,
-  'section' | 'canEdit' | 'scale' | 'onSelect' | 'onChange' | 'onPreview' | 'offsetX' | 'offsetY'
+  'section' | 'canEdit' | 'scale' | 'onSelect' | 'onChange' | 'onPreview' | 'offsetX' | 'offsetY' | 'canStartDrag'
 > & {
   /** 一緒に動かす、位置を持つ所属メンバー(api と同じ規則)。省略は、なし */
   followMemberIds?: readonly string[]
@@ -33,7 +33,10 @@ export type SectionMoveSurfaceProps = Pick<
   getConnectors?: () => ConnectorFollower | null
 }
 
-type Latest = Pick<SectionMoveSurfaceProps, 'scale' | 'onSelect' | 'onChange' | 'onPreview' | 'followMemberIds' | 'getConnectors' | 'section'> & {
+type Latest = Pick<
+  SectionMoveSurfaceProps,
+  'scale' | 'onSelect' | 'onChange' | 'onPreview' | 'followMemberIds' | 'getConnectors' | 'section' | 'canStartDrag'
+> & {
   base: Rect
 }
 
@@ -46,14 +49,35 @@ export function SectionMoveSurface({
   onPreview,
   followMemberIds,
   getConnectors,
+  canStartDrag,
   offsetX = 0,
   offsetY = 0,
 }: SectionMoveSurfaceProps) {
   const base: Rect = { x: section.x, y: section.y, width: section.width, height: section.height }
 
   // イベントの中(古い render の関数)から、最新の値を読むための入れ物
-  const latest = useRef<Latest>({ base, scale, onSelect, onChange, onPreview, followMemberIds, getConnectors, section })
-  latest.current = { base, scale, onSelect, onChange, onPreview, followMemberIds, getConnectors, section }
+  const latest = useRef<Latest>({
+    base,
+    scale,
+    onSelect,
+    onChange,
+    onPreview,
+    followMemberIds,
+    getConnectors,
+    section,
+    canStartDrag,
+  })
+  latest.current = {
+    base,
+    scale,
+    onSelect,
+    onChange,
+    onPreview,
+    followMemberIds,
+    getConnectors,
+    section,
+    canStartDrag,
+  }
 
   // カーソル(つかんでいる間は grabbing)のためだけの状態。動くたびには変わらない(確定と終わりのときだけ)
   const [dragging, setDragging] = useState(false)
@@ -111,6 +135,8 @@ export function SectionMoveSurface({
         }
         // 右クリック・中ボタン・主でないポインタは、受けない(親の処理に任せる)
         if (e.button !== 0 || !e.isPrimary) return
+        // Space を押している間は、動かさない(パンに譲る。押下を止めない)
+        if (latest.current.canStartDrag && !latest.current.canStartDrag()) return
         e.stopPropagation()
         e.preventDefault()
         latest.current.onSelect()

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { MemberCard } from '#/components/member-card'
 import { CardGhost, DragSlot } from '#/components/member-card-drag'
 import { SectionDrawLayer } from '#/components/section-draw-layer'
@@ -13,13 +13,26 @@ import type { TreeSearchResult } from '#/components/tree-search-panel'
 import { TreeToolbar } from '#/components/tree-toolbar'
 import { CommentDraft } from '#/components/comment-draft'
 import { CommentPin } from '#/components/comment-pin'
+import { MarqueeBox } from '#/components/marquee-box'
 import { StickyNote } from '#/components/sticky-note'
 import type { NewProductComment, ProductComment, ProductCommentPatch } from '#/lib/comment-api'
 import { commentPlaceOffset } from '#/lib/comment-scale'
 import type { ProductNote, ProductNotePatch } from '#/lib/memo-api'
 import { boxToCanvasRect, CanvasViewContext, clientToCanvas } from '#/lib/canvas-view'
-import type { CanvasView } from '#/lib/section-interaction-types'
+import {
+  applyMarquee,
+  itemKey,
+  itemsInRect,
+  NOTE_SIZE,
+  pressItem,
+} from '#/lib/canvas-selection'
+import type { ItemKey, ItemKind, Selectable } from '#/lib/canvas-selection'
+import { decideDragAction } from '#/lib/canvas-gesture'
+import type { DragTarget } from '#/lib/canvas-gesture'
+import type { CanvasTool, CanvasView } from '#/lib/section-interaction-types'
 import { cursorClass } from '#/lib/canvas-tool'
+import { useMarquee } from '#/lib/use-marquee'
+import { useSpaceHeld } from '#/lib/use-space-held'
 import { freezeBeforeCommit } from '#/lib/freeze-on-commit'
 import type { Section } from '#/lib/section'
 import { NO_SECTION_ACTIONS } from '#/lib/use-section-actions'
@@ -53,6 +66,40 @@ const NO_SECTIONS: Section[] = []
 // (拡大縮小は、ホイール・ピンチ・キー(+ -)、全体表示は、キー(0))
 const BOTTOM_INSET = 62
 const ABOVE_TOOLBAR = 'bottom-[66px]'
+
+// 押しても、選択・範囲選択の対象にしないもの(AI・コメント・編集のメニュー・ダイアログ)。
+// 中ボタン・Space のパンだけは、どこでも使える
+const IGNORED_TARGETS =
+  '[data-comment-place], [data-comment-draft], [data-comment-pin], [data-ai-slot], [data-ai-card], [data-section-menu], [role="dialog"]'
+
+function isIgnoredTarget(target: Element): boolean {
+  return target.closest(IGNORED_TARGETS) !== null
+}
+
+/** 押した要素が、選択できるもの(カード・メモ・セクション)の内側か。近いものを優先する */
+function itemAt(target: Element): { key: ItemKey; kind: ItemKind; id: string } | null {
+  const card = target.closest('[data-card-id]')
+  if (card) {
+    const id = card.getAttribute('data-card-id')
+    if (id) return { key: itemKey('card', id), kind: 'card', id }
+  }
+  const note = target.closest('[data-note-id]')
+  if (note) {
+    const id = note.getAttribute('data-note-id')
+    if (id) return { key: itemKey('note', id), kind: 'note', id }
+  }
+  const section = target.closest(
+    '[data-section-editor], [data-section-move-surface], [data-section-id]',
+  )
+  if (section) {
+    const id =
+      section.getAttribute('data-section-editor') ??
+      section.getAttribute('data-section-move-surface') ??
+      section.getAttribute('data-section-id')
+    if (id) return { key: itemKey('section', id), kind: 'section', id }
+  }
+  return null
+}
 
 /** 配置モードのカーソル: コメントのアイコン(lucide の message-square。枠は白、線は黒)。先端(ホットスポット)は、吹き出しの中心 */
 const COMMENT_CURSOR =
@@ -160,6 +207,55 @@ export function ProductTree({
   const searchOpenRef = useRef(false)
   searchOpenRef.current = searchOpen
   const toolRef = useRef<string>('select')
+  // Space + ドラッグのパン(Figma と同じ)。イベントの中から最新の値を読む
+  const spaceHeld = useSpaceHeld()
+  // いま選べるもの(カード・セクション・メモ)と、実際に動かせるもののキー。カードとセクションはリーダーだけ。
+  // メモは、変更できないもの(他の人のメモ)も選べる(動かせるのは、変更できるものだけ)
+  const { selectable: selectableKeys, movable: movableKeys } = useMemo(() => {
+    const selectable = new Set<ItemKey>()
+    const movable = new Set<ItemKey>()
+    if (memoEditing) return { selectable, movable }
+    if (canEditSections) {
+      for (const m of [leader, ...members]) {
+        selectable.add(itemKey('card', m.productMemberId))
+        movable.add(itemKey('card', m.productMemberId))
+      }
+      for (const s of sections) {
+        selectable.add(itemKey('section', s.sectionId))
+        movable.add(itemKey('section', s.sectionId))
+      }
+    }
+    for (const n of notes) {
+      const key = itemKey('note', n.noteId)
+      selectable.add(key)
+      if (n.canEdit) movable.add(key)
+    }
+    return { selectable, movable }
+  }, [leader, members, sections, notes, canEditSections, memoEditing])
+  // この押しで、画面を動かしてよいか。背景・Space + ドラッグ・中ボタンだけがパン。
+  // ものの上(動かす)・左ドラッグの範囲選択・「セクション」の道具は、そちらに譲る
+  const canPanDrag = useCallback(
+    (e: ReactPointerEvent<HTMLElement>) => {
+      // メモの編集中・コメントの配置モードでは、選択も範囲選択もしない。左ドラッグは、これまでどおりパン
+      if (memoEditingRef.current || commentMode) return true
+      const el = e.target instanceof Element ? e.target : null
+      if (el && isIgnoredTarget(el)) return e.button === 1 || spaceHeld.ref.current
+      const item = el ? itemAt(el) : null
+      const target: DragTarget = item ? 'item' : 'background'
+      return (
+        decideDragAction({
+          pointerType: e.pointerType,
+          button: e.button,
+          spaceHeld: spaceHeld.ref.current,
+          tool: toolRef.current as CanvasTool,
+          target,
+          movable: item ? selectableKeys.has(item.key) : false,
+          draggable: item ? movableKeys.has(item.key) : false,
+        }) === 'pan'
+      )
+    },
+    [selectableKeys, movableKeys, spaceHeld.ref, commentMode],
+  )
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const isFind = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f'
@@ -235,7 +331,9 @@ export function ProductTree({
     headerHeight,
     BOTTOM_INSET,
   )
-  const { view, freeze, shiftOrigin, panTo, handlers } = usePanZoom(containerRef, size)
+  const { view, freeze, shiftOrigin, panTo, handlers } = usePanZoom(containerRef, size, {
+    canPanDrag,
+  })
   // 中身のずらし量(負の座標を表示するための、中身の最小座標から決まる値)が変わったとき、どの要素も画面上の位置が変わらないよう、
   // パンを逆向きに補正する(セクションを左・上へ動かして範囲が変わっても、見ている画面が勝手に動かない)。
   // レイアウトの直後・描画の前に行うので、ちらつかない。楽観更新の取り消しで、ずらし量が元に戻るときも、同じ計算で元の見え方に戻る
@@ -313,7 +411,92 @@ export function ProductTree({
     scale,
     toCanvas,
     getCardRect,
+    selectableKeys,
   })
+  // いまの選択(イベントの中から、最新の値を読む)
+  const selectedRef = useRef(interaction.selected)
+  selectedRef.current = interaction.selected
+  // 範囲選択の対象(押した瞬間に測る)と、押す前の選択(取りやめたら戻す)
+  const marqueeItemsRef = useRef<Selectable[]>([])
+  const marqueeBaseRef = useRef<Set<ItemKey>>(new Set())
+  // 押しただけで離したときに、選択を 1 つにまとめるための、押した位置
+  const pendingCollapseRef = useRef<{ key: ItemKey; x: number; y: number } | null>(null)
+
+  // 範囲選択の対象を、いまの DOM とデータから測る(押した瞬間に 1 回だけ)
+  const getSelectableItems = useCallback((): Selectable[] => {
+    const items: Selectable[] = []
+    if (memoEditing) return items
+    if (canEditSections) {
+      for (const s of sections) {
+        items.push({
+          kind: 'section',
+          id: s.sectionId,
+          rect: { x: s.x, y: s.y, width: s.width, height: s.height },
+        })
+      }
+      const content = contentRef.current
+      if (content) {
+        for (const el of content.querySelectorAll<HTMLElement>('[data-card-id]')) {
+          const id = el.dataset.cardId
+          if (!id) continue
+          items.push({
+            kind: 'card',
+            id,
+            rect: boxToCanvasRect(boxWithin(content, el), {
+              x: bounds.offsetX,
+              y: bounds.offsetY,
+            }),
+          })
+        }
+      }
+    }
+    for (const n of notes) {
+      items.push({
+        kind: 'note',
+        id: n.noteId,
+        rect: { x: n.x, y: n.y, width: NOTE_SIZE.width, height: NOTE_SIZE.height },
+      })
+    }
+    return items
+  }, [memoEditing, canEditSections, sections, notes, contentRef, bounds.offsetX, bounds.offsetY])
+
+  const marquee = useMarquee({
+    toCanvas,
+    onLive: (rect, additive) => {
+      interaction.setSelection(
+        applyMarquee(
+          marqueeBaseRef.current,
+          itemsInRect(marqueeItemsRef.current, rect, 'touch'),
+          additive,
+        ),
+      )
+    },
+    onCommit: (rect, additive) => {
+      interaction.setSelection(
+        applyMarquee(
+          marqueeBaseRef.current,
+          itemsInRect(marqueeItemsRef.current, rect, 'touch'),
+          additive,
+        ),
+      )
+    },
+    onCancel: () => interaction.setSelection(new Set(marqueeBaseRef.current)),
+  })
+  const { setMarqueeDragging } = interaction
+  useEffect(() => {
+    setMarqueeDragging(marquee.active)
+  }, [marquee.active, setMarqueeDragging])
+
+  const startMarquee = (e: ReactPointerEvent<HTMLElement>) => {
+    marqueeBaseRef.current = new Set(selectedRef.current)
+    marqueeItemsRef.current = getSelectableItems()
+    marquee.start({
+      pointerId: e.pointerId,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      additive: e.shiftKey,
+    })
+  }
   // C: カードのドラッグ(リーダーだけ。「セクション」の道具で描いている間は動かさない)
   // ドラッグ中に、親子の線(SVG)を、動くカードに追従させる。線の元の端点は、描画のたびに ref に入れる(下の `boxes` から)
   const connectorSourceRef = useRef<{
@@ -341,8 +524,17 @@ export function ProductTree({
     ...interaction.cardDragOptions,
     getConnectors: (memberId) => makeConnectors([memberId]),
   })
-  const dragHandlersFor = (memberId: string) =>
-    interaction.cardDragOptions.enabled ? cardDrag.getDragHandlers(memberId) : undefined
+  const dragHandlersFor = (memberId: string) => {
+    if (!interaction.cardDragOptions.enabled) return undefined
+    const handlers = cardDrag.getDragHandlers(memberId)
+    return {
+      onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
+        // 中ボタン・Space のときは、動かさずパンに譲る(押下は止めない)
+        if (e.button !== 0 || spaceHeld.ref.current) return
+        handlers.onPointerDown(e)
+      },
+    }
+  }
   // ドラッグの最中かを、Esc の優先順位(土台)に知らせる(ドラッグ中の Esc は、選択を外さず、ドラッグの取り消しだけ)
   const { setCardDragging } = interaction
   useEffect(() => {
@@ -355,6 +547,8 @@ export function ProductTree({
       : undefined
   const mode = interaction.tool
   toolRef.current = mode
+  // カード・セクション・メモの単体ドラッグを始めてよいか。Space を押している間は、パンに譲る
+  const canStartDragItem = useCallback(() => !spaceHeld.ref.current, [spaceHeld.ref])
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase()
   const searchResults: TreeSearchResult[] = []
   if (normalizedQuery) {
@@ -457,8 +651,48 @@ export function ProductTree({
         aria-label="ツリー(ドラッグか矢印キーで移動、+ と - で拡大縮小、0 で全体表示)"
         tabIndex={0}
         {...containerHandlers}
-        onPointerDownCapture={() => {
+        onPointerDownCapture={(e) => {
           swallowClickRef.current = memoEditingRef.current
+          // メモの編集中・コメントの配置モードでは、選択も範囲選択もしない
+          if (memoEditingRef.current || commentMode) return
+          // 左(トラックパッドの 1 本指)と中ボタンだけ。右ボタンなどは、コンテキストメニューに任せる
+          if (e.button !== 0 && e.button !== 1) return
+          const el = e.target instanceof Element ? e.target : null
+          if (!el || isIgnoredTarget(el)) return
+          const item = itemAt(el)
+          const action = decideDragAction({
+            pointerType: e.pointerType,
+            button: e.button,
+            spaceHeld: spaceHeld.ref.current,
+            tool: mode,
+            target: item ? 'item' : 'background',
+            movable: item ? selectableKeys.has(item.key) : false,
+            draggable: item ? movableKeys.has(item.key) : false,
+          })
+          // 動かすもの(選択できるもの)の上: 押した時点で選択を決める。動かすのは、これまでどおり各カード・セクション
+          if (action === 'move' && item) {
+            const pressed = pressItem(selectedRef.current, item.key, e.shiftKey)
+            interaction.setSelection(pressed.selected)
+            pendingCollapseRef.current = pressed.collapseOnRelease
+              ? { key: item.key, x: e.clientX, y: e.clientY }
+              : null
+            return
+          }
+          pendingCollapseRef.current = null
+          // 背景(と、動かせないものの上)のドラッグ: 範囲選択
+          if (action === 'marquee') startMarquee(e)
+        }}
+        onPointerUpCapture={(e) => {
+          const pending = pendingCollapseRef.current
+          pendingCollapseRef.current = null
+          if (!pending) return
+          // 動かさずに離した(クリック)ときだけ、選択を 1 つにまとめる
+          if (Math.hypot(e.clientX - pending.x, e.clientY - pending.y) < 4) {
+            interaction.setSelection(new Set([pending.key]))
+          }
+        }}
+        onPointerCancelCapture={() => {
+          pendingCollapseRef.current = null
         }}
         onClick={(e) => {
           if (swallowClickRef.current) {
@@ -469,6 +703,7 @@ export function ProductTree({
           interaction.handleCanvasClick(
             e.target instanceof Element ? e.target : null,
             toCanvas({ x: e.clientX, y: e.clientY }),
+            e.shiftKey,
           )
         }}
         className={`absolute inset-0 touch-none select-none overflow-clip overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink ${cursorClass(mode)}`}
@@ -491,12 +726,32 @@ export function ProductTree({
           <SectionLayer
             sections={sections}
             selectedSectionId={interaction.selectedSectionId}
+            selectedSectionIds={
+              new Set(
+                sections
+                  .filter((s) => interaction.selected.has(itemKey('section', s.sectionId)))
+                  .map((s) => s.sectionId),
+              )
+            }
             hoverSectionId={cardDrag.hoverSectionId}
             offsetX={bounds.offsetX}
             offsetY={bounds.offsetY}
             scale={scale}
           />
-          {notes.map((note) => <StickyNote key={note.noteId} note={note} autoEdit={note.noteId === autoEditNoteId} onEditingChange={setMemoEditing} offsetX={bounds.offsetX} offsetY={bounds.offsetY} onUpdate={(id, patch) => { void Promise.resolve(onUpdateMemo?.(id, patch)).catch(showMemoError) }} onDelete={(id) => { void Promise.resolve(onDeleteMemo?.(id)).catch(showMemoError) }} />)}
+          {notes.map((note) => (
+            <StickyNote
+              key={note.noteId}
+              note={note}
+              autoEdit={note.noteId === autoEditNoteId}
+              selected={interaction.selected.has(itemKey('note', note.noteId))}
+              canStartDrag={canStartDragItem}
+              onEditingChange={setMemoEditing}
+              offsetX={bounds.offsetX}
+              offsetY={bounds.offsetY}
+              onUpdate={(id, patch) => { void Promise.resolve(onUpdateMemo?.(id, patch)).catch(showMemoError) }}
+              onDelete={(id) => { void Promise.resolve(onDeleteMemo?.(id)).catch(showMemoError) }}
+            />
+          ))}
           {comments.map((comment) => <CommentPin key={comment.commentId} comment={comment} offsetX={bounds.offsetX} offsetY={bounds.offsetY} onEditingChange={setMemoEditing} onUpdate={(id, patch) => { void Promise.resolve(onUpdateComment?.(id, patch)).catch(showCommentError) }} onDelete={(id) => { void Promise.resolve(onDeleteComment?.(id)).catch(showCommentError) }} />)}
           {commentDraft && (
             <CommentDraft
@@ -526,6 +781,7 @@ export function ProductTree({
                   onSelect={e.onSelect}
                   onChange={e.onChange}
                   onPreview={e.onPreview}
+                  canStartDrag={canStartDragItem}
                   followMemberIds={followIdsFor(s.sectionId)}
                   getConnectors={() => makeConnectors(followIdsFor(s.sectionId))}
                   offsetX={bounds.offsetX}
@@ -555,6 +811,7 @@ export function ProductTree({
               <DragSlot
                 handlers={dragHandlersFor(leader.productMemberId)}
                 dragging={cardDrag.draggingId === leader.productMemberId}
+                selected={interaction.selected.has(itemKey('card', leader.productMemberId))}
               >
                 <MemberCard
                   member={leader}
@@ -611,6 +868,7 @@ export function ProductTree({
                         <DragSlot
                           handlers={dragHandlersFor(m.productMemberId)}
                           dragging={cardDrag.draggingId === m.productMemberId}
+                          selected={interaction.selected.has(itemKey('card', m.productMemberId))}
                         >
                           <MemberCard
                             member={m}
@@ -641,6 +899,7 @@ export function ProductTree({
               <DragSlot
                 handlers={dragHandlersFor(member.productMemberId)}
                 dragging={cardDrag.draggingId === member.productMemberId}
+                selected={interaction.selected.has(itemKey('card', member.productMemberId))}
               >
                 <MemberCard
                   member={member}
@@ -679,6 +938,7 @@ export function ProductTree({
                 <SectionEditor
                   key={s.sectionId}
                   {...interaction.editorPropsFor(s)}
+                  canStartDrag={canStartDragItem}
                   followMemberIds={followIdsFor(s.sectionId)}
                   getConnectors={() => makeConnectors(followIdsFor(s.sectionId))}
                   offsetX={bounds.offsetX}
@@ -694,6 +954,15 @@ export function ProductTree({
             offsetX={bounds.offsetX}
             offsetY={bounds.offsetY}
           />
+          {/* 範囲選択の四角。いちばん手前(編集枠・描く層より上)。ポインタは通す */}
+          {marquee.live && (
+            <MarqueeBox
+              rect={marquee.live}
+              scale={scale}
+              offsetX={bounds.offsetX}
+              offsetY={bounds.offsetY}
+            />
+          )}
           </CanvasViewContext.Provider>
         </div>
         {/* コメントの配置モード: カーソルをコメントのアイコンにして、クリックした位置に置く。この層が押しを受けるので、下のカード・セクション・メモは、置く間は反応しない。
