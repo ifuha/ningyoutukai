@@ -101,7 +101,8 @@ describe("応答スキーマを付けても、応答の形が変わらない", (
     expect(Object.keys(await one.json()).sort()).toEqual(PRODUCT_KEYS);
 
     const list = await request("GET", "/api/product", { cookie: p.leader.cookie });
-    for (const row of await list.json()) expect(Object.keys(row).sort()).toEqual(PRODUCT_KEYS);
+    // 一覧だけ、確認待ちの数(pendingReviewCount)が加わる
+    for (const row of await list.json()) expect(Object.keys(row).sort()).toEqual([...PRODUCT_KEYS, "pendingReviewCount"].sort());
 
     // 作ったプロダクトは消しておく
     await request("DELETE", `/api/product/${createdBody.productId}`, { cookie: p.leader.cookie });
