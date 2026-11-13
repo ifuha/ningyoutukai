@@ -52,6 +52,8 @@ export function useProductRevision(productId: string, enabled = true) {
       }
       if (action === 'refresh') {
         void queryClient.invalidateQueries({ queryKey: ['products', productId] })
+        // サイドバーの、確認待ちの赤い点(プロダクト一覧)も、取り直す
+        void queryClient.invalidateQueries({ queryKey: ['products'], exact: true })
       }
       if (action === 'defer') timer = setTimeout(decide, DEFER_MS)
     }

@@ -9,7 +9,8 @@ import { SidebarInvitation } from '#/components/sidebar-invitation'
 import type { Invitation } from '#/lib/invitation'
 
 // `avatarUrl`: アイコンの画像の URL(なければ代わりの表示)。`isLeader` の行だけ、右クリック(スマホは長押し)でメニューを出す(プロダクト設定)
-export type SidebarProduct = { id: string; name: string; avatarUrl?: string | null; isLeader?: boolean }
+// `pendingReviewCount`: 確認待ちの数(リーダーのプロダクトだけ。1 以上なら、行とアイコンに赤い点を出す)
+export type SidebarProduct = { id: string; name: string; avatarUrl?: string | null; isLeader?: boolean; pendingReviewCount?: number | null }
 
 // サイドバー(Figma `side-light` / `side-dark`、幅 240px)。角丸は使わない(ユーザーの指定。Figma は 10px)。
 // データは、呼び出し側から渡す(api は、ここでは呼ばない)。
@@ -85,6 +86,7 @@ export function Sidebar({
                 name={p.name}
                 avatarUrl={p.avatarUrl}
                 isLeader={p.isLeader}
+                pendingReviewCount={p.pendingReviewCount}
                 active={p.id === activeProductId}
                 onSelect={onSelectProduct}
                 onOpenSettings={onOpenProductSettings}

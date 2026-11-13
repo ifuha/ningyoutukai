@@ -1,5 +1,6 @@
 import { PanelLeftOpen } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
+import { hasPendingReview, ReviewDot, withReviewLabel } from '#/components/review-dot'
 import type { SidebarProduct } from '#/components/sidebar'
 
 // サイドバーをたたんだときの、幅の狭い帯。一番上に「サイドバーを開く」、その下にプロダクトのアイコンを縦に並べる。
@@ -9,9 +10,9 @@ import type { SidebarProduct } from '#/components/sidebar'
 // - たたんでいない間は、帯は見えない(`collapsed` が false)ので、キーボードの移動からも外す(tabIndex -1)
 // - プロダクトが多いときは、アイコンの並びだけがスクロールする(「開く」は上に固定)
 
-/** 頭文字(名前が空なら ?) */
+/** 頭文字: 名前の最初の、文字か数字(「【デモ】…」の括弧のような記号は飛ばす)。なければ ? */
 export function productInitial(name: string): string {
-  return [...name.trim()][0] ?? '?'
+  return /[\p{L}\p{N}]/u.exec(name)?.[0] ?? '?'
 }
 
 function RailProduct({ product, active, collapsed, onSelect }: { product: SidebarProduct; active: boolean; collapsed: boolean; onSelect?: (productId: string) => void }) {
@@ -19,12 +20,12 @@ function RailProduct({ product, active, collapsed, onSelect }: { product: Sideba
     <li>
       <button
         type="button"
-        aria-label={product.name}
-        title={product.name}
+        aria-label={withReviewLabel(product.name, product.pendingReviewCount)}
+        title={withReviewLabel(product.name, product.pendingReviewCount)}
         aria-current={active ? 'page' : undefined}
         tabIndex={collapsed ? 0 : -1}
         onClick={() => onSelect?.(product.id)}
-        className="flex size-10 cursor-pointer items-center justify-center border-b-2 border-transparent transition-[border-color,background-color] duration-200 ease-out hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none aria-[current=page]:border-ink aria-[current=page]:bg-surface"
+        className="relative flex size-10 cursor-pointer items-center justify-center border-b-2 border-transparent transition-[border-color,background-color] duration-200 ease-out hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none aria-[current=page]:border-ink aria-[current=page]:bg-surface"
       >
         {product.avatarUrl ? (
           <img src={product.avatarUrl} alt="" draggable={false} className="size-7 shrink-0 rounded-full object-cover" />
@@ -33,6 +34,7 @@ function RailProduct({ product, active, collapsed, onSelect }: { product: Sideba
             {productInitial(product.name)}
           </span>
         )}
+        {hasPendingReview(product.pendingReviewCount) && <ReviewDot className="absolute top-2 right-2" />}
       </button>
     </li>
   )
