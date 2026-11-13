@@ -259,6 +259,23 @@ body {
   animation: comment-card-in 0.16s ease-out;
 }
 
+/* 確認待ちの赤い点の、広がる輪。標準の ping(2 倍)より大きく、3 倍まで広がって消える */
+@keyframes review-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  80%,
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+.review-ping {
+  animation: review-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
 /* 404 ページの文字の縁取り。左右の幕の記号に重なっても読めるよう、周りを、紙の色でにじませて消す(窓を使わない代わり) */
 .not-found-halo {
   text-shadow:
@@ -271,6 +288,7 @@ body {
   .code-char,
   .details-in,
   .comment-card-in,
+  .review-ping,
   .stage-in {
     animation: none;
   }
