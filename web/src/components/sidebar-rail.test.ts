@@ -14,10 +14,13 @@ const render = (props: Partial<Parameters<typeof SidebarRail>[0]> = {}) =>
   renderToStaticMarkup(createElement(SidebarRail, { products, collapsed: true, onExpand: () => {}, ...props }))
 
 describe('productInitial', () => {
-  test('名前の最初の 1 文字。前の空白は除く。空なら ?', () => {
+  test('名前の最初の文字か数字(前の空白・記号は飛ばす)。なければ ?', () => {
     expect(productInitial('Alpha')).toBe('A')
     expect(productInitial(' 人形劇')).toBe('人')
-    expect(productInitial('😀x')).toBe('😀')
+    // 記号は飛ばして、最初の文字・数字(同じ「【デモ】」で始まるプロダクトを、区別できるように)
+    expect(productInitial('【デモ】招待')).toBe('デ')
+    expect(productInitial('(1) テスト')).toBe('1')
+    expect(productInitial('---')).toBe('?')
     expect(productInitial('   ')).toBe('?')
   })
 })

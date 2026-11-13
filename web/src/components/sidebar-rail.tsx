@@ -11,7 +11,7 @@ import type { SidebarProduct } from '#/components/sidebar'
 
 /** 頭文字(名前が空なら ?) */
 export function productInitial(name: string): string {
-  return [...name.trim()][0] ?? '?'
+  return /[\p{L}\p{N}]/u.exec(name)?.[0] ?? '?'
 }
 
 function RailProduct({ product, active, collapsed, onSelect }: { product: SidebarProduct; active: boolean; collapsed: boolean; onSelect?: (productId: string) => void }) {
