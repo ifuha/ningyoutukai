@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
-import { productMembers, products } from "../db/schema";
+import { productMembers, products, tasks } from "../db/schema";
 import { authGuard } from "../lib/auth-guard";
 import { withAvatarUrl } from "../lib/avatar";
 import { MessageSchema, ProductSchema } from "../lib/response-schema";
@@ -48,7 +48,9 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
       detail: { summary: "プロダクト作成" },
     }
   )
-  // プロダクト一覧: ログイン中のユーザーが所属するもの
+  // プロダクト一覧: ログイン中のユーザーが所属するもの。
+  // `pendingReviewCount` = 確認待ち(完了報告済みで、まだ完了になっていないタスク)の数。**リーダーのプロダクトだけ**(確認するのはリーダー)。メンバーのプロダクトは null。
+  // サイドバーが、確認が要るプロダクトに赤い点を出すために使う
   .get(
     "/",
     async ({ user }) => {
@@ -57,11 +59,26 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
         .from(productMembers)
         .innerJoin(products, eq(productMembers.productId, products.productId))
         .where(eq(productMembers.userId, user.userId));
-      return rows.map(withAvatarUrl);
+
+      const leaderProductIds = rows.filter((r) => r.role === "leader").map((r) => r.productId);
+      const counts = new Map<string, number>();
+      if (leaderProductIds.length > 0) {
+        const pending = await db
+          .select({ productId: productMembers.productId, n: count() })
+          .from(tasks)
+          .innerJoin(productMembers, eq(tasks.productMemberId, productMembers.productMemberId))
+          .where(and(inArray(productMembers.productId, leaderProductIds), isNotNull(tasks.reportedAt), isNull(tasks.completedAt)))
+          .groupBy(productMembers.productId);
+        for (const row of pending) counts.set(row.productId, row.n);
+      }
+      return rows.map((r) => ({
+        ...withAvatarUrl(r),
+        pendingReviewCount: r.role === "leader" ? (counts.get(r.productId) ?? 0) : null,
+      }));
     },
     {
       requireUser: true,
-      response: { 200: t.Array(ProductSchema) },
+      response: { 200: t.Array(t.Composite([ProductSchema, t.Object({ pendingReviewCount: t.Nullable(t.Number()) })])) },
       detail: { summary: "プロダクト一覧取得" },
     }
   )

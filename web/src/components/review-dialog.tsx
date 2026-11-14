@@ -56,10 +56,13 @@ function ReviewRow({
           .api.product({ productId })
           .task({ taskId: task.taskId }).complete.patch(),
       ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
+    onSuccess: () => {
+      // 確認したら、サイドバーの赤い点(プロダクト一覧の、確認待ちの数)も、すぐ取り直す
+      void queryClient.invalidateQueries({ queryKey: ['products'], exact: true })
+      return queryClient.invalidateQueries({
         queryKey: ['products', productId, 'tree'],
-      }),
+      })
+    },
   })
   const stale =
     complete.error instanceof ApiError &&

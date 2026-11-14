@@ -57,6 +57,8 @@ export function AppShell({
     queryFn: listProducts,
     enabled: Boolean(session?.user),
     retry: false,
+    // ほかのプロダクトの新しい報告(確認待ち)に気づくため、1 分おきに取り直す(画面が裏の間は止まる)
+    refetchInterval: 60_000,
   })
 
   // 自分宛ての保留中の招待(サイドバーに出す。ホームの「招待」と、同じクエリを共有する)
@@ -73,6 +75,7 @@ export function AppShell({
     name: p.productName,
     avatarUrl: p.avatarUrl,
     isLeader: p.role === 'leader',
+    pendingReviewCount: p.pendingReviewCount,
   }))
   const selectProduct = (productId: string) => {
     drawer.close()

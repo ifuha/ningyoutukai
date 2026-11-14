@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { ContextMenu } from '#/components/context-menu'
 import { ProductAvatar } from '#/components/product-avatar'
+import { hasPendingReview, ReviewDot, withReviewLabel } from '#/components/review-dot'
 import { sidebarMenuItems } from '#/lib/sidebar-menu'
 import { useLongPress } from '#/lib/use-long-press'
 
@@ -13,6 +14,7 @@ export function SidebarProductRow({
   name,
   avatarUrl,
   isLeader = false,
+  pendingReviewCount,
   active,
   onSelect,
   onOpenSettings,
@@ -21,6 +23,8 @@ export function SidebarProductRow({
   name: string
   avatarUrl?: string | null
   isLeader?: boolean
+  // 確認待ちの数(リーダーのプロダクトだけ)。1 以上なら、行の右端に赤い点を出す
+  pendingReviewCount?: number | null
   active: boolean
   onSelect?: (productId: string) => void
   // メニューの「プロダクト設定」(そのプロダクトへ移動して、設定のモーダルを開く)
@@ -44,6 +48,7 @@ export function SidebarProductRow({
           onSelect?.(productId)
         }}
         aria-current={active ? 'page' : undefined}
+        aria-label={hasPendingReview(pendingReviewCount) ? withReviewLabel(name, pendingReviewCount) : undefined}
         aria-haspopup={isLeader ? 'menu' : undefined}
         onContextMenu={
           isLeader
@@ -62,10 +67,15 @@ export function SidebarProductRow({
         onPointerMove={isLeader ? longPress.move : undefined}
         onPointerUp={isLeader ? longPress.cancel : undefined}
         onPointerCancel={isLeader ? longPress.cancel : undefined}
-        className={`flex h-12 w-full items-center truncate border-b-2 border-transparent pr-2 pl-[40px] text-left text-l font-medium transition-[border-color,background-color] duration-200 ease-out motion-reduce:transition-none hover:bg-side-item aria-[current=page]:border-ink aria-[current=page]:bg-surface aria-[current=page]:hover:bg-surface${isLeader ? ' select-none [-webkit-touch-callout:none]' : ''}`}
+        className={`flex h-12 w-full items-center truncate border-b-2 border-transparent ${hasPendingReview(pendingReviewCount) ? 'pr-7' : 'pr-2'} pl-[40px] text-left text-l font-medium transition-[border-color,background-color] duration-200 ease-out motion-reduce:transition-none hover:bg-side-item aria-[current=page]:border-ink aria-[current=page]:bg-surface aria-[current=page]:hover:bg-surface${isLeader ? ' select-none [-webkit-touch-callout:none]' : ''}`}
       >
         <span className="truncate">{name}</span>
       </button>
+      {hasPendingReview(pendingReviewCount) && (
+        <span className="pointer-events-none absolute top-0 right-3 flex h-12 items-center">
+          <ReviewDot />
+        </span>
+      )}
       {isLeader && menu && (
         <ContextMenu
           x={menu.x}
