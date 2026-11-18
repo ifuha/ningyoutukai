@@ -10,18 +10,18 @@ import type { ProductTree, TreeMember, TreeTask } from '#/lib/tree'
 
 export type PendingReview = { member: TreeMember; task: TreeTask }
 
-/** ツリー全員のうち、完了報告済み(確認待ち)のタスク。報告日時の古い順(長く待っているものが上) */
+/** ツリー全員のうち、確認待ち(status が reported)のタスク。報告日時の古い順(長く待っているものが上) */
 export function pendingReviews(tree: ProductTree): PendingReview[] {
   return [tree.leader, ...tree.members]
     .flatMap((member) =>
       member.tasks
-        .filter((task) => task.reportedAt)
+        .filter((task) => task.status === 'reported')
         .map((task) => ({ member, task })),
     )
     .sort(
       (a, b) =>
-        new Date(a.task.reportedAt!).getTime() -
-        new Date(b.task.reportedAt!).getTime(),
+        new Date(a.task.reportedAt ?? 0).getTime() -
+        new Date(b.task.reportedAt ?? 0).getTime(),
     )
 }
 

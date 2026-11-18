@@ -23,3 +23,11 @@ export type TreeAi = TreeMember['ais'][number]
 
 /** ツリーのタスク 1 件 */
 export type TreeTask = TreeMember['tasks'][number]
+
+/** タスクの状態の見出し(CLI の `STATUS_LABELS` と同じ言葉) */
+export const statusLabel: Record<TreeTask['status'], string> = {
+  in_progress: '作業中',
+  reported: '確認待ち',
+  rejected: '差し戻し中',
+  completed: '完了',
+}

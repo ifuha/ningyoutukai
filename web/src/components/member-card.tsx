@@ -68,7 +68,7 @@ export function MemberCard({
   const { ref, height } = useElementHeight<HTMLElement>()
   const shown = member.tasks.slice(0, MAX_TASKS)
   const rest = member.tasks.length - shown.length
-  const pending = member.tasks.filter((t) => t.reportedAt).length
+  const pending = member.tasks.filter((t) => t.status === 'reported').length
   const editing = memberEditingLabel(editingDocuments ?? [])
 
   return (
@@ -132,9 +132,9 @@ export function MemberCard({
                     </span>
                   )}
                 </div>
-                {(t.reportedAt || t.taskType) && (
+                {(t.status === 'reported' || t.taskType) && (
                   <div className="mt-0.5 flex items-center gap-2 text-s">
-                    {t.reportedAt && (
+                    {t.status === 'reported' && (
                       <span className="shrink-0 shadow-box px-1">
                         確認待ち
                       </span>
