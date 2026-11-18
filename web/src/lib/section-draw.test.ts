@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import {
+  DRAW_CLICK_PX,
   DRAW_IDLE,
   drawReducer,
   formatSize,
+  placedRect,
   previewRect,
   type DrawEffect,
   type DrawEvent,
@@ -72,12 +74,12 @@ describe('drawReducer: 通常のドラッグ', () => {
     }
   })
 
-  test('動かさずに離す(クリックだけ)は、既定の大きさにせず、1×1', () => {
+  test('動かさずに離す(クリックだけ)は、置く前の四角が 1×1(既定の大きさは placedRect が当てる)', () => {
     const { effects } = run([down(500, 600), up(500, 600)])
     expect(effects).toEqual([{ type: 'create', rect: { x: 500, y: 600, width: 1, height: 1 } }])
   })
 
-  test('数ピクセルだけ動いたときは、動いた大きさのまま', () => {
+  test('数ピクセルだけ動いたときは、置く前の四角は動いた大きさのまま', () => {
     const { effects } = run([down(10, 10), move(14, 13), up(14, 13)])
     expect(effects).toEqual([{ type: 'create', rect: { x: 10, y: 10, width: 4, height: 3 } }])
   })
@@ -223,5 +225,47 @@ describe('previewRect / formatSize', () => {
   test('大きさの文字は、整数に丸めて「幅×高さ」', () => {
     expect(formatSize({ width: 300, height: 400 })).toBe('300×400')
     expect(formatSize({ width: 123.4, height: 99.6 })).toBe('123×100')
+  })
+})
+
+describe('placedRect / クリックに近いドラッグは、既定の大きさで置く', () => {
+  test('動きが 0(クリックだけ)なら、300×400。位置は押した角のまま', () => {
+    expect(placedRect({ x: 500, y: 600, width: 1, height: 1 }, 1)).toEqual({
+      x: 500,
+      y: 600,
+      width: 300,
+      height: 400,
+    })
+  })
+
+  test('幅・高さとも画面で 24px 未満の動きなら、既定の大きさ', () => {
+    expect(placedRect({ x: 0, y: 0, width: 23, height: 23 }, 1)).toEqual({ x: 0, y: 0, width: 300, height: 400 })
+  })
+
+  test('片方の軸でも 24px 以上動いたら、ドラッグした大きさのまま', () => {
+    expect(placedRect({ x: 0, y: 0, width: 24, height: 3 }, 1)).toEqual({ x: 0, y: 0, width: 24, height: 3 })
+    expect(placedRect({ x: 0, y: 0, width: 5, height: 100 }, 1)).toEqual({ x: 0, y: 0, width: 5, height: 100 })
+  })
+
+  test('拡大率で、画面の px をキャンバスの座標に直す', () => {
+    // 4 倍に拡大: 画面 24px = キャンバス 6px。5px 動かしても既定の大きさ、6px 動いたら描いた大きさ
+    expect(placedRect({ x: 0, y: 0, width: 5, height: 5 }, 4)).toEqual({ x: 0, y: 0, width: 300, height: 400 })
+    expect(placedRect({ x: 0, y: 0, width: 6, height: 6 }, 4)).toEqual({ x: 0, y: 0, width: 6, height: 6 })
+    // 0.5 倍に縮小: 画面 24px = キャンバス 48px
+    expect(placedRect({ x: 0, y: 0, width: 47, height: 47 }, 0.5)).toEqual({ x: 0, y: 0, width: 300, height: 400 })
+    expect(placedRect({ x: 0, y: 0, width: 48, height: 10 }, 0.5)).toEqual({ x: 0, y: 0, width: 48, height: 10 })
+  })
+
+  test('拡大率が不正(0)でも、割り算で壊れない', () => {
+    expect(placedRect({ x: 0, y: 0, width: 1, height: 1 }, 0)).toEqual({ x: 0, y: 0, width: 300, height: 400 })
+  })
+
+  test('押した直後のプレビュー(1×1)も、置かれる大きさに直して見せる', () => {
+    const preview = previewRect(run([down(10, 20)]).state)
+    expect(placedRect(preview!, 1)).toEqual({ x: 10, y: 20, width: 300, height: 400 })
+  })
+
+  test('移動を 4px でドラッグとみなす判定より大きい(置くのは大きくなるので)', () => {
+    expect(DRAW_CLICK_PX).toBeGreaterThan(4)
   })
 })

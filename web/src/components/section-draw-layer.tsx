@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { startDragSession } from '#/lib/drag-session'
 import type { DragSession, DragTarget } from '#/lib/drag-session'
-import { DRAW_IDLE, drawReducer, formatSize, previewRect, type DrawEvent, type DrawState } from '#/lib/section-draw'
+import { DRAW_IDLE, drawReducer, formatSize, placedRect, previewRect, type DrawEvent, type DrawState } from '#/lib/section-draw'
 import type { Point, Rect } from '#/lib/section-edit-geometry'
 import { sectionStyle } from '#/lib/section-style'
 
@@ -19,6 +19,7 @@ import { sectionStyle } from '#/lib/section-style'
 //   負の座標があるときの、全体のずらし量(プレビューを置く位置にだけ使う。`toCanvas` の結果には足さない)
 //
 // 確定・取り消しの判断は、`#/lib/section-draw`(状態機械)が行う。ここは、イベントを事象に変えて、副作用を実行するだけ
+// 置く四角は、この層が `placedRect` で決める(クリックに近いドラッグは既定の大きさ 300×400。拡大率も使うので、この層で行う)
 // 押した瞬間から離すまで、window で動きを受ける(`drag-session.ts`。速く動かしても、層の外へ出ても追従する)。
 // プレビューの描き直しは、1 フレームに 1 回にまとめる(動きの計算は、イベントごとに最新の座標で行う)。位置は、離した座標で決める
 
@@ -51,16 +52,21 @@ export function SectionDrawLayer({
   const sessionRef = useRef<DragSession | null>(null)
 
   // 最新の props を、イベントの処理(window の keydown を含む)から読むための ref
-  const latest = useRef({ toCanvas, onCreate, onCancel })
-  latest.current = { toCanvas, onCreate, onCancel }
+  const latest = useRef({ toCanvas, onCreate, onCancel, scale })
+  latest.current = { toCanvas, onCreate, onCancel, scale }
+
+  // 置かれる四角。ドラッグが画面でごく小さいときは既定の大きさ(300×400)にする(`placedRect`)。
+  // プレビューと確定の両方でこれを使う(見せる大きさと、置く大きさを一致させる)
+  const placed = (rect: Rect): Rect => placedRect(rect, latest.current.scale)
+  const placedOrNull = (rect: Rect | null): Rect | null => (rect === null ? null : placed(rect))
 
   // 事象を状態機械に渡し、副作用(onCreate / onCancel)を実行する。この層が受けたかどうかを返す
   // `render: false` のとき(動き)は、プレビューの描き直しを、次のフレームにまとめる
   function apply(event: DrawEvent, render = true): boolean {
     const step = drawReducer(stateRef.current, event)
     stateRef.current = step.state
-    if (render) setPreview(previewRect(step.state))
-    if (step.effect?.type === 'create') latest.current.onCreate(step.effect.rect)
+    if (render) setPreview(placedOrNull(previewRect(step.state)))
+    if (step.effect?.type === 'create') latest.current.onCreate(placed(step.effect.rect))
     else if (step.effect?.type === 'cancel') latest.current.onCancel()
     return step.consumed
   }
@@ -116,7 +122,7 @@ export function SectionDrawLayer({
         if (stateRef.current.kind === 'dragging') s.requestFrame()
         return consumed
       },
-      onFrame: () => setPreview(previewRect(stateRef.current)),
+      onFrame: () => setPreview(placedOrNull(previewRect(stateRef.current))),
       onUp: (ev) => {
         sessionRef.current = null
         // 離した座標で、置く四角を決める(最後の pointermove ではなく)

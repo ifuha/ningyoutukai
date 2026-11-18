@@ -136,6 +136,7 @@ export function useSectionInteraction({
   }
 
   // A: セクションを描く層。置いたら、作って(名前と色は既定)、「選択」に戻り、作ったセクションを選ぶ
+  //    幅・高さとも画面 24px 未満のドラッグ(クリックに近い)で置いたときは、既定の大きさ(300×400)になる(層の `placedRect`)
   const drawLayerProps: SectionDrawLayerProps = {
     active: canEdit && tool === 'section',
     scale,

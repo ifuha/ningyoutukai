@@ -77,7 +77,7 @@ describe('rectFromDrag', () => {
   test('左上へのドラッグ', () => {
     expect(rectFromDrag(s, { x: 0, y: 0 })).toEqual({ x: 0, y: 0, width: 100, height: 200 })
   })
-  test('クリックだけ(動きが 0): 既定の 300×400 にせず、1×1 で置く', () => {
+  test('クリックだけ(動きが 0): 置く前の四角は 1×1(既定の大きさは section-draw の placedRect が当てる)', () => {
     expect(rectFromDrag(s, s)).toEqual({ x: 100, y: 200, width: 1, height: 1 })
   })
   test('最小は決めない: 小さくドラッグしたら、ドラッグした大きさのまま置く', () => {
