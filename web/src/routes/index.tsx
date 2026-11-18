@@ -44,13 +44,10 @@ function Login() {
         <h1>
           <Logo className="h-24" />
         </h1>
-        <div className="space-y-1">
-          <Prompt>
-            ningyoutukai login
-            <span className="cursor ml-1 inline-block h-[1.1em] w-[0.6em] translate-y-[0.2em] bg-ink" aria-hidden="true" />
-          </Prompt>
-          <p className="text-m opacity-60"># 誰が、いつ、何をしているか。ひと目で。</p>
-        </div>
+        <Prompt>
+          ningyoutukai login
+          <span className="cursor ml-1 inline-block h-[1.1em] w-[0.6em] translate-y-[0.2em] bg-ink" aria-hidden="true" />
+        </Prompt>
         <div className="space-y-3">
           <p className="text-m">? どのアカウントで続けますか?</p>
           <LoginButtons />
