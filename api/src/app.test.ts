@@ -86,6 +86,7 @@ const EXPECTED_ROUTES = [
   "POST /api/product/:productId/section",
   "POST /api/product/:productId/task",
   "POST /api/product/:productId/task/:taskId/complete-report",
+  "POST /api/product/:productId/task/:taskId/reject",
   "POST /api/product/:productId/task/:taskId/report-draft",
   "POST /api/product/:productId/task/:taskId/report-draft/:draftId/adopt",
   "POST /api/product/:productId/task/:taskId/report-draft/:draftId/discard",

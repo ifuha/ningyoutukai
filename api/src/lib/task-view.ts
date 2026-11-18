@@ -18,6 +18,11 @@ export const taskColumns = {
   status: tasks.status,
 };
 
+/** `taskColumns` で select した行の形(ルートが返すタスク 1 件) */
+export type TaskRow = {
+  [K in keyof typeof taskColumns]: (typeof tasks.$inferSelect)[K];
+};
+
 /** `taskColumns` の応答スキーマ(日時は、DB の Date のまま返す。JSON になると ISO 文字列になる) */
 export const TaskSchema = t.Object({
   taskId: t.String(),

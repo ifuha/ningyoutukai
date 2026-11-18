@@ -132,6 +132,8 @@ describe("履歴の中身", () => {
     expect(Object.keys(row).sort()).toEqual([
       "author",
       "body",
+      "canDelete",
+      "canEdit",
       "createdAt",
       "deleted",
       "editedAt",

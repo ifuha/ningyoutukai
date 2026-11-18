@@ -43,14 +43,16 @@
 | **GET** `/api/product/{productId}/task/{taskId}` | 指定したタスクを取得 | 指定したタスクの詳細情報を取得する |
 | **GET** `/api/product/{productId}/member/{memberId}/task` | 指定したメンバーのタスクを取得 | 指定したメンバーに割り振られているタスクの一覧を取得する |
 | **PATCH** `/api/product/{productId}/task/{taskId}` | タスク情報変更 | タスクのタイトル、説明、期限、公開設定などを変更する |
-| **POST** `/api/product/{productId}/task/{taskId}/complete-report` | タスク完了報告 | 担当メンバーがリーダーに完了を報告する。Resend APIを使用してメール通知する |
-| **PATCH** `/api/product/{productId}/task/{taskId}/complete` | タスク完了確定 | プロダクトリーダーが確認後、タスクを完了状態に変更する |
+| **POST** `/api/product/{productId}/task/{taskId}/complete-report` | タスク完了報告 | 担当メンバーがリーダーに完了を報告する。本文(任意・2000字まで)はやりとりに「完了報告」(差し戻し中なら「再提出」)のログとして残る。Resend APIを使用してメール通知し、本文の先頭とリンクを添える |
+| **PATCH** `/api/product/{productId}/task/{taskId}/complete` | タスク完了確定 | プロダクトリーダーが確認後、タスクを完了状態に変更する。やりとりに「承認」のログが残る(本文は任意)。担当者にメール通知する |
+| **POST** `/api/product/{productId}/task/{taskId}/reject` | タスク差し戻し | プロダクトリーダーが確認待ちのタスクを差し戻し、再提出を要求する。本文は必須(2000字まで)。やりとりに「差し戻し」のログが残り、担当者にメール通知する。確認待ち以外は 409 |
 
 #### メッセージ
 
 | メソッド・エンドポイント | 名称 | 説明 |
 | --- | --- | --- |
-| **GET** `/api/product/{productId}/task/{taskId}/message` | メッセージ履歴取得 | タスクのメッセージを古い順に取得する。タスクを見られる人（公開タスクはメンバー全員、非公開タスクはリーダーと担当者）は読める。削除済みのメッセージは本文が空で `deleted: true` になる |
+| **GET** `/api/product/{productId}/task/{taskId}/message` | メッセージ履歴取得 | タスクのメッセージを古い順に取得する。タスクを見られる人（公開タスクはメンバー全員、非公開タスクはリーダーと担当者）は読める。削除済みのメッセージは本文が空で `deleted: true` になる。各行に、この閲覧者が編集できる `canEdit`・削除できる `canDelete` が付く |
+| **POST** `/api/product/{productId}/task/{taskId}/message` | コメント追加 | リーダーと担当者がコメントを投稿する(種類は常に `comment`、本文は必須・2000字まで)。完了済みのタスクには書けない。通知メールは送らない |
 | **PATCH** `/api/product/{productId}/task/{taskId}/message/{messageId}` | メッセージ編集 | 書いた本人が本文を編集する。完了済みのタスクと削除済みのメッセージは編集できない。コメントと差し戻しは本文を空にできない |
 | **DELETE** `/api/product/{productId}/task/{taskId}/message/{messageId}` | メッセージ削除 | 書いた本人かリーダーが、コメントを削除する(論理削除。本文は空になり、履歴には「削除済み」として残る)。報告・差し戻し・承認は削除できない。完了済みのタスクと削除済みのメッセージは削除できない。成功は 204 |
 

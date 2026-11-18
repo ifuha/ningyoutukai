@@ -139,6 +139,8 @@ describe("編集できる", () => {
     expect(Object.keys(json).sort()).toEqual([
       "author",
       "body",
+      "canDelete",
+      "canEdit",
       "createdAt",
       "deleted",
       "editedAt",

@@ -1,4 +1,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { eq } from "drizzle-orm";
+import { db } from "../../src/db";
+import { taskMessages } from "../../src/db/schema";
 import { mailer } from "../../src/lib/mailer";
 import {
   cleanup,
@@ -227,6 +230,61 @@ describe("PATCH /api/product/:productId/task/:taskId/complete", () => {
       const res = await request("PATCH", path(productId, task.taskId), { cookie: leader.cookie });
       expect(res.status).toBe(200);
       expect((await findTask(task.taskId))!.completedAt).not.toBeNull();
+    });
+  });
+
+  describe("やり取りのログ", () => {
+    const messagesOf = async (taskId: string) =>
+      db.select().from(taskMessages).where(eq(taskMessages.taskId, taskId));
+
+    test("完了にすると、やりとりに「承認」が 1 件残る", async () => {
+      const { productId, leader, members } = await setupProduct();
+      const task = await insertTask(members[0]!.memberId, { reportedAt: new Date() });
+      const res = await request("PATCH", path(productId, task.taskId), {
+        cookie: leader.cookie,
+        body: { body: "OK、このままで" },
+      });
+      expect(res.status).toBe(200);
+
+      const rows = await messagesOf(task.taskId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        kind: "approve",
+        body: "OK、このままで",
+        authorMemberId: leader.memberId,
+      });
+    });
+
+    test("本文なしでも、ログは残る(本文は空)", async () => {
+      const { productId, leader, members } = await setupProduct();
+      const task = await insertTask(members[0]!.memberId);
+      const res = await request("PATCH", path(productId, task.taskId), { cookie: leader.cookie });
+      expect(res.status).toBe(200);
+      const rows = await messagesOf(task.taskId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ kind: "approve", body: "" });
+    });
+
+    test("409 のときはログも残らない", async () => {
+      const { productId, leader, members } = await setupProduct();
+      const task = await insertTask(members[0]!.memberId, { completedAt: new Date() });
+      const res = await request("PATCH", path(productId, task.taskId), {
+        cookie: leader.cookie,
+        body: { body: "二重完了" },
+      });
+      expect(res.status).toBe(409);
+      expect(await messagesOf(task.taskId)).toHaveLength(0);
+    });
+
+    test("本文が 2000 字を超えると 422", async () => {
+      const { productId, leader, members } = await setupProduct();
+      const task = await insertTask(members[0]!.memberId);
+      const res = await request("PATCH", path(productId, task.taskId), {
+        cookie: leader.cookie,
+        body: { body: "あ".repeat(2001) },
+      });
+      expect(res.status).toBe(422);
+      expect(await messagesOf(task.taskId)).toHaveLength(0);
     });
   });
 });

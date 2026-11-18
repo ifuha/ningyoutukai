@@ -5,6 +5,7 @@ import { getTask } from "./get-task";
 import { listMemberTasks } from "./list-member-tasks";
 import { listTasks } from "./list-tasks";
 import { reportComplete } from "./report-complete";
+import { rejectTask } from "./reject";
 import { updateTask } from "./update-task";
 import { listMessages } from "./list-messages";
 import { createMessage } from "./create-message";
@@ -28,6 +29,7 @@ export const taskRoutes = new Elysia({ name: "task-routes" })
   .use(assignAssignee) // PATCH .../task/assignee は、PATCH .../task/:taskId より先に登録する
   .use(updateTask)
   .use(reportComplete)
+  .use(rejectTask)
   .use(confirmComplete)
   .use(listMessages)
   .use(createMessage)

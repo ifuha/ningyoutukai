@@ -5,10 +5,11 @@ import { db } from "../../db";
 import { productMembers, taskMessages, taskReportDrafts, tasks } from "../../db/schema";
 import type { ReadDocument } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { mailer } from "../../lib/mailer";
+import { mailer, mailPreview } from "../../lib/mailer";
 import { getLeaderContacts, getMemberContact, getMembership } from "../../lib/product-access";
 import { MessageSchema } from "../../lib/response-schema";
 import { nextStep } from "../../lib/task-flow";
+import { Conflict } from "../../lib/task-race";
 import { resolveTaskDocuments } from "../../lib/task-documents";
 import { canSee, taskColumns } from "../../lib/task-view";
 import { NO_NUL } from "../../lib/validation";
@@ -22,7 +23,6 @@ import { NO_NUL } from "../../lib/validation";
 const MAX_BODY = 10000;
 const MAX_PENDING = 10;
 const MAX_READ_DOCUMENTS = 20;
-const PREVIEW_LENGTH = 200;
 
 const taskParams = t.Object({ productId: t.String({ format: "uuid" }), taskId: t.String({ format: "uuid" }) });
 const draftParams = t.Object({ productId: t.String({ format: "uuid" }), taskId: t.String({ format: "uuid" }), draftId: t.String({ format: "uuid" }) });
@@ -58,8 +58,6 @@ const notFoundTask = { message: "タスクが見つかりません" };
 const notFoundDraft = { message: "下書きが見つかりません" };
 const assigneeOnly = { message: "担当者のみ、下書きを確認できます" };
 
-class Conflict extends Error {}
-
 async function findVisibleTask(productId: string, taskId: string, viewer: NonNullable<Awaited<ReturnType<typeof getMembership>>>) {
   const [task] = await db
     .select(taskColumns)
@@ -68,8 +66,6 @@ async function findVisibleTask(productId: string, taskId: string, viewer: NonNul
     .where(and(eq(tasks.taskId, taskId), eq(productMembers.productId, productId)));
   return task && canSee(task, viewer) ? task : undefined;
 }
-
-const preview = (text: string) => (text.length > PREVIEW_LENGTH ? `${text.slice(0, PREVIEW_LENGTH)}…` : text);
 
 export const reportDraftEndpoints = new Elysia({ name: "task-report-drafts" })
   .use(authGuard)
@@ -120,7 +116,7 @@ export const reportDraftEndpoints = new Elysia({ name: "task-report-drafts" })
           `AI「${aiToken.name}」が、タスク「${task.taskName}」の報告の下書きを保存しました。`,
           "内容を確認して、完了報告に出すか判断してください。",
           "",
-          preview(created!.body),
+          mailPreview(created!.body),
           "",
           "プロダクトを開く:",
           `${webOrigin}/products/${params.productId}`,
@@ -223,7 +219,7 @@ export const reportDraftEndpoints = new Elysia({ name: "task-report-drafts" })
             text: [
               `${reporter?.userName ?? "メンバー"} さんがタスク「${task.taskName}」の完了を報告しました(AI「${draft.aiName}」の下書きをもとにしています)。`,
               "",
-              preview(text),
+              mailPreview(text),
               "",
               "プロダクトを開く:",
               `${webOrigin}/products/${params.productId}`,

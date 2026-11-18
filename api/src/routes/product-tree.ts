@@ -80,6 +80,7 @@ export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
           description: tasks.description,
           timeLimit: tasks.timeLimit,
           reportedAt: tasks.reportedAt,
+          status: tasks.status,
           isVisible: tasks.isVisible,
           productMemberId: tasks.productMemberId,
           taskTypeId: taskTypes.taskTypeId,
