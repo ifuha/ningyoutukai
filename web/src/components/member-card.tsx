@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react'
 import { AiCards } from '#/components/ai-card'
 import { EditingDot } from '#/components/editing-dot'
+import { hasUnread, ReviewDot, withUnreadLabel } from '#/components/review-dot'
 import { memberEditingLabel } from '#/lib/document-tree'
 import { useElementHeight } from '#/lib/use-element-height'
 import type { TreeAi, TreeMember, TreeTask } from '#/lib/tree'
@@ -119,13 +120,22 @@ export function MemberCard({
                     <button
                       type="button"
                       onClick={() => onEditTask(t)}
+                      aria-label={withUnreadLabel(t.taskName, t.unreadCount)}
+                      title={hasUnread(t.unreadCount) ? withUnreadLabel(t.taskName, t.unreadCount) : undefined}
                       className="min-w-0 flex-1 cursor-pointer truncate text-left underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                     >
                       {t.taskName}
                     </button>
                   ) : (
-                    <span className="min-w-0 flex-1 truncate">{t.taskName}</span>
+                    <span
+                      className="min-w-0 flex-1 truncate"
+                      title={hasUnread(t.unreadCount) ? withUnreadLabel(t.taskName, t.unreadCount) : undefined}
+                    >
+                      {t.taskName}
+                    </span>
                   )}
+                  {/* 未読のやりとりがあるときだけ、赤い点(名前は flex-1 なので、点を足しても行の並びは変わらない) */}
+                  {hasUnread(t.unreadCount) && <ReviewDot className="self-center" />}
                   {t.timeLimit && (
                     <span className="shrink-0 text-s">
                       {formatLimit(t.timeLimit)}

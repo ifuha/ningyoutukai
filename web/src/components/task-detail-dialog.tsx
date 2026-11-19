@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatDateTime } from '#/components/member-card'
 import { Modal } from '#/components/modal'
 import { IconButton } from '#/components/icon-button'
@@ -94,6 +94,21 @@ function Detail({
   })
   const invalidateTree = () =>
     void queryClient.invalidateQueries({ queryKey: ['products', productId, 'tree'] })
+  // 開いたことを見える(タスク行の未読の点を消す)。取得し直すまで点が残るので、成功したらツリーを取り直す。
+  // 失敗しても詳細は開いたままにする(コメントは読めているので)。次の開き直しでもう一度送られる
+  useEffect(() => {
+    let alive = true
+    edenData(eden().api.product({ productId }).task({ taskId: task.taskId }).read.post())
+      .then(() => {
+        if (alive) invalidateTree()
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+    // invalidateTree は毎レンダー作り直すので、ここには入れない(入れると取り直しの無限ループになる)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId, task.taskId])
   // 完了報告(本文はやり取りのログに残る)。差し戻し中からの再提出も同じ API
   const report = useMutation({
     mutationFn: (body: string) =>
