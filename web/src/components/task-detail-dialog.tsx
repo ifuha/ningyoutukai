@@ -67,6 +67,7 @@ function Detail({
   canReport,
   canComment,
   canReject,
+  viewerMemberId,
   onEdit,
   onClose,
 }: {
@@ -75,6 +76,8 @@ function Detail({
   canReport: boolean
   canComment: boolean
   canReject: boolean
+  /** 閲覧者自身の productMemberId(自分が押したリアクションを示す) */
+  viewerMemberId?: string
   onEdit?: () => void
   onClose: () => void
 }) {
@@ -186,6 +189,9 @@ function Detail({
         productId={productId}
         taskId={task.taskId}
         canComment={canComment}
+        // リアクションはコメントを書ける人と同じ。完了済みのタスクでは付けられない(api 同じ判定)
+        reactable={canComment && task.status !== 'completed'}
+        viewerMemberId={viewerMemberId}
       />
       {report.isError && (
         <p role="alert" className="border-l border-line pl-3 text-m">
@@ -267,6 +273,7 @@ export function TaskDetailDialog({
   canReport = false,
   canComment = false,
   canReject = false,
+  viewerMemberId,
   onEdit,
   onClose,
 }: {
@@ -275,6 +282,8 @@ export function TaskDetailDialog({
   canReport?: boolean
   canComment?: boolean
   canReject?: boolean
+  /** 閲覧者自身の productMemberId */
+  viewerMemberId?: string
   onEdit?: (target: TaskDetailTarget) => void
   onClose: () => void
 }) {
@@ -288,6 +297,7 @@ export function TaskDetailDialog({
           canReport={canReport}
           canComment={canComment}
           canReject={canReject}
+          viewerMemberId={viewerMemberId}
           onEdit={onEdit && (() => onEdit(target))}
           onClose={onClose}
         />
