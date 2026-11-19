@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { formatDateTime } from '#/components/member-card'
 import { Modal } from '#/components/modal'
 import { IconButton } from '#/components/icon-button'
@@ -13,54 +13,11 @@ import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
 import {
   canSubmitMessage,
-  MAX_MESSAGE_LENGTH,
   normalizeMessageBody,
 } from '#/lib/message-body'
 import { retryDelay, retryTransient } from '#/lib/query-retry'
 
 export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
-
-const textareaClass =
-  'min-h-16 w-full resize-y border border-line bg-panel p-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
-
-/** 差し戻しの本文の入力欄(送信は下のボタンで行う。ここでは書くだけ)。
- * `hint` を渡さなければ、プレースホルダー(入力欄の中の薄い文)は出さない */
-function BodyInput({
-  label,
-  hint,
-  required,
-  text,
-  onChangeText,
-  disabled,
-}: {
-  label: string
-  hint?: string
-  required: boolean
-  text: string
-  onChangeText: (text: string) => void
-  disabled: boolean
-}) {
-  return (
-    <div className="space-y-1">
-      <label className="block text-s opacity-60">
-        {label}
-        {required ? '(必須)' : '(任意)'}
-      </label>
-      <textarea
-        aria-label={label}
-        placeholder={hint}
-        value={text}
-        maxLength={MAX_MESSAGE_LENGTH}
-        disabled={disabled}
-        onChange={(e) => onChangeText(e.target.value)}
-        className={textareaClass}
-      />
-      <p className="text-s opacity-60">
-        {text.length} / {MAX_MESSAGE_LENGTH}
-      </p>
-    </div>
-  )
-}
 
 function Detail({
   productId,
@@ -84,7 +41,6 @@ function Detail({
 }) {
   const { task } = target
   const queryClient = useQueryClient()
-  const [rejectText, setRejectText] = useState('')
   // 渡された Markdown(文書)。なければ(機能がない・取得に失敗)何も出さない
   const handed = useQuery({
     queryKey: ['products', productId, 'task', task.taskId, 'documents', 'handed'],
@@ -127,14 +83,14 @@ function Detail({
       onClose()
     },
   })
-  // 差し戻し(再提出の要求)。理由は必須。やり取りに「差し戻し」のログが残り、担当者にメールがいく
+  // 差し戻し(再提出の要求)。理由は必須(空ならボタンを押せない)。やり取りに「差し戻し」のログが残り、担当者にメールがいく。
+  // 理由も、やりとりの入力欄に書いたものをそのまま送る
   const reject = useMutation({
     mutationFn: (body: string) =>
       edenData(
         eden().api.product({ productId }).task({ taskId: task.taskId }).reject.post({ body }),
       ),
     onSuccess: () => {
-      setRejectText('')
       invalidateTree()
       // 差し戻しのログをすぐ出すため、モーダルは開いたままにする
       void queryClient.invalidateQueries({
@@ -146,6 +102,42 @@ function Detail({
   // 報告できるのは、作業中と差し戻し中(確認待ちになったら報告済み)
   const reportable = task.status === 'in_progress' || task.status === 'rejected'
   const rejecting = canReject && task.status === 'reported'
+
+  // やりとりの「送信」の左に並べるボタン。報告(作業中・差し戻し中)と差し戻し(確認待ち)は
+  // 状態が競合しないので、片方だけが出る。押すと、入力欄に書いた本文をそのまま送る
+  // (報告は complete-report、差し戻しは reject)。送れたら `clear` で入力欄を空にする
+  // (報告は成功するとモーダルごと閉じる)
+  function beforeSend(text: string, clear: () => void) {
+    if (canReport && reportable) {
+      return (
+        <IconButton
+          icon={Check}
+          label={task.status === 'rejected' ? '再提出' : '完了を報告'}
+          showLabel
+          variant="outline"
+          className="bg-panel"
+          disabled={report.isPending}
+          onClick={() => report.mutate(normalizeMessageBody(text), { onSuccess: clear })}
+        />
+      )
+    }
+    if (rejecting) {
+      return (
+        <IconButton
+          icon={Undo2}
+          label="差し戻す"
+          showLabel
+          variant="outline"
+          className="bg-panel"
+          // 理由は必須。空なら押せない(押せない理由はツールチップに出す)
+          tip={canSubmitMessage(text) ? undefined : '理由を書くと押せます'}
+          disabled={reject.isPending || !canSubmitMessage(text)}
+          onClick={() => reject.mutate(normalizeMessageBody(text), { onSuccess: clear })}
+        />
+      )
+    }
+    return null
+  }
 
   return (
     <>
@@ -208,23 +200,9 @@ function Detail({
         // リアクションはコメントを書ける人と同じ。完了済みのタスクでは付けられない(api 同じ判定)
         reactable={canComment && task.status !== 'completed'}
         viewerMemberId={viewerMemberId}
-        // 完了報告は、やりとりの「送信」の左に並べる(報告できるときだけ)。
-        // 押すと、入力欄に書いた本文を**完了報告**として送る(コメントにはしない)
-        beforeSend={
-          canReport && reportable
-            ? (text) => (
-                <IconButton
-                  icon={Check}
-                  label={task.status === 'rejected' ? '再提出' : '完了を報告'}
-                  showLabel
-                  variant="outline"
-                  className="bg-panel"
-                  disabled={report.isPending}
-                  onClick={() => report.mutate(normalizeMessageBody(text))}
-                />
-              )
-            : undefined
-        }
+        // 完了報告・差し戻しは、やりとりの「送信」の左に並べる(片方だけ出る)。
+        // 押すと、入力欄に書いた本文をそのまま送る(コメントにはしない)
+        beforeSend={beforeSend}
       />
       {report.isError && (
         <p role="alert" className="border-l border-line pl-3 text-m">
@@ -236,28 +214,7 @@ function Detail({
           ERR {errorMessage(reject.error.message)}
         </p>
       )}
-      {rejecting && (
-        <BodyInput
-          label="差し戻しの理由"
-          hint="何を直すべきか(担当者にメールでも知らせる)"
-          required
-          text={rejectText}
-          onChangeText={setRejectText}
-          disabled={reject.isPending}
-        />
-      )}
       <div className="flex flex-wrap gap-3">
-        {rejecting && (
-          <IconButton
-            icon={Undo2}
-            label="差し戻す"
-            showLabel
-            variant="outline"
-            className="bg-panel"
-            disabled={reject.isPending || !canSubmitMessage(rejectText)}
-            onClick={() => reject.mutate(normalizeMessageBody(rejectText))}
-          />
-        )}
         {onEdit && (
           <IconButton
             icon={Pencil}
@@ -277,7 +234,8 @@ function Detail({
 // タスクの詳細のモーダル。やりとり(メッセージの履歴)を出す。
 // `canReport` は担当者本人にだけ渡す: 未報告なら「完了を報告」を出す(押すとリーダーに通知される。担当者でなければ、api が 403 にする)。
 // `canComment` はリーダーと担当者にだけ渡す: コメントの入力欄を出す(それ以外は、api が 403 にする)。
-// `canReject` はリーダーにだけ渡す: 確認待ちのとき「差し戻す」を出す(理由は必須。api も本文なしを 400 にする)。
+// `canReject` はリーダーにだけ渡す: 確認待ちのとき「差し戻す」を出す(理由は必須で、やりとりの入力欄の本文を使う。
+//   空なら押せない。api も本文なしを 400 にする)。
 // `onEdit` はリーダーにだけ渡す(編集のフォームへ移る)。`target` が null の間は閉じている
 export function TaskDetailDialog({
   productId,

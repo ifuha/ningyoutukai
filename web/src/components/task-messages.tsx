@@ -327,9 +327,9 @@ export function TaskMessages({
   canComment?: boolean
   reactable?: boolean
   viewerMemberId?: string
-  /** コメントの「送信」の左に置くボタン(例: 完了を報告)。入力欄があるときだけ出る。
-   *  いま入っている本文を渡す(報告ボタンは、それを報告の本文として送る) */
-  beforeSend?: (text: string) => ReactNode
+  /** コメントの「送信」の左に置くボタン(例: 完了を報告・差し戻す)。入力欄があるときだけ出る。
+   *  いま入っている本文と、送り終わった本文を消す関数を渡す */
+  beforeSend?: (text: string, clear: () => void) => ReactNode
 }) {
   const messages = useQuery({
     queryKey: ['products', productId, 'task', taskId, 'messages'],
