@@ -22,8 +22,9 @@ export function TaskMessageForm({
 }: {
   productId: string
   taskId: string
-  /** 「送信」の左に置くボタン(例: 完了を報告)。フォームの中に出すので、`type="button"` にして送信と混ぜない */
-  beforeSend?: ReactNode
+  /** 「送信」の左に置くボタン(例: 完了を報告)。いま入っている本文を渡すので、
+   *  ボタンは本文をそのまま送れるように作る(フォームの中に出すので `type="button"` にする) */
+  beforeSend?: (text: string) => ReactNode
 }) {
   const queryClient = useQueryClient()
   const [text, setText] = useState('')
@@ -79,7 +80,7 @@ export function TaskMessageForm({
           {text.length} / {MAX_MESSAGE_LENGTH}
         </span>
         <span className="flex items-center gap-3">
-          {beforeSend}
+          {beforeSend?.(text)}
           <IconButton
             type="submit"
             icon={Send}

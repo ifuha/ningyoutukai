@@ -23,7 +23,7 @@ export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 const textareaClass =
   'min-h-16 w-full resize-y border border-line bg-panel p-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
-/** 報告・差し戻しの本文の入力欄(送信は下のボタンで行う。ここでは書くだけ)。
+/** 差し戻しの本文の入力欄(送信は下のボタンで行う。ここでは書くだけ)。
  * `hint` を渡さなければ、プレースホルダー(入力欄の中の薄い文)は出さない */
 function BodyInput({
   label,
@@ -84,7 +84,6 @@ function Detail({
 }) {
   const { task } = target
   const queryClient = useQueryClient()
-  const [reportText, setReportText] = useState('')
   const [rejectText, setRejectText] = useState('')
   // 渡された Markdown(文書)。なければ(機能がない・取得に失敗)何も出さない
   const handed = useQuery({
@@ -110,7 +109,8 @@ function Detail({
     // invalidateTree は毎レンダー作り直すので、ここには入れない(入れると取り直しの無限ループになる)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId, task.taskId])
-  // 完了報告(本文はやり取りのログに残る)。差し戻し中からの再提出も同じ API
+  // 完了報告(本文はやり取りのログに残る)。差し戻し中からの再提出も同じ API。
+  // 本文は、やりとりの入力欄に書いたものをそのまま送る(報告専用の入力欄は無い)
   const report = useMutation({
     mutationFn: (body: string) =>
       edenData(
@@ -208,19 +208,22 @@ function Detail({
         // リアクションはコメントを書ける人と同じ。完了済みのタスクでは付けられない(api 同じ判定)
         reactable={canComment && task.status !== 'completed'}
         viewerMemberId={viewerMemberId}
-        // 完了報告は、やりとりの「送信」の左に並べる(報告できるときだけ)
+        // 完了報告は、やりとりの「送信」の左に並べる(報告できるときだけ)。
+        // 押すと、入力欄に書いた本文を**完了報告**として送る(コメントにはしない)
         beforeSend={
-          canReport && reportable ? (
-            <IconButton
-              icon={Check}
-              label={task.status === 'rejected' ? '再提出' : '完了を報告'}
-              showLabel
-              variant="outline"
-              className="bg-panel"
-              disabled={report.isPending}
-              onClick={() => report.mutate(normalizeMessageBody(reportText))}
-            />
-          ) : undefined
+          canReport && reportable
+            ? (text) => (
+                <IconButton
+                  icon={Check}
+                  label={task.status === 'rejected' ? '再提出' : '完了を報告'}
+                  showLabel
+                  variant="outline"
+                  className="bg-panel"
+                  disabled={report.isPending}
+                  onClick={() => report.mutate(normalizeMessageBody(text))}
+                />
+              )
+            : undefined
         }
       />
       {report.isError && (
@@ -232,15 +235,6 @@ function Detail({
         <p role="alert" className="border-l border-line pl-3 text-m">
           ERR {errorMessage(reject.error.message)}
         </p>
-      )}
-      {canReport && reportable && (
-        <BodyInput
-          label="報告の内容"
-          required={false}
-          text={reportText}
-          onChangeText={setReportText}
-          disabled={report.isPending}
-        />
       )}
       {rejecting && (
         <BodyInput
