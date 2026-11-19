@@ -23,7 +23,8 @@ export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 const textareaClass =
   'min-h-16 w-full resize-y border border-line bg-panel p-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
-/** 報告・差し戻しの本文の入力欄(送信は下のボタンで行う。ここでは書くだけ) */
+/** 報告・差し戻しの本文の入力欄(送信は下のボタンで行う。ここでは書くだけ)。
+ * `hint` を渡さなければ、プレースホルダー(入力欄の中の薄い文)は出さない */
 function BodyInput({
   label,
   hint,
@@ -33,7 +34,7 @@ function BodyInput({
   disabled,
 }: {
   label: string
-  hint: string
+  hint?: string
   required: boolean
   text: string
   onChangeText: (text: string) => void
@@ -207,6 +208,20 @@ function Detail({
         // リアクションはコメントを書ける人と同じ。完了済みのタスクでは付けられない(api 同じ判定)
         reactable={canComment && task.status !== 'completed'}
         viewerMemberId={viewerMemberId}
+        // 完了報告は、やりとりの「送信」の左に並べる(報告できるときだけ)
+        beforeSend={
+          canReport && reportable ? (
+            <IconButton
+              icon={Check}
+              label={task.status === 'rejected' ? '再提出' : '完了を報告'}
+              showLabel
+              variant="outline"
+              className="bg-panel"
+              disabled={report.isPending}
+              onClick={() => report.mutate(normalizeMessageBody(reportText))}
+            />
+          ) : undefined
+        }
       />
       {report.isError && (
         <p role="alert" className="border-l border-line pl-3 text-m">
@@ -221,7 +236,6 @@ function Detail({
       {canReport && reportable && (
         <BodyInput
           label="報告の内容"
-          hint="完了報告の本文(やりとりのログに残る)"
           required={false}
           text={reportText}
           onChangeText={setReportText}
@@ -239,17 +253,6 @@ function Detail({
         />
       )}
       <div className="flex flex-wrap gap-3">
-        {canReport && reportable && (
-          <IconButton
-            icon={Check}
-            label={task.status === 'rejected' ? '再提出' : '完了を報告'}
-            showLabel
-            variant="outline"
-            className="bg-panel"
-            disabled={report.isPending}
-            onClick={() => report.mutate(normalizeMessageBody(reportText))}
-          />
-        )}
         {rejecting && (
           <IconButton
             icon={Undo2}

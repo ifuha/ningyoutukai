@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Send } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
@@ -18,9 +18,12 @@ const textareaClass =
 export function TaskMessageForm({
   productId,
   taskId,
+  beforeSend,
 }: {
   productId: string
   taskId: string
+  /** 「送信」の左に置くボタン(例: 完了を報告)。フォームの中に出すので、`type="button"` にして送信と混ぜない */
+  beforeSend?: ReactNode
 }) {
   const queryClient = useQueryClient()
   const [text, setText] = useState('')
@@ -75,15 +78,18 @@ export function TaskMessageForm({
         <span className="text-s opacity-60">
           {text.length} / {MAX_MESSAGE_LENGTH}
         </span>
-        <IconButton
-          type="submit"
-          icon={Send}
-          label="送信"
-          showLabel
-          variant="outline"
-          className="bg-panel"
-          disabled={post.isPending || !submittable}
-        />
+        <span className="flex items-center gap-3">
+          {beforeSend}
+          <IconButton
+            type="submit"
+            icon={Send}
+            label="送信"
+            showLabel
+            variant="outline"
+            className="bg-panel"
+            disabled={post.isPending || !submittable}
+          />
+        </span>
       </div>
       {post.isError && (
         <p role="alert" className="border-l border-line pl-3 text-m">
