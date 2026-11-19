@@ -90,11 +90,14 @@ describe("書ける人と、作られるもの", () => {
     expect(Object.keys(json).sort()).toEqual([
       "author",
       "body",
+      "canDelete",
+      "canEdit",
       "createdAt",
       "deleted",
       "editedAt",
       "kind",
       "messageId",
+      "reactions",
     ]);
     expect(json).toMatchObject({
       kind: "comment",

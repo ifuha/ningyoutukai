@@ -139,11 +139,14 @@ describe("編集できる", () => {
     expect(Object.keys(json).sort()).toEqual([
       "author",
       "body",
+      "canDelete",
+      "canEdit",
       "createdAt",
       "deleted",
       "editedAt",
       "kind",
       "messageId",
+      "reactions",
     ]);
     expect(json).toMatchObject({
       messageId: msg.messageId,

@@ -46,6 +46,11 @@ async function sendToMailpit(baseUrl: string, mail: Mail): Promise<MailResult> {
   }
 }
 
+/** メールの本文に入れる、長い本文の先頭(メールは長い本文を読みにくい)。省略したときの上限は 200 文字 */
+export function mailPreview(text: string, max = 200): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
 export const mailer = {
   async send(mail: Mail): Promise<MailResult> {
     const mailpitUrl = process.env.MAILPIT_URL;

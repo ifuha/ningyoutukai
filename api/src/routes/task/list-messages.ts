@@ -3,7 +3,8 @@ import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, taskMessages, tasks, users } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { TaskMessageListSchema } from "../../lib/message-view";
+import { TaskMessageListSchema, actorFor, messageView } from "../../lib/message-view";
+import { loadReactions } from "../../lib/reaction-view";
 import { getMembership } from "../../lib/product-access";
 import { MessageSchema } from "../../lib/response-schema";
 import { canSee, taskColumns } from "../../lib/task-view";
@@ -39,6 +40,7 @@ export const listMessages = new Elysia({ name: "task-list-messages" })
         return status(404, { message: "タスクが見つかりません" });
       }
 
+      const actor = actorFor(viewer, task);
       const rows = await db
         .select({
           messageId: taskMessages.messageId,
@@ -60,23 +62,32 @@ export const listMessages = new Elysia({ name: "task-list-messages" })
         .where(eq(taskMessages.taskId, task.taskId))
         .orderBy(asc(taskMessages.createdAt), asc(taskMessages.messageId));
 
+      // リアクションは、履歴の行数ぶんをまとめて 1 クエリで取る
+      const reactions = await loadReactions(rows.map((r) => r.messageId));
+
       return {
         messages: rows.map((r) => {
           const deleted = r.deletedAt !== null;
-          return {
-            messageId: r.messageId,
-            kind: r.kind,
-            // 削除済みは、DB に本文が残っていても返さない
-            body: deleted ? "" : r.body,
-            author: {
-              productMemberId: r.authorMemberId,
-              userName: r.userName,
-              avatarUrl: r.avatarUrl,
+          return messageView(
+            {
+              messageId: r.messageId,
+              kind: r.kind,
+              // 削除済みは、DB に本文が残っていても返さない
+              body: deleted ? "" : r.body,
+              author: {
+                productMemberId: r.authorMemberId,
+                userName: r.userName,
+                avatarUrl: r.avatarUrl,
+              },
+              createdAt: r.createdAt,
+              editedAt: r.editedAt,
+              deleted,
+              authorMemberId: r.authorMemberId,
             },
-            createdAt: r.createdAt,
-            editedAt: r.editedAt,
-            deleted,
-          };
+            actor,
+            task.status,
+            reactions.get(r.messageId) ?? [],
+          );
         }),
       };
     },

@@ -48,7 +48,7 @@ export function TaskListDialog({
                   )}
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2 text-s">
-                  {t.reportedAt && (
+                  {t.status === 'reported' && (
                     <span className="shrink-0 shadow-box px-1">
                       確認待ち
                     </span>

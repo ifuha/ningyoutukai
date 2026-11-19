@@ -1,4 +1,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { eq } from "drizzle-orm";
+import { db } from "../../src/db";
+import { taskMessages } from "../../src/db/schema";
 import { mailer } from "../../src/lib/mailer";
 import {
   cleanup,
@@ -260,6 +263,81 @@ describe("POST /api/product/:productId/task/:taskId/complete-report", () => {
       });
       expect(res.status).toBe(200);
       expect((await findTask(task.taskId)).reportedAt).not.toBeNull();
+    });
+  });
+
+  describe("やり取りのログ", () => {
+    const messagesOf = async (taskId: string) =>
+      db.select().from(taskMessages).where(eq(taskMessages.taskId, taskId));
+
+    test("報告すると、やりとりに「完了報告」が 1 件残る", async () => {
+      const { productId, members } = await setupProduct();
+      const task = await insertTask(members[0].memberId);
+      const res = await request("POST", url(productId, task.taskId), {
+        cookie: members[0].cookie,
+        body: { body: "実装しました。確認をお願いします" },
+      });
+      expect(res.status).toBe(200);
+
+      const rows = await messagesOf(task.taskId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        kind: "report",
+        body: "実装しました。確認をお願いします",
+        authorMemberId: members[0].memberId,
+      });
+      expect(rows[0]!.deletedAt).toBeNull();
+    });
+
+    test("本文なしでも、ログは残る(本文は空)", async () => {
+      const { productId, members } = await setupProduct();
+      const task = await insertTask(members[0].memberId);
+      const res = await request("POST", url(productId, task.taskId), {
+        cookie: members[0].cookie,
+      });
+      expect(res.status).toBe(200);
+      const rows = await messagesOf(task.taskId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ kind: "report", body: "" });
+    });
+
+    test("差し戻し中からの報告は「再提出」で残る", async () => {
+      const { productId, members } = await setupProduct();
+      const task = await insertTask(members[0].memberId, {
+        status: "rejected",
+        reportedAt: new Date("2030-01-01T00:00:00.000Z"),
+      });
+      const res = await request("POST", url(productId, task.taskId), {
+        cookie: members[0].cookie,
+        body: { body: "直しました" },
+      });
+      expect(res.status).toBe(200);
+      const rows = await messagesOf(task.taskId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ kind: "resubmit", body: "直しました" });
+      expect((await findTask(task.taskId))!.status).toBe("reported");
+    });
+
+    test("409 のときはログも残らない", async () => {
+      const { productId, members } = await setupProduct();
+      const task = await insertTask(members[0].memberId, { reportedAt: new Date() });
+      const res = await request("POST", url(productId, task.taskId), {
+        cookie: members[0].cookie,
+        body: { body: "二重報告" },
+      });
+      expect(res.status).toBe(409);
+      expect(await messagesOf(task.taskId)).toHaveLength(0);
+    });
+
+    test("本文が 2000 字を超えると 422", async () => {
+      const { productId, members } = await setupProduct();
+      const task = await insertTask(members[0].memberId);
+      const res = await request("POST", url(productId, task.taskId), {
+        cookie: members[0].cookie,
+        body: { body: "あ".repeat(2001) },
+      });
+      expect(res.status).toBe(422);
+      expect(await messagesOf(task.taskId)).toHaveLength(0);
     });
   });
 });

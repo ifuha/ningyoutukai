@@ -24,6 +24,7 @@ export type TaskRow = Pick<
   | "description"
   | "timeLimit"
   | "reportedAt"
+  | "status"
   | "isVisible"
   | "productMemberId"
   | "taskTypeId"
@@ -46,6 +47,7 @@ export function buildTree(
       description: row.description,
       timeLimit: row.timeLimit,
       reportedAt: row.reportedAt,
+      status: row.status,
       isVisible: row.isVisible,
       taskType:
         row.taskTypeId && row.taskTypeName

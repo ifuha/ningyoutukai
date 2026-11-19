@@ -36,6 +36,7 @@
         "description": null,
         "timeLimit": "2026-10-31T00:00:00.000Z",
         "reportedAt": null,
+        "status": "in_progress",
         "isVisible": true,
         "taskType": { "taskTypeId": "…", "taskTypeName": "デザイン" }
       }
@@ -60,7 +61,8 @@
 | `members` | リーダーの下にぶら下がるメンバー。名前順。メンバーだけのプロダクトでは空配列 |
 | `tasks` | そのメンバーのタスク。期限が近い順（期限なしは最後）。なければ空配列 |
 | `taskType` | タスクの種類。未設定なら `null` |
-| `reportedAt` | 値があれば「完了報告済み・リーダー確認待ち」 |
+| `reportedAt` | 最後に完了報告した日時(未報告なら `null`) |
+| `status` | 状態(`in_progress` 作業中 / `reported` 確認待ち / `rejected` 差し戻し中 / `completed` 完了)。「確認待ち」はこの値で見る |
 | `timeLimit` | 期限。未設定なら `null` |
 
 #### 含まれるタスクのルール

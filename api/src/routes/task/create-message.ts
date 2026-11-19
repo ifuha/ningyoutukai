@@ -3,15 +3,13 @@ import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, taskMessages, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { TaskMessageSchema } from "../../lib/message-view";
+import { TaskMessageSchema, actorFor, messageView } from "../../lib/message-view";
+import { MAX_BODY_LENGTH } from "../../lib/message-body";
 import { getMembership } from "../../lib/product-access";
 import { MessageSchema } from "../../lib/response-schema";
 import { canComment } from "../../lib/task-flow";
 import { taskStillExists } from "../../lib/task-race";
 import { canSee, taskColumns } from "../../lib/task-view";
-
-// コメントの本文の上限(UTF-16 の長さ。trim 前で判定する。docs/v2.0/message-feature.md の Q10 の案)
-const MAX_BODY_LENGTH = 2000;
 
 // コメント追加 POST /api/product/:productId/task/:taskId/message
 // - 書けるのは、リーダーと担当者だけ(公開タスクのほかのメンバーは、読むだけ)
@@ -45,11 +43,7 @@ export const createMessage = new Elysia({ name: "task-create-message" })
         return status(404, { message: "タスクが見つかりません" });
       }
 
-      const actor = {
-        productMemberId: viewer.productMemberId,
-        isLeader: viewer.role === "leader",
-        isAssignee: task.productMemberId === viewer.productMemberId,
-      };
+      const actor = actorFor(viewer, task);
       // 見えるが、書く権限がない(公開タスクのほかのメンバー)
       if (!actor.isLeader && !actor.isAssignee) {
         return status(403, { message: "リーダーと担当者のみコメントを書けます" });
@@ -84,19 +78,27 @@ export const createMessage = new Elysia({ name: "task-create-message" })
       }
       if (!created) throw new Error("コメントを保存できませんでした");
 
-      return status(201, {
-        messageId: created.messageId,
-        kind: created.kind,
-        body: created.body,
-        author: {
-          productMemberId: viewer.productMemberId,
-          userName: user.userName,
-          avatarUrl: user.avatarUrl,
-        },
-        createdAt: created.createdAt,
-        editedAt: created.editedAt,
-        deleted: false,
-      });
+      return status(
+        201,
+        messageView(
+          {
+            messageId: created.messageId,
+            kind: created.kind,
+            body: created.body,
+            author: {
+              productMemberId: viewer.productMemberId,
+              userName: user.userName,
+              avatarUrl: user.avatarUrl,
+            },
+            createdAt: created.createdAt,
+            editedAt: created.editedAt,
+            deleted: false,
+            authorMemberId: created.authorMemberId,
+          },
+          actor,
+          task.status,
+        )
+      );
     },
     {
       requireUser: true,

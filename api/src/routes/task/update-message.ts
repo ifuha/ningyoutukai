@@ -3,15 +3,13 @@ import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { productMembers, taskMessages, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
-import { TaskMessageSchema } from "../../lib/message-view";
+import { TaskMessageSchema, actorFor, messageView } from "../../lib/message-view";
+import { MAX_BODY_LENGTH } from "../../lib/message-body";
+import { loadReactions } from "../../lib/reaction-view";
 import { getMembership } from "../../lib/product-access";
 import { MessageSchema } from "../../lib/response-schema";
 import { canEditMessage } from "../../lib/task-flow";
 import { canSee, taskColumns } from "../../lib/task-view";
-
-// 本文の上限(UTF-16 の長さ。trim 前で判定する。docs/v2.0/message-feature.md の Q10 の案)
-// TODO: コメント追加(create-message.ts)と同じ値。両方がマージされたら、1 か所にまとめる
-const MAX_BODY_LENGTH = 2000;
 
 // 本文を空にできない種類。報告・再提出・承認は、本文が任意なので、空に戻してよい
 const BODY_REQUIRED_KINDS: readonly string[] = ["comment", "reject"];
@@ -71,11 +69,7 @@ export const updateMessage = new Elysia({ name: "task-update-message" })
       }
 
       // 本人なのに編集できない理由は、削除済みか、完了済みのタスクのどちらか
-      const actor = {
-        productMemberId: viewer.productMemberId,
-        isLeader: viewer.role === "leader",
-        isAssignee: task.productMemberId === viewer.productMemberId,
-      };
+      const actor = actorFor(viewer, task);
       if (!canEditMessage(actor, message, task.status)) {
         return status(409, {
           message: message.deletedAt
@@ -84,20 +78,28 @@ export const updateMessage = new Elysia({ name: "task-update-message" })
         });
       }
 
-      // 書いた人は、呼び出した本人(上で確認済み)
-      const toItem = (m: typeof taskMessages.$inferSelect) => ({
-        messageId: m.messageId,
-        kind: m.kind,
-        body: m.body,
-        author: {
-          productMemberId: viewer.productMemberId,
-          userName: user.userName,
-          avatarUrl: user.avatarUrl,
-        },
-        createdAt: m.createdAt,
-        editedAt: m.editedAt,
-        deleted: false,
-      });
+      // 書いた人は、呼び出した本人(上で確認済み)。リアクションは編集で変わらないが、応答に載せる
+      const reactions = (await loadReactions([message.messageId])).get(message.messageId) ?? [];
+      const toItem = (m: typeof taskMessages.$inferSelect) =>
+        messageView(
+          {
+            messageId: m.messageId,
+            kind: m.kind,
+            body: m.body,
+            author: {
+              productMemberId: viewer.productMemberId,
+              userName: user.userName,
+              avatarUrl: user.avatarUrl,
+            },
+            createdAt: m.createdAt,
+            editedAt: m.editedAt,
+            deleted: false,
+            authorMemberId: viewer.productMemberId,
+          },
+          actor,
+          task.status,
+          reactions,
+        );
 
       // 本文が変わらなければ、何も書き換えない(「編集済み」にならない)
       if (text === message.body) return toItem(message);

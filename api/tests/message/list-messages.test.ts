@@ -132,11 +132,14 @@ describe("履歴の中身", () => {
     expect(Object.keys(row).sort()).toEqual([
       "author",
       "body",
+      "canDelete",
+      "canEdit",
       "createdAt",
       "deleted",
       "editedAt",
       "kind",
       "messageId",
+      "reactions",
     ]);
     expect(Object.keys(row.author).sort()).toEqual(["avatarUrl", "productMemberId", "userName"]);
     expect(row).toMatchObject({

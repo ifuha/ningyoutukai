@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { productMembers, products, tasks } from "../db/schema";
@@ -67,7 +67,7 @@ export const productRoutes = new Elysia({ prefix: "/api/product" })
           .select({ productId: productMembers.productId, n: count() })
           .from(tasks)
           .innerJoin(productMembers, eq(tasks.productMemberId, productMembers.productMemberId))
-          .where(and(inArray(productMembers.productId, leaderProductIds), isNotNull(tasks.reportedAt), isNull(tasks.completedAt)))
+          .where(and(inArray(productMembers.productId, leaderProductIds), eq(tasks.status, "reported")))
           .groupBy(productMembers.productId);
         for (const row of pending) counts.set(row.productId, row.n);
       }

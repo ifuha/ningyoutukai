@@ -1,4 +1,5 @@
 import { t, type Static } from "elysia";
+import { taskStatuses } from "./task-flow";
 
 /**
  * ツリー表示 API のレスポンスの形。
@@ -14,6 +15,8 @@ export const TreeTaskSchema = t.Object({
   description: t.Union([t.String(), t.Null()]),
   timeLimit: nullableDate,
   reportedAt: nullableDate,
+  // 状態(作業中/確認待ち/差し戻し中/完了)。画面の「確認待ち」はこの値で見る(日時では推測しない)
+  status: t.UnionEnum([...taskStatuses]),
   isVisible: t.Boolean(),
   taskType: t.Union([
     t.Object({ taskTypeId: t.String(), taskTypeName: t.String() }),
