@@ -1,6 +1,7 @@
 import { formatLimit } from '#/components/member-card'
 import { Modal } from '#/components/modal'
 import { IconButton } from '#/components/icon-button'
+import { hasUnread, ReviewDot, withUnreadLabel } from '#/components/review-dot'
 import { X } from 'lucide-react'
 import type { TreeMember, TreeTask } from '#/lib/tree'
 
@@ -32,15 +33,22 @@ export function TaskListDialog({
                     <button
                       type="button"
                       onClick={() => onEditTask(member, t)}
+                      aria-label={withUnreadLabel(t.taskName, t.unreadCount)}
+                      title={hasUnread(t.unreadCount) ? withUnreadLabel(t.taskName, t.unreadCount) : undefined}
                       className="min-w-0 flex-1 cursor-pointer text-left break-words underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                     >
                       {t.taskName}
                     </button>
                   ) : (
-                    <span className="min-w-0 flex-1 break-words">
+                    <span
+                      className="min-w-0 flex-1 break-words"
+                      title={hasUnread(t.unreadCount) ? withUnreadLabel(t.taskName, t.unreadCount) : undefined}
+                    >
                       {t.taskName}
                     </span>
                   )}
+                  {/* 未読のやりとりがあるときだけ、赤い点 */}
+                  {hasUnread(t.unreadCount) && <ReviewDot className="self-center" />}
                   {t.timeLimit && (
                     <span className="shrink-0 text-s">
                       {formatLimit(t.timeLimit)}

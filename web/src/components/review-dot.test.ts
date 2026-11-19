@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { hasPendingReview, ReviewDot, withReviewLabel } from './review-dot'
+import { hasPendingReview, hasUnread, ReviewDot, withReviewLabel, withUnreadLabel } from './review-dot'
 import { Sidebar, type SidebarProduct } from './sidebar'
 import { SidebarRail } from './sidebar-rail'
 
@@ -17,6 +17,18 @@ describe('hasPendingReview / withReviewLabel', () => {
     expect(withReviewLabel('Alpha', 2)).toBe('Alpha(確認待ち 2 件)')
     expect(withReviewLabel('Alpha', 0)).toBe('Alpha')
     expect(withReviewLabel('Alpha', null)).toBe('Alpha')
+  })
+})
+
+describe('hasUnread / withUnreadLabel(タスクの未読)', () => {
+  test('1 件以上のときだけ。0・null・未指定は、なし', () => {
+    expect(hasUnread(1)).toBe(true)
+    for (const none of [0, null, undefined]) expect(hasUnread(none)).toBe(false)
+  })
+  test('読み上げの名前に、件数を足す。なければ名前のまま', () => {
+    expect(withUnreadLabel('要件整理', 2)).toBe('要件整理(未読 2 件)')
+    expect(withUnreadLabel('要件整理', 0)).toBe('要件整理')
+    expect(withUnreadLabel('要件整理', null)).toBe('要件整理')
   })
 })
 

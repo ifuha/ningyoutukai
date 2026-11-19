@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDateTime } from '#/components/member-card'
 import { TaskMessageForm } from '#/components/task-message-form'
@@ -312,19 +312,24 @@ function MessageRow({
 // タスクの詳細の「やりとり」の欄。報告・再提出・差し戻し・承認・コメントを、古い順に出す。
 // タスクを見られる人なら、誰でも読める(api が判定する)。
 // `canComment`(リーダーと担当者)のときだけ、コメントの入力欄を出す。
-// `reactable`(= canComment かつ完了済みでない)のときだけ、絵文字を付けられる
+// `reactable`(= canComment かつ完了済みでない)のときだけ、絵文字を付けられる。
+// `beforeSend` は、入力欄の「送信」の左に並べるボタン(完了を報告など)を渡すのに使う
 export function TaskMessages({
   productId,
   taskId,
   canComment = false,
   reactable = false,
   viewerMemberId,
+  beforeSend,
 }: {
   productId: string
   taskId: string
   canComment?: boolean
   reactable?: boolean
   viewerMemberId?: string
+  /** コメントの「送信」の左に置くボタン(例: 完了を報告・差し戻す)。入力欄があるときだけ出る。
+   *  いま入っている本文と、送り終わった本文を消す関数を渡す */
+  beforeSend?: (text: string, clear: () => void) => ReactNode
 }) {
   const messages = useQuery({
     queryKey: ['products', productId, 'task', taskId, 'messages'],
@@ -366,7 +371,9 @@ export function TaskMessages({
           ))}
         </ul>
       )}
-      {canComment && <TaskMessageForm productId={productId} taskId={taskId} />}
+      {canComment && (
+        <TaskMessageForm productId={productId} taskId={taskId} beforeSend={beforeSend} />
+      )}
     </section>
   )
 }

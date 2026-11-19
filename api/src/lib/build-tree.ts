@@ -37,6 +37,8 @@ export function buildTree(
   viewerProductMemberId: string,
   /** 持ち主(userId)ごとの AI のカード。なければ空 */
   aisByUser: Map<string, TreeAi[]> = new Map(),
+  /** タスクごとの未読件数。なければ全部 0(未読のない画面でも成立させる) */
+  unreadCounts: Map<string, number> = new Map(),
 ): ProductTree {
   // メンバーごとにタスクをまとめる（入力の並び順を保つ）
   const tasksByMember = new Map<string, TreeTask[]>();
@@ -49,6 +51,8 @@ export function buildTree(
       reportedAt: row.reportedAt,
       status: row.status,
       isVisible: row.isVisible,
+      // 見ている人が開けるタスクだけ、呼び出し側で未読を数えて渡してくる(開けないタスクは 0)
+      unreadCount: unreadCounts.get(row.taskId) ?? 0,
       taskType:
         row.taskTypeId && row.taskTypeName
           ? { taskTypeId: row.taskTypeId, taskTypeName: row.taskTypeName }

@@ -12,6 +12,7 @@ import { createMessage } from "./create-message";
 import { updateMessage } from "./update-message";
 import { deleteMessage } from "./delete-message";
 import { messageReactions } from "./reaction";
+import { markRead } from "./mark-read";
 import { assignAssignee } from "./assign-assignee";
 import { suggestAssignee } from "./suggest-assignee";
 import { reportDraftEndpoints } from "./report-draft";
@@ -37,5 +38,6 @@ export const taskRoutes = new Elysia({ name: "task-routes" })
   .use(updateMessage)
   .use(deleteMessage)
   .use(messageReactions)
+  .use(markRead)
   .use(taskDocumentLinks)
   .use(reportDraftEndpoints);

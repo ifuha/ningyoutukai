@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Send } from 'lucide-react'
 import { IconButton } from '#/components/icon-button'
@@ -18,9 +18,14 @@ const textareaClass =
 export function TaskMessageForm({
   productId,
   taskId,
+  beforeSend,
 }: {
   productId: string
   taskId: string
+  /** 「送信」の左に置くボタン(例: 完了を報告・差し戻す)。いま入っている本文と、
+   *  送り終わった本文を入力欄から消す関数を渡す(**成功したときだけ**呼ぶ)。
+   *  ボタンは本文をそのまま送れるように作る(フォームの中に出すので `type="button"` にする) */
+  beforeSend?: (text: string, clear: () => void) => ReactNode
 }) {
   const queryClient = useQueryClient()
   const [text, setText] = useState('')
@@ -75,15 +80,18 @@ export function TaskMessageForm({
         <span className="text-s opacity-60">
           {text.length} / {MAX_MESSAGE_LENGTH}
         </span>
-        <IconButton
-          type="submit"
-          icon={Send}
-          label="送信"
-          showLabel
-          variant="outline"
-          className="bg-panel"
-          disabled={post.isPending || !submittable}
-        />
+        <span className="flex items-center gap-3">
+          {beforeSend?.(text, () => setText(''))}
+          <IconButton
+            type="submit"
+            icon={Send}
+            label="送信"
+            showLabel
+            variant="outline"
+            className="bg-panel"
+            disabled={post.isPending || !submittable}
+          />
+        </span>
       </div>
       {post.isError && (
         <p role="alert" className="border-l border-line pl-3 text-m">
