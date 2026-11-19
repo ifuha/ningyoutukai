@@ -34,6 +34,40 @@ export function formatLimit(iso: string): string {
   return dateFormat.format(new Date(iso)).replace('月', '/').replace('日', '')
 }
 
+const messageTimeFormat = new Intl.DateTimeFormat('ja-JP', {
+  timeZone: 'Asia/Tokyo',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+const dayKeyFormat = new Intl.DateTimeFormat('ja-JP', {
+  timeZone: 'Asia/Tokyo',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+})
+
+/** 日本時間で見た日付(年月日)が同じか。日をまたいだかの判定に使う */
+function sameDayJst(a: Date, b: Date): boolean {
+  return dayKeyFormat.format(a) === dayKeyFormat.format(b)
+}
+
+/**
+ * ISO の日時を、やりとり向けに短くする(日本時間)。
+ * 今日は `今日 HH:mm`、昨日は `昨日 HH:mm`、それより前は `YYYY/M/D HH:mm`。
+ * `now` はテスト用(省略すると、いまの日時)
+ */
+export function formatMessageTime(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  if (sameDayJst(date, now)) return `今日 ${messageTimeFormat.format(date)}`
+  // 日本時間には夏時間が無いので、24 時間前がそのまま昨日になる
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  if (sameDayJst(date, yesterday)) return `昨日 ${messageTimeFormat.format(date)}`
+  return dateTimeFormat.format(date)
+}
+
 // ツリーの 1 人分のカード(見出し部: アバター・名前・役割 / 本体: タスク 3 件まで / フッター: 件数)
 // `onEditTask` を渡すと、タスク名が押せる(リーダーにだけ渡す。ツリーに完了済みは出ないので、すべて編集できる)
 // `onShowTasks` を渡すと、4 件目以降があるとき「他 N 件」が押せて、全タスクの一覧を開ける
