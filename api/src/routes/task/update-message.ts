@@ -5,6 +5,7 @@ import { productMembers, taskMessages, tasks } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { TaskMessageSchema, actorFor, messageView } from "../../lib/message-view";
 import { MAX_BODY_LENGTH } from "../../lib/message-body";
+import { loadReactions } from "../../lib/reaction-view";
 import { getMembership } from "../../lib/product-access";
 import { MessageSchema } from "../../lib/response-schema";
 import { canEditMessage } from "../../lib/task-flow";
@@ -77,7 +78,8 @@ export const updateMessage = new Elysia({ name: "task-update-message" })
         });
       }
 
-      // 書いた人は、呼び出した本人(上で確認済み)
+      // 書いた人は、呼び出した本人(上で確認済み)。リアクションは編集で変わらないが、応答に載せる
+      const reactions = (await loadReactions([message.messageId])).get(message.messageId) ?? [];
       const toItem = (m: typeof taskMessages.$inferSelect) =>
         messageView(
           {
@@ -96,6 +98,7 @@ export const updateMessage = new Elysia({ name: "task-update-message" })
           },
           actor,
           task.status,
+          reactions,
         );
 
       // 本文が変わらなければ、何も書き換えない(「編集済み」にならない)

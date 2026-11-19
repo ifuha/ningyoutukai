@@ -97,6 +97,7 @@ describe("書ける人と、作られるもの", () => {
       "editedAt",
       "kind",
       "messageId",
+      "reactions",
     ]);
     expect(json).toMatchObject({
       kind: "comment",

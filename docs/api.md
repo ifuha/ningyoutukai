@@ -51,10 +51,12 @@
 
 | メソッド・エンドポイント | 名称 | 説明 |
 | --- | --- | --- |
-| **GET** `/api/product/{productId}/task/{taskId}/message` | メッセージ履歴取得 | タスクのメッセージを古い順に取得する。タスクを見られる人（公開タスクはメンバー全員、非公開タスクはリーダーと担当者）は読める。削除済みのメッセージは本文が空で `deleted: true` になる。各行に、この閲覧者が編集できる `canEdit`・削除できる `canDelete` が付く |
+| **GET** `/api/product/{productId}/task/{taskId}/message` | メッセージ履歴取得 | タスクのメッセージを古い順に取得する。タスクを見られる人（公開タスクはメンバー全員、非公開タスクはリーダーと担当者）は読める。削除済みのメッセージは本文が空で `deleted: true` になる。各行に、この閲覧者が編集できる `canEdit`・削除できる `canDelete`、そして絵文字ごとにまとめたリアクション `reactions`（押した人の一覧つき）が付く |
 | **POST** `/api/product/{productId}/task/{taskId}/message` | コメント追加 | リーダーと担当者がコメントを投稿する(種類は常に `comment`、本文は必須・2000字まで)。完了済みのタスクには書けない。通知メールは送らない |
 | **PATCH** `/api/product/{productId}/task/{taskId}/message/{messageId}` | メッセージ編集 | 書いた本人が本文を編集する。完了済みのタスクと削除済みのメッセージは編集できない。コメントと差し戻しは本文を空にできない |
 | **DELETE** `/api/product/{productId}/task/{taskId}/message/{messageId}` | メッセージ削除 | 書いた本人かリーダーが、コメントを削除する(論理削除。本文は空になり、履歴には「削除済み」として残る)。報告・差し戻し・承認は削除できない。完了済みのタスクと削除済みのメッセージは削除できない。成功は 204 |
+| **POST** `/api/product/{productId}/task/{taskId}/message/{messageId}/reaction` | リアクション | コメントを書ける人(リーダーと担当者)が、メッセージに絵文字を付ける。絵文字は 👍 🎉 👀 ✅ ❓ の 5 個だけで、**1 人のメッセージ 1 件につき 1 個**(押すと置き換わる)。報告・差し戻しなどのログにも付く。完了済みのタスク・削除済みのメッセージは 409 |
+| **DELETE** `/api/product/{productId}/task/{taskId}/message/{messageId}/reaction` | リアクション取り消し | 押した本人のリアクションだけを外す。応答はどちらも、そのメッセージの最新のリアクション(絵文字ごとの一覧) |
 
 #### タスクの種類
 

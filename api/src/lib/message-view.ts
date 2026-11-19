@@ -1,4 +1,5 @@
 import { t } from "elysia";
+import { ReactionListSchema, type ReactionGroup } from "./reaction-view";
 import {
   canDeleteMessage,
   canEditMessage,
@@ -12,7 +13,8 @@ import {
  * メッセージ API が返すメッセージ 1 件の形(日時は、DB の Date のまま返す。JSON になると ISO 文字列になる)。
  * 削除済みのメッセージは、本文を空にして `deleted: true` で返す(履歴の並びを崩さないため)。
  * `canEdit` / `canDelete` は、**この閲覧者**がそのメッセージを編集・削除できるか
- * (web はボタンを出すかどうかをこの 2 つで判断する。api 側も同じ判定で通す)
+ * (web はボタンを出すかどうかをこの 2 つで判断する。api 側も同じ判定で通す)。
+ * `reactions` は絵文字ごとにまとめたリアクション(押した人の一覧つき)
  */
 export const TaskMessageSchema = t.Object({
   messageId: t.String(),
@@ -28,6 +30,7 @@ export const TaskMessageSchema = t.Object({
   deleted: t.Boolean(),
   canEdit: t.Boolean(),
   canDelete: t.Boolean(),
+  reactions: ReactionListSchema,
 });
 
 /** 履歴取得 `GET …/task/:taskId/message` の応答 */
@@ -60,7 +63,13 @@ export function messageView<
   row: T,
   actor: Actor,
   status: TaskStatus,
-): Omit<T, "authorMemberId"> & { canEdit: boolean; canDelete: boolean } {
+  /** このメッセージのリアクション(既定は空。履歴の取得でまとめて渡す) */
+  reactions: ReactionGroup[] = [],
+): Omit<T, "authorMemberId"> & {
+  canEdit: boolean;
+  canDelete: boolean;
+  reactions: ReactionGroup[];
+} {
   const like = {
     authorMemberId: row.authorMemberId,
     kind: row.kind,
@@ -73,5 +82,6 @@ export function messageView<
     ...out,
     canEdit: canEditMessage(actor, like, status),
     canDelete: canDeleteMessage(actor, like, status),
+    reactions,
   };
 }

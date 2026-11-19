@@ -139,6 +139,7 @@ describe("履歴の中身", () => {
       "editedAt",
       "kind",
       "messageId",
+      "reactions",
     ]);
     expect(Object.keys(row.author).sort()).toEqual(["avatarUrl", "productMemberId", "userName"]);
     expect(row).toMatchObject({

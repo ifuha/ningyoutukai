@@ -4,6 +4,7 @@ import { db } from "../../db";
 import { productMembers, taskMessages, tasks, users } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { TaskMessageListSchema, actorFor, messageView } from "../../lib/message-view";
+import { loadReactions } from "../../lib/reaction-view";
 import { getMembership } from "../../lib/product-access";
 import { MessageSchema } from "../../lib/response-schema";
 import { canSee, taskColumns } from "../../lib/task-view";
@@ -61,6 +62,9 @@ export const listMessages = new Elysia({ name: "task-list-messages" })
         .where(eq(taskMessages.taskId, task.taskId))
         .orderBy(asc(taskMessages.createdAt), asc(taskMessages.messageId));
 
+      // リアクションは、履歴の行数ぶんをまとめて 1 クエリで取る
+      const reactions = await loadReactions(rows.map((r) => r.messageId));
+
       return {
         messages: rows.map((r) => {
           const deleted = r.deletedAt !== null;
@@ -82,6 +86,7 @@ export const listMessages = new Elysia({ name: "task-list-messages" })
             },
             actor,
             task.status,
+            reactions.get(r.messageId) ?? [],
           );
         }),
       };

@@ -146,6 +146,7 @@ describe("編集できる", () => {
       "editedAt",
       "kind",
       "messageId",
+      "reactions",
     ]);
     expect(json).toMatchObject({
       messageId: msg.messageId,
