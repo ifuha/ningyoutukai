@@ -42,7 +42,7 @@ import { sectionStyle } from '#/lib/section-style'
 //   大きさの変更は、見た目の四角(破線とハンドル)を、1 フレームに 1 回だけ更新する。
 //   確定は、ポインタを離したときに 1 回だけ `onChange(rect)`(離した座標で決める)。動かなかったら呼ばない。Esc で取り消し
 // - 名前: 札をダブルクリックで、その場で編集(Enter・外のクリックで `onRename`、Esc で取り消し)
-// - 削除: 選択中の Delete / Backspace で、確認を挟まず、すぐ削除する。「⋯」のメニューのボタンは、ユーザーの指示で消した
+// - 削除: 選択中の Delete / Backspace は、キャンバス側(選択の一括削除)が受ける。ここでは受けない(二重に削除しない)。「⋯」のメニューのボタンは、ユーザーの指示で消した
 //   色の変更は、いま、入口が無い(`onColorChange` と色の選択のメニューは、後で別の入口をつけるために残してある。使われていない)
 // - 矢印キー: 1px(Shift で 10px)。連打は、待ち時間(350ms)のあとに 1 回にまとめて `onChange`
 // 座標は、すべてキャンバスの座標(`offsetX` / `offsetY` は、`SectionBox` と同じ全体のずらし量で、表示の位置にだけ足す)
@@ -213,7 +213,7 @@ export function SectionEditor({
     preview(null)
   }
 
-  // 選択中のキー操作(Delete・矢印・Esc)。入力欄の中のキーは、取らない
+  // 選択中のキー操作(矢印・Esc)。Delete / Backspace は、キャンバス側(選択の一括削除)が受ける。入力欄の中のキーは、取らない
   useEffect(() => {
     if (!canEdit || !selected) return
     const onKeyDown = (e: KeyboardEvent) => {
@@ -228,12 +228,9 @@ export function SectionEditor({
         altKey: e.altKey,
         inEditable,
       })
-      if (action === null) return
-      if (action.type === 'ask-delete') {
-        // 確認は挟まず、すぐ削除する(ユーザーの指示)。中のメンバーは無所属に戻る
-        e.preventDefault()
-        latest.current.onDelete()
-      } else if (action.type === 'nudge') {
+      // 削除は、ツリー側がまとめて受ける(二重に削除しない)
+      if (action === null || action.type === 'ask-delete') return
+      if (action.type === 'nudge') {
         if (controller.isActive()) return
         e.preventDefault()
         const next = nudgeRect(nudgeRef.current ?? latest.current.base, action.delta)
@@ -433,7 +430,7 @@ export function SectionEditor({
           />
         ))}
 
-      {/* 選択中: 色の選択のメニュー(開く入口は無い。使われていない)。削除は、確認なしで Delete / Backspace からすぐ行う */}
+      {/* 選択中: 色の選択のメニュー(開く入口は無い。使われていない)。削除は、キャンバス側の Delete / Backspace(一括削除)が受ける */}
       {selected && (
         <SectionEditorMenu
           name={section.sectionName}

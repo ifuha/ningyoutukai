@@ -1,5 +1,7 @@
 import { ApiError } from '#/lib/api'
 import { eden, edenData, type Json } from '#/lib/eden'
+import { deleteProductNote } from '#/lib/memo-api'
+import type { BatchDelete } from '#/lib/section-cache'
 
 /**
  * セクション機能(F1)の API を呼ぶ層。型は api の応答・本文の型から取る(手書きしない)。
@@ -106,6 +108,22 @@ export function moveSelection(
   client: Client = eden(),
 ) {
   return edenData(client.api.product({ productId }).move.post(input))
+}
+
+/**
+ * 選択したセクションとメモをまとめて削除する。**まとめて削除するエンドポイントは作らず**、
+ * 既存の 1 件ずつの削除 API(`DELETE …/section/{sectionId}`・`DELETE …/note/{noteId}`)を順に呼ぶ。
+ * - **1 件でも弾かれたら、そこで打ち切る**(残りは呼ばない)。まとめての原子性は無いので、
+ *   呼び出し側(`use-section-actions`)が、先に更新した画面の値を元に戻してサーバーの値を取り直す
+ * - カード(メンバー)は消さないので、渡すのはセクションとメモだけ
+ */
+export async function deleteSelection(
+  productId: string,
+  del: BatchDelete,
+  client: Client = eden(),
+): Promise<void> {
+  for (const sectionId of del.sectionIds) await deleteSection(productId, sectionId, client)
+  for (const noteId of del.noteIds) await deleteProductNote(productId, noteId, client)
 }
 
 /** 値が `undefined` のキーを取り除く(`null` は残す。送らないキーは、本文に含めない) */

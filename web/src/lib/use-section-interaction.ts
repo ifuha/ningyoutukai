@@ -94,6 +94,20 @@ export function useSectionInteraction({
     busy.current.marqueeDragging = dragging
   }
 
+  // Delete / Backspace で、選択の一括削除を受けてよいか。Esc と同じ優先順位で決める:
+  // 選択があり、描く道具・ドラッグ・範囲選択・編集枠のドラッグ・入力中・編集のメニューのどれでもないとき。
+  // 呼び出し側(`product-tree`)は、ダイアログ・メニュー・メモの編集中・コメントの配置中も先に除く。
+  const canActOnSelection = (typing: boolean): boolean =>
+    escapeOwner({
+      tool,
+      hasSelection: selected.size > 0,
+      typing,
+      cardDragging: busy.current.cardDragging,
+      marqueeDragging: busy.current.marqueeDragging,
+      editorDragging: busy.current.editorDragging,
+      menuOpen: isEditorMenuOpen(),
+    }) === 'selection'
+
   // Esc: 1 回で、優先順位がいちばん高い 1 つだけが受ける(`escapeOwner`)。ここで動くのは、
   //   「セクション」の道具なら「選択」へ戻る、何かを選んでいれば選択を外す、の 2 つだけ。
   //   カードのドラッグ・範囲選択・編集枠のドラッグ・名前の入力・メニューは、それぞれの部品が受ける(ここでは、選択を外さない)。
@@ -196,5 +210,6 @@ export function useSectionInteraction({
     cardDragOptions,
     setCardDragging,
     setMarqueeDragging,
+    canActOnSelection,
   }
 }

@@ -184,6 +184,61 @@ export function applyBatchMove<
   return { ok: true, sections: nextSections, tree: nextTree, notes: nextNotes }
 }
 
+/** 一括削除で消す、セクション・メモの ID(選択から作る。1 件ずつの削除 API を呼ぶのに使う) */
+export type BatchDelete = {
+  sectionIds: string[]
+  noteIds: string[]
+}
+
+/**
+ * まとめて削除する(セクション・メモ)。**api を呼ぶ前に**、画面の値を先に計算する(楽観更新)。
+ * - セクションを消すと、所属していたカードは無所属に戻る(メンバーと位置は残る。api の `ON DELETE SET NULL`)
+ * - カード(メンバー)は削除しない
+ * - 画面に無いもの(存在しない・メモの一覧が未読込)は、api を呼ぶ前に失敗にして止める。
+ *   api は 1 件ずつの削除なので、ここで弾いておかないと、途中で失敗して半分だけ消える
+ * - 1 つでも弾かれたら、呼び出し側は先に更新した値を元に戻し、サーバーの値を取り直す(まとめての原子性は無い)
+ * - メモの一覧がまだ読み込まれていない(undefined)のに、メモを消そうとしたら失敗
+ */
+export function applyBatchDelete<
+  S extends CachedSection,
+  M extends CachedMember,
+  T extends CachedTree<M>,
+  N extends CachedNote,
+>(
+  sections: readonly S[],
+  tree: T | undefined,
+  notes: N[] | undefined,
+  del: BatchDelete,
+): BatchUpdate<S, T, N> {
+  const sectionIds = new Set(del.sectionIds)
+  const noteIds = new Set(del.noteIds)
+
+  for (const sectionId of sectionIds) {
+    if (!sections.some((s) => s.sectionId === sectionId)) {
+      return { ok: false, reason: 'not-found' }
+    }
+  }
+  if (noteIds.size > 0) {
+    if (!notes) return { ok: false, reason: 'not-found' }
+    for (const noteId of noteIds) {
+      if (!notes.some((n) => n.noteId === noteId)) {
+        return { ok: false, reason: 'not-found' }
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    sections: sections.filter((s) => !sectionIds.has(s.sectionId)),
+    tree: tree
+      ? mapMembers<M, T>(tree, (m) =>
+          m.sectionId && sectionIds.has(m.sectionId) ? { ...m, sectionId: null } : m,
+        )
+      : tree,
+    notes: notes ? notes.filter((n) => !noteIds.has(n.noteId)) : notes,
+  }
+}
+
 /** セクションの削除。所属メンバーは無所属に戻り、メンバーと位置は残る(api の `ON DELETE SET NULL`) */
 export function applySectionDelete<
   S extends CachedSection,

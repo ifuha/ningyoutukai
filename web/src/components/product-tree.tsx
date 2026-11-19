@@ -29,12 +29,14 @@ import {
   notesForMarquee,
   parseKey,
   pressItem,
+  splitDeletable,
 } from '#/lib/canvas-selection'
 import type { ItemKey, ItemKind, MoveCandidate, Selectable } from '#/lib/canvas-selection'
 import { decideDragAction } from '#/lib/canvas-gesture'
 import type { DragTarget } from '#/lib/canvas-gesture'
 import type { CanvasTool, CanvasView } from '#/lib/section-interaction-types'
-import { cursorClass } from '#/lib/canvas-tool'
+import { cursorClass, isTypingTarget } from '#/lib/canvas-tool'
+import { keyAction } from '#/lib/section-editor-state'
 import { useMarquee } from '#/lib/use-marquee'
 import { useSpaceHeld } from '#/lib/use-space-held'
 import { freezeBeforeCommit } from '#/lib/freeze-on-commit'
@@ -219,6 +221,8 @@ export function ProductTree({
   const [commentError, setCommentError] = useState<string | null>(null)
   // コメントの配置モード。ツールバーの「コメント」で入り、ツリーをクリックして置く。ほかの道具を押すか、Esc でやめる。置いたら終わる
   const [commentMode, setCommentMode] = useState(false)
+  const commentModeRef = useRef(false)
+  commentModeRef.current = commentMode
   // 配置モードの層で、ボタンを押した位置(動かしたドラッグ = 画面の移動のときは、置かない)
   const commentPressRef = useRef<{ x: number; y: number } | null>(null)
   // メモの内容を編集中か。編集中は、セクションやカードなど他の操作を止める(道具は同時に使えない)
@@ -265,6 +269,17 @@ export function ProductTree({
     }
     return { selectable, movable }
   }, [leader, members, sections, notes, canEditSections, memoEditing])
+  // 選択をまとめて削除したときに消せるもの(セクションと、自分が変更できるメモ)。カード(メンバー)は消さない。
+  // 選択に入っていても、ここに無いものは、削除のときに黙って飛ばす
+  const deletableKeys = useMemo(() => {
+    const keys = new Set<ItemKey>()
+    if (memoEditing) return keys
+    if (canEditSections) {
+      for (const s of sections) keys.add(itemKey('section', s.sectionId))
+    }
+    for (const n of notes) if (n.canEdit) keys.add(itemKey('note', n.noteId))
+    return keys
+  }, [sections, notes, canEditSections, memoEditing])
   // この押しで、画面を動かしてよいか。背景・Space + ドラッグ・中ボタンだけがパン。
   // ものの上(動かす)・左ドラッグの範囲選択・「セクション」の道具は、そちらに譲る
   const canPanDrag = useCallback(
@@ -382,6 +397,9 @@ export function ProductTree({
   }, [bounds.offsetX, bounds.offsetY])
   // 編集の確定の直前に、いまの見え方を固定する(自動の全体表示が、編集のたびに計算し直されないように)
   const guardedActions = freezeBeforeCommit(sectionActions, freeze)
+  // Delete / Backspace の削除も、同じく確定として扱う(イベントの中から、最新の操作を読む)
+  const deleteActionsRef = useRef(guardedActions)
+  deleteActionsRef.current = guardedActions
   const scale = view?.scale ?? 1
   // 画面の座標 → キャンバス座標。中身(変換された層)の左上の画面上の位置は、パンを含んで測れる
   const toCanvas = useCallback(
@@ -449,6 +467,39 @@ export function ProductTree({
   // いまの選択(イベントの中から、最新の値を読む)
   const selectedRef = useRef(interaction.selected)
   selectedRef.current = interaction.selected
+  // Delete / Backspace の一括削除(イベントの中から、最新の値を読む)
+  const canActOnSelectionRef = useRef(interaction.canActOnSelection)
+  canActOnSelectionRef.current = interaction.canActOnSelection
+  const deletableKeysRef = useRef(deletableKeys)
+  deletableKeysRef.current = deletableKeys
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const typing = isTypingTarget(
+        event.target as { tagName?: string; isContentEditable?: boolean } | null,
+      )
+      const action = keyAction({
+        key: event.key,
+        shiftKey: event.shiftKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        altKey: event.altKey,
+        inEditable: typing,
+      })
+      if (action?.type !== 'ask-delete') return
+      // ダイアログ・メニューの中の Delete は、その部品に任せる
+      const target = event.target instanceof Element ? event.target : null
+      if (target?.closest('[role="dialog"], [role="menu"], [role="alertdialog"]')) return
+      if (memoEditingRef.current || commentModeRef.current) return
+      if (!canActOnSelectionRef.current(typing)) return
+      // Backspace で、ブラウザが前のページへ戻らないようにする(削除できるものが無くても)
+      event.preventDefault()
+      const del = splitDeletable(selectedRef.current, deletableKeysRef.current)
+      if (del.sectionIds.length + del.noteIds.length === 0) return
+      void deleteActionsRef.current.deleteSelection(del)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
   // 範囲選択の対象(押した瞬間に測る)と、押す前の選択(取りやめたら戻す)
   const marqueeItemsRef = useRef<Selectable[]>([])
   const marqueeBaseRef = useRef<Set<ItemKey>>(new Set())
@@ -831,7 +882,7 @@ export function ProductTree({
       <div
         ref={containerRef}
         role="region"
-        aria-label="ツリー(ドラッグか矢印キーで移動、+ と - で拡大縮小、0 で全体表示)"
+        aria-label="ツリー(ドラッグか矢印キーで移動、Delete で選択を削除、+ と - で拡大縮小、0 で全体表示)"
         tabIndex={0}
         {...containerHandlers}
         onPointerDownCapture={(e) => {

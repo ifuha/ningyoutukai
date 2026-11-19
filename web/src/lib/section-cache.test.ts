@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
   applyMemberMove,
+  applyBatchDelete,
   applyBatchMove,
   applySectionCreate,
   applySectionDelete,
@@ -309,5 +310,66 @@ describe('applyBatchMove(まとめて動かす)', () => {
     expect(s.x).toBe(100)
     expect(t.members[0].positionX).toBe(150)
     expect(n.x).toBe(1)
+  })
+})
+
+describe('applyBatchDelete(まとめて削除する)', () => {
+  const note = (id: string) => ({ noteId: id, x: 0, y: 0, content: 'メモ' })
+
+  test('セクションとメモを消す。所属していたカードは無所属に戻り、位置は残る(カードは消さない)', () => {
+    const t = tree(member('L', 's1', [10, 10]), [
+      member('M1', 's1', [20, 20]),
+      member('M2', 's2', [30, 30]),
+    ])
+    const r = applyBatchDelete(
+      [section(), section({ sectionId: 's2', sectionName: '開発' })],
+      t,
+      [note('n1'), note('n2')],
+      { sectionIds: ['s1'], noteIds: ['n1'] },
+    )
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.sections.map((s) => s.sectionId)).toEqual(['s2'])
+    // 消したセクションのカードは無所属。位置とメンバーは残る
+    expect(r.tree?.leader).toMatchObject({ productMemberId: 'L', sectionId: null, positionX: 10, positionY: 10 })
+    expect(r.tree?.members[0]).toMatchObject({ productMemberId: 'M1', sectionId: null, positionX: 20, positionY: 20 })
+    // 別のセクションのカードは、そのまま
+    expect(r.tree?.members[1]).toMatchObject({ productMemberId: 'M2', sectionId: 's2' })
+    expect(r.notes?.map((n) => n.noteId)).toEqual(['n2'])
+  })
+
+  test('見つからないセクション・メモは not-found で、何も変えない', () => {
+    const t = tree(member('L', null, null), [])
+    expect(
+      applyBatchDelete([section()], t, [note('n1')], { sectionIds: ['zz'], noteIds: [] }),
+    ).toEqual({ ok: false, reason: 'not-found' })
+    expect(
+      applyBatchDelete([section()], t, [note('n1')], { sectionIds: [], noteIds: ['zz'] }),
+    ).toEqual({ ok: false, reason: 'not-found' })
+  })
+
+  test('メモの一覧が読み込まれていないのにメモを消そうとしたら、失敗する', () => {
+    expect(
+      applyBatchDelete([], undefined, undefined, { sectionIds: [], noteIds: ['n1'] }),
+    ).toEqual({ ok: false, reason: 'not-found' })
+  })
+
+  test('何も指定しなければ、そのまま返す', () => {
+    const t = tree(member('L', null, null), [])
+    const r = applyBatchDelete([section()], t, [note('n1')], { sectionIds: [], noteIds: [] })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.sections.map((s) => s.sectionId)).toEqual(['s1'])
+    expect(r.notes?.map((n) => n.noteId)).toEqual(['n1'])
+  })
+
+  test('元のデータは書き換えない', () => {
+    const s = section()
+    const t = tree(member('L', 's1', [10, 10]), [])
+    const n = note('n1')
+    applyBatchDelete([s], t, [n], { sectionIds: ['s1'], noteIds: ['n1'] })
+    expect(s.sectionId).toBe('s1')
+    expect(t.leader.sectionId).toBe('s1')
+    expect(n.noteId).toBe('n1')
   })
 })

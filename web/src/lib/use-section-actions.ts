@@ -5,6 +5,7 @@ import { runOptimistic } from '#/lib/optimistic'
 import { beginCommit, endCommit } from '#/lib/pending-commits'
 import type { Store } from '#/lib/optimistic'
 import {
+  applyBatchDelete,
   applyBatchMove,
   applyMemberMove,
   applySectionCreate,
@@ -13,10 +14,11 @@ import {
   nextSectionColor,
   nextSectionName,
 } from '#/lib/section-cache'
-import type { BatchMove, SectionPatch } from '#/lib/section-cache'
+import type { BatchDelete, BatchMove, SectionPatch } from '#/lib/section-cache'
 import {
   createSection as apiCreateSection,
   deleteSection as apiDeleteSection,
+  deleteSelection as apiDeleteSelection,
   moveMember as apiMoveMember,
   moveSelection as apiMoveSelection,
   updateSection as apiUpdateSection,
@@ -31,7 +33,7 @@ import type { ProductTree } from '#/lib/tree'
 import { productNotesQueryKey } from '#/lib/use-product-notes'
 import { sectionsQueryKey, treeQueryKey } from '#/lib/use-sections'
 
-// セクションの操作(作成・更新・削除・カードの移動・選択の一括移動)。api を呼び、画面の値(セクションの一覧と、ツリーのメンバーの位置・所属、メモの位置)を
+// セクションの操作(作成・更新・削除・カードの移動・選択の一括移動・一括削除)。api を呼び、画面の値(セクションの一覧と、ツリーのメンバーの位置・所属、メモの位置・一覧)を
 // **先に更新**(楽観更新)して、失敗したら元に戻す。成功・失敗のあとは、サーバーの値で取り直して整合を取る。
 // 失敗は、種類(403 / 404 / 409 / 422 …)ごとの短い日本語のメッセージにして、`notice` に出す(画面が表示する)。
 // 作成だけは、先に更新しない(サーバーが決める ID が要るため)。成功したら、一覧に足す。
@@ -56,6 +58,9 @@ export type SectionActions = {
   ) => Promise<boolean>
   /** 選択したセクション・カード・メモを、まとめて移動する(所属は変えない) */
   moveSelection: (move: BatchMove) => Promise<boolean>
+  /** 選択したセクションと、削除できるメモを、まとめて削除する(カードは削除しない)。
+   * 新しいエンドポイントは作らず、既存の 1 件ずつの削除 API を順に呼ぶ */
+  deleteSelection: (del: BatchDelete) => Promise<boolean>
 }
 
 /** 編集の操作を持たない画面(読み取りだけ・テスト)で使う、何もしない操作 */
@@ -67,6 +72,7 @@ export const NO_SECTION_ACTIONS: SectionActions = {
   deleteSection: async () => false,
   moveMember: async () => false,
   moveSelection: async () => false,
+  deleteSelection: async () => false,
 }
 
 type Snapshot = {
@@ -254,6 +260,43 @@ export function useSectionActions(productId: string): SectionActions {
     return result.ok
   }
 
+  const deleteSelection: SectionActions['deleteSelection'] = async (del) => {
+    const current = store.read()
+    // api に送る前に、画面で分かる失敗(存在しない・メモ未読込)は止める
+    const check = applyBatchDelete(current.sections ?? [], current.tree, current.notes, del)
+    if (!check.ok) {
+      notify(sectionErrorMessage(new ApiError(404, '')))
+      return false
+    }
+    const result = await runOptimistic({
+      ...shared,
+      // メモの取得も、先に更新した値を古い値で上書きしないよう取り消す
+      before: () => {
+        beginCommit()
+        return cancelIfFetching(queryClient, [sectionsKey, treeKey, notesKey])
+      },
+      settle: (ok) => {
+        endCommit()
+        resyncOnFailure(queryClient, [sectionsKey, treeKey, notesKey])(ok)
+      },
+      apply: (s) => {
+        const next = applyBatchDelete(s.sections ?? [], s.tree, s.notes, del)
+        return next.ok
+          ? {
+              sections: s.sections ? next.sections : undefined,
+              tree: next.tree,
+              notes: next.notes,
+            }
+          : null
+      },
+      // 既存の 1 件ずつの削除 API を順に呼ぶ(まとめて削除するエンドポイントは作らない。中身は section-api)。
+      // 1 つでも弾かれたらそこで打ち切る。失敗は runOptimistic が受け、先に更新した画面の値を元に戻し、
+      // 下の settle がサーバーの値を取り直す
+      call: () => apiDeleteSelection(productId, del),
+    })
+    return result.ok
+  }
+
   const createSection: SectionActions['createSection'] = async (rect) => {
     const existing = store.read().sections ?? []
     const result = await runOptimistic({
@@ -287,5 +330,6 @@ export function useSectionActions(productId: string): SectionActions {
     deleteSection,
     moveMember,
     moveSelection,
+    deleteSelection,
   }
 }
