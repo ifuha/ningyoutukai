@@ -6,6 +6,7 @@ import { products, productMembers, tasks, taskTypes, users } from "../db/schema"
 import { authGuard } from "../lib/auth-guard";
 import { buildTree } from "../lib/build-tree";
 import { ProductTreeSchema } from "../lib/tree-schema";
+import { loadUnreadCounts } from "../lib/task-unread";
 
 export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
   .use(authGuard)
@@ -102,7 +103,13 @@ export const productTreeRoutes = new Elysia({ prefix: "/api/product" })
 
       // 5. ツリーに組み立てて返す
       const aisByUser = await loadTreeAis(productId, memberRows, user.userId);
-      return buildTree(product, memberRows, taskRows, me.productMemberId, aisByUser);
+      // 未読のやりとりは、**開けるタスクだけ**数える(リーダーは全部、メンバーは自分のタスクだけ)。
+      // 開けないタスクの未読は消せないので、出さない(点が付いたまま残ってしまうため)
+      const readableTaskIds = taskRows
+        .filter((r) => viewerIsLeader || r.productMemberId === me.productMemberId)
+        .map((r) => r.taskId);
+      const unreadCounts = await loadUnreadCounts(me.productMemberId, readableTaskIds);
+      return buildTree(product, memberRows, taskRows, me.productMemberId, aisByUser, unreadCounts);
     },
     {
         requireUser: true,

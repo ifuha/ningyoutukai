@@ -14,4 +14,5 @@ export * from "./tasks";
 export * from "./relations";
 export * from "./task_message";
 export * from "./task_message_reactions";
+export * from "./task_reads";
 export * from "./product_ai_positions";

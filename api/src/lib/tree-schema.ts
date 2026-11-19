@@ -17,6 +17,9 @@ export const TreeTaskSchema = t.Object({
   reportedAt: nullableDate,
   // 状態(作業中/確認待ち/差し戻し中/完了)。画面の「確認待ち」はこの値で見る(日時では推測しない)
   status: t.UnionEnum([...taskStatuses]),
+  // 未読のやりとりの件数(自分以外が書いた、開いた日時より新しいコメント・報告など)。
+  // 画面はこの数が 0 より大きいときだけ、行に赤い点を出す。開くと 0 になる(`POST …/task/:taskId/read`)
+  unreadCount: t.Number(),
   isVisible: t.Boolean(),
   taskType: t.Union([
     t.Object({ taskTypeId: t.String(), taskTypeName: t.String() }),
