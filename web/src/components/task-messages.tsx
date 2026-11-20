@@ -201,7 +201,7 @@ function MessageRow({
   return (
     <li
       ref={rowRef}
-      className="flex gap-2 text-m"
+      className="flex gap-2 text-m hover:bg-side-item/20"
       onContextMenu={(e) => {
         // 右クリック(スマホは長押し)で、編集・削除のメニューを出す
         if (message.deleted || editing) return
