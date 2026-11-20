@@ -16,6 +16,9 @@ export const SIZE_MAX = 100_000
 export const MIN_SECTION_SIZE = 80
 // メンバーのカードの大きさ(Figma の task カード)
 export const CARD_SIZE: Size = { width: 236, height: 138 }
+// セクションを置くときの既定の大きさ(Figma の section-*、api の既定と同じ 300×400)。
+// クリックに近いドラッグで置いたときにも、この大きさにする(`section-draw` の `placedRect`)
+export const DEFAULT_SECTION_SIZE: Size = { width: 300, height: 400 }
 
 function clamp(value: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, value))
@@ -63,7 +66,8 @@ function dragAxis(s: number, e: number): { lo: number; size: number } {
 }
 
 // ドラッグで四角を描く。どの向きにドラッグしても、正の幅・高さの四角にする(始点の角は動かさない)
-// - ドラッグした大きさのまま置く(最小は決めない。クリックだけでも、既定の大きさにはしない)
+// - ドラッグした大きさのまま返す(最小は決めない)。**クリックに近いときの既定の大きさ(300×400)は、置く側が当てる**
+//   (`section-draw` の `placedRect`)。この関数は、画面の拡大率を持たない純粋な座標の計算
 // - 動きが 0 の辺だけ、1 にする(api は 0 より大きい値を求める)
 // - 座標と大きさが上限を超えるときは、上限に丸める
 export function rectFromDrag(start: Point, end: Point): Rect {

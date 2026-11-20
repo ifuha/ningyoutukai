@@ -1,7 +1,14 @@
-import { rectFromDrag, type Point, type Rect } from '#/lib/section-edit-geometry'
+import {
+  DEFAULT_SECTION_SIZE,
+  rectFromDrag,
+  type Point,
+  type Rect,
+} from '#/lib/section-edit-geometry'
+import { screenSize } from '#/lib/section-editor-state'
 
 // 「ドラッグでセクションを置く」操作の状態遷移(画面や DOM に依存しない純粋な関数)
-// 座標はすべて「キャンバスの座標」。画面の座標からの変換(`toCanvas`)は、呼び出す側(部品)が行う
+// 座標はすべて「キャンバスの座標」。画面の座標からの変換(`toCanvas`)は、呼び出す側(部品)が行う。
+// 拡大率を使うのは `placedRect` だけ(画面で 24px という大きさを、キャンバスの座標に直すため)
 //
 // 状態: 待機(idle) → 押した(dragging) → 離した(確定: create)/ 取り消し(cancel)
 // 副作用(`onCreate` / `onCancel` を呼ぶこと)は、ここでは行わず、`effect` として返す。呼ぶ側が実行する
@@ -26,6 +33,27 @@ export type DrawEvent =
   | { type: 'reset' }
 
 export type DrawEffect = { type: 'create'; rect: Rect } | { type: 'cancel' }
+
+/**
+ * 画面で、これ以上動かさなければ「クリック」とみなす(既定の大きさで置く)。**幅・高さの両方**がこの値未満のとき。
+ * マウスのジッターや数 px の押し違いで、1×1 に近いセクションが置かれてしまうのを防ぐ。
+ * 移動を 4px でドラッグとみなす判定より大きい(置くのは勝手に大きくなるので、描いた人と違う大きさになる)。
+ * 拡大率でキャンバスの座標に直すのは `placedRect`(`screenSize`)
+ */
+export const DRAW_CLICK_PX = 24
+
+/**
+ * 置かれる四角。ドラッグが画面で `DRAW_CLICK_PX` 未満(クリックに近い)なら、既定の大きさ(300×400)にする。
+ * `scale` は拡大率(画面の px をキャンバスの座標に直す。不正なら 1 として扱う)。
+ * **プレビューと確定の両方で、この関数を通す**(見せる大きさと、置く大きさを一致させるため)
+ */
+export function placedRect(rect: Rect, scale: number): Rect {
+  const limit = screenSize(DRAW_CLICK_PX, scale)
+  if (rect.width < limit && rect.height < limit) {
+    return { ...rect, width: DEFAULT_SECTION_SIZE.width, height: DEFAULT_SECTION_SIZE.height }
+  }
+  return rect
+}
 
 export type DrawStep = {
   state: DrawState
@@ -76,7 +104,7 @@ export function drawReducer(state: DrawState, event: DrawEvent): DrawStep {
   }
 }
 
-/** ドラッグ中のプレビューの四角(キャンバスの座標)。ドラッグ中でなければ null。ほぼクリックのときは、既定の大きさ(置かれる大きさ)を見せる */
+/** ドラッグ中のプレビューの四角(キャンバスの座標)。ドラッグ中でなければ null。置かれる大きさに直すのは、呼び出す側(`placedRect`) */
 export function previewRect(state: DrawState): Rect | null {
   return state.kind === 'dragging' ? rectFromDrag(state.start, state.current) : null
 }
