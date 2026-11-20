@@ -15,6 +15,7 @@ export const SectionSchema = t.Object({
   width: t.Number(),
   height: t.Number(),
   createdAt: t.Date(),
+  deletedAt: t.Union([t.Date(), t.Null()]),
   // 所属するメンバー(productMemberId)。並びは productMemberId の昇順で固定する
   memberIds: t.Array(t.String()),
 });
@@ -28,6 +29,7 @@ export const sectionColumns = {
   width: sections.width,
   height: sections.height,
   createdAt: sections.createdAt,
+  deletedAt: sections.deletedAt,
 };
 
 export type SectionRow = {

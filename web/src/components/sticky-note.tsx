@@ -49,6 +49,14 @@ export function StickyNote({ note, offsetX = 0, offsetY = 0, selected = false, c
   const [content, setContent] = useState(note.content)
   const drag = useRef<{ x: number; y: number; startX: number; startY: number } | null>(null)
   const [position, setPosition] = useState({ x: note.x, y: note.y })
+  // まとめて移動・取り直しなどで、外から位置が変わったら、表示も合わせる
+  // (単体のドラッグ中は、props は変わらないので、指の位置のまま)。
+  // 確定の描画と同じフレームで合わせたいので、effect ではなく、描画の途中で直す(React の「props が変わったら state を直す」形)
+  const [syncedFrom, setSyncedFrom] = useState({ x: note.x, y: note.y })
+  if (syncedFrom.x !== note.x || syncedFrom.y !== note.y) {
+    setSyncedFrom({ x: note.x, y: note.y })
+    setPosition({ x: note.x, y: note.y })
+  }
 
   const positionAt = (e: { clientX: number; clientY: number }) => {
     const d = drag.current

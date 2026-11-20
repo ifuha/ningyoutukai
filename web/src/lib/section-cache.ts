@@ -1,4 +1,4 @@
-import { applyDeltaToMembers } from '#/lib/section-edit-geometry'
+import { applyDeltaToMembers, COORD_MAX } from '#/lib/section-edit-geometry'
 import type { Point } from '#/lib/section-edit-geometry'
 import { sectionStyles } from '#/lib/section-style'
 
@@ -79,6 +79,163 @@ export function applySectionUpdate<
     ok: true,
     sections: sections.map((s) => (s.sectionId === sectionId ? updated : s)),
     tree: nextTree,
+  }
+}
+
+/** 一括移動で動かす、セクション・カード・メモの、移動先の絶対位置(api の本文と同じ形) */
+export type BatchMove = {
+  sections: { sectionId: string; x: number; y: number }[]
+  members: { memberId: string; positionX: number; positionY: number }[]
+  notes: { noteId: string; x: number; y: number }[]
+}
+
+/** キャッシュ上のメモ。位置だけを変える(ほかの項目はそのまま) */
+export type CachedNote = { noteId: string; x: number; y: number }
+
+export type BatchUpdate<S, T, N> =
+  | { ok: true; sections: S[]; tree: T | undefined; notes: N[] | undefined }
+  | { ok: false; reason: UpdateFailure }
+
+/**
+ * まとめて動かす(セクション・カード・メモ)。api と同じ規則で、先に画面の値を計算する。
+ * - セクションを動かすと、所属する位置持ちのカードも同じ差分だけ動く。ただし、この一括移動で明示されたカードは、
+ *   あとで絶対位置で上書きする(二重に動かさない)
+ * - 位置が NULL のカード(自動配置)は、セクションと一緒には動かない。明示されたときだけ、その位置を持つ
+ * - 1 つでも見つからない、または座標の上限を超えるなら、何も変えずに失敗(api は 404 / 422 で全件ロールバック)
+ * - メモの一覧がまだ読み込まれていない(undefined)のに、メモを動かそうとしたら失敗
+ */
+export function applyBatchMove<
+  S extends CachedSection,
+  M extends CachedMember,
+  T extends CachedTree<M>,
+  N extends CachedNote,
+>(
+  sections: readonly S[],
+  tree: T | undefined,
+  notes: N[] | undefined,
+  move: BatchMove,
+): BatchUpdate<S, T, N> {
+  const explicit = new Set(move.members.map((m) => m.memberId))
+  let nextSections = [...sections]
+  let nextTree = tree
+
+  for (const target of move.sections) {
+    if (Math.abs(target.x) > COORD_MAX || Math.abs(target.y) > COORD_MAX) {
+      return { ok: false, reason: 'out-of-range' }
+    }
+    const current = nextSections.find((s) => s.sectionId === target.sectionId)
+    if (!current) return { ok: false, reason: 'not-found' }
+    const delta: Point = { x: target.x - current.x, y: target.y - current.y }
+    if (nextTree && (delta.x !== 0 || delta.y !== 0)) {
+      const inSection = [nextTree.leader, ...nextTree.members].filter(
+        (m) => m.sectionId === target.sectionId && !explicit.has(m.productMemberId),
+      )
+      const moved = applyDeltaToMembers(inSection, delta)
+      if (!moved.ok) return { ok: false, reason: 'out-of-range' }
+      const byId = new Map(moved.members.map((m) => [m.productMemberId, m]))
+      nextTree = mapMembers<M, T>(
+        nextTree,
+        (m) => (byId.get(m.productMemberId) as M | undefined) ?? m,
+      )
+    }
+    nextSections = nextSections.map((s) =>
+      s.sectionId === target.sectionId ? { ...s, x: target.x, y: target.y } : s,
+    )
+  }
+
+  for (const target of move.members) {
+    if (
+      Math.abs(target.positionX) > COORD_MAX ||
+      Math.abs(target.positionY) > COORD_MAX
+    ) {
+      return { ok: false, reason: 'out-of-range' }
+    }
+    if (!nextTree) return { ok: false, reason: 'not-found' }
+    const exists = [nextTree.leader, ...nextTree.members].some(
+      (m) => m.productMemberId === target.memberId,
+    )
+    if (!exists) return { ok: false, reason: 'not-found' }
+    const moved = applyMemberMove(
+      nextSections,
+      nextTree,
+      target.memberId,
+      { x: target.positionX, y: target.positionY },
+      undefined,
+    )
+    nextSections = moved.sections
+    nextTree = moved.tree
+  }
+
+  if (move.notes.length > 0 && !notes) return { ok: false, reason: 'not-found' }
+  let nextNotes = notes
+  if (notes) {
+    for (const target of move.notes) {
+      if (Math.abs(target.x) > COORD_MAX || Math.abs(target.y) > COORD_MAX) {
+        return { ok: false, reason: 'out-of-range' }
+      }
+      const index = nextNotes!.findIndex((n) => n.noteId === target.noteId)
+      if (index < 0) return { ok: false, reason: 'not-found' }
+      nextNotes = nextNotes!.map((n, i) =>
+        i === index ? ({ ...n, x: target.x, y: target.y } as N) : n,
+      )
+    }
+  }
+
+  return { ok: true, sections: nextSections, tree: nextTree, notes: nextNotes }
+}
+
+/** 一括削除で消す、セクション・メモの ID(選択から作る。1 件ずつの削除 API を呼ぶのに使う) */
+export type BatchDelete = {
+  sectionIds: string[]
+  noteIds: string[]
+}
+
+/**
+ * まとめて削除する(セクション・メモ)。**api を呼ぶ前に**、画面の値を先に計算する(楽観更新)。
+ * - セクションを消すと、所属していたカードは無所属に戻る(メンバーと位置は残る。api の `ON DELETE SET NULL`)
+ * - カード(メンバー)は削除しない
+ * - 画面に無いもの(存在しない・メモの一覧が未読込)は、api を呼ぶ前に失敗にして止める。
+ *   api は 1 件ずつの削除なので、ここで弾いておかないと、途中で失敗して半分だけ消える
+ * - 1 つでも弾かれたら、呼び出し側は先に更新した値を元に戻し、サーバーの値を取り直す(まとめての原子性は無い)
+ * - メモの一覧がまだ読み込まれていない(undefined)のに、メモを消そうとしたら失敗
+ */
+export function applyBatchDelete<
+  S extends CachedSection,
+  M extends CachedMember,
+  T extends CachedTree<M>,
+  N extends CachedNote,
+>(
+  sections: readonly S[],
+  tree: T | undefined,
+  notes: N[] | undefined,
+  del: BatchDelete,
+): BatchUpdate<S, T, N> {
+  const sectionIds = new Set(del.sectionIds)
+  const noteIds = new Set(del.noteIds)
+
+  for (const sectionId of sectionIds) {
+    if (!sections.some((s) => s.sectionId === sectionId)) {
+      return { ok: false, reason: 'not-found' }
+    }
+  }
+  if (noteIds.size > 0) {
+    if (!notes) return { ok: false, reason: 'not-found' }
+    for (const noteId of noteIds) {
+      if (!notes.some((n) => n.noteId === noteId)) {
+        return { ok: false, reason: 'not-found' }
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    sections: sections.filter((s) => !sectionIds.has(s.sectionId)),
+    tree: tree
+      ? mapMembers<M, T>(tree, (m) =>
+          m.sectionId && sectionIds.has(m.sectionId) ? { ...m, sectionId: null } : m,
+        )
+      : tree,
+    notes: notes ? notes.filter((n) => !noteIds.has(n.noteId)) : notes,
   }
 }
 

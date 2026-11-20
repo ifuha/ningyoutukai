@@ -22,7 +22,7 @@ export type Selectable = {
 /** 範囲選択の判定。'touch' は触れたもの(重なり)、'contain' は完全に入ったものだけ */
 export type MarqueeMode = 'touch' | 'contain'
 
-/** 次にまとめて動かす候補(今回の PR では使わない。次の PR の一括移動で使う) */
+/** まとめて動かす候補(複数選択の移動で使う) */
 export type MoveCandidate = {
   kind: ItemKind
   id: string
@@ -80,6 +80,14 @@ export function itemsInRect(
   return items
     .filter((item) => (mode === 'contain' ? rectContains(marquee, item.rect) : rectsIntersect(marquee, item.rect)))
     .map((item) => itemKey(item.kind, item.id))
+}
+
+/**
+ * 範囲選択に入れるメモ。**変更できないメモ(他の人のメモ)は、まとめて動かせないので、範囲選択では選ばない**
+ * (押したときは、これまでどおり選べる。動かせないだけ)
+ */
+export function notesForMarquee<N extends { canEdit: boolean }>(notes: readonly N[]): N[] {
+  return notes.filter((note) => note.canEdit)
 }
 
 /** Shift を押しながらの、1 つの選択の切り替え */
@@ -149,7 +157,7 @@ export function reconcileItemSelection(
 }
 
 /**
- * まとめて動かす候補から、二重に動かさないものを除く(次の PR で使う)。
+ * まとめて動かす候補から、二重に動かさないものを除く(複数選択の移動で使う)。
  * セクションを選んでいるとき、その所属カードのうち位置を持つものは、セクションの移動で一緒に動くので、除く。
  * 位置を持たないカード(自動配置)は、もともと動かない。カード単体の選択は、そのまま残す。
  */
@@ -161,4 +169,29 @@ export function itemsToMove(candidates: readonly MoveCandidate[]): MoveCandidate
     if (c.kind !== 'card' || !c.hasPosition) return true
     return !(c.sectionId && selectedSections.has(c.sectionId))
   })
+}
+
+/** まとめて削除するものを、セクションとメモに分けたもの(api の本文と同じ形) */
+export type DeletableBatch = {
+  sectionIds: string[]
+  noteIds: string[]
+}
+
+/**
+ * 選択のうち、削除できるものだけを、セクションとメモに分ける(複数選択の削除で使う)。
+ * `deletable` に入っていないもの(カード、他の人のメモ)は、黙って飛ばす。順序は、選択の順のまま。
+ */
+export function splitDeletable(
+  selected: Iterable<ItemKey>,
+  deletable: ReadonlySet<ItemKey>,
+): DeletableBatch {
+  const sectionIds: string[] = []
+  const noteIds: string[] = []
+  for (const key of selected) {
+    if (!deletable.has(key)) continue
+    const { kind, id } = parseKey(key)
+    if (kind === 'section') sectionIds.push(id)
+    else if (kind === 'note') noteIds.push(id)
+  }
+  return { sectionIds, noteIds }
 }

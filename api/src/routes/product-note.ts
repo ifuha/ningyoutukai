@@ -1,4 +1,4 @@
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { productNotes, products, users } from "../db/schema";
@@ -17,7 +17,7 @@ const noteSchema = t.Object({
   authorName: t.Union([t.String(), t.Null()]), createdBy: t.Union([t.String(), t.Null()]), isPublic: t.Boolean(),
   // 見ている人が、変更・削除・公開の切り替えをできるか(画面が、メニューの項目を出し分けるのに使う)
   canEdit: t.Boolean(),
-  createdAt: t.Date(), updatedAt: t.Date(),
+  createdAt: t.Date(), updatedAt: t.Date(), deletedAt: t.Union([t.Date(), t.Null()]),
 });
 const noteListSchema = t.Array(noteSchema);
 const notFound = { message: "プロダクトまたはメモが見つかりません" };
@@ -28,7 +28,7 @@ const forbiddenDelete = { message: "他の人のメモは削除できません" 
 const noteColumns = {
   noteId: productNotes.noteId, productId: productNotes.productId, content: productNotes.content, x: productNotes.x, y: productNotes.y,
   authorName: users.userName, createdBy: productNotes.createdBy, isPublic: productNotes.isPublic,
-  createdAt: productNotes.createdAt, updatedAt: productNotes.updatedAt,
+  createdAt: productNotes.createdAt, updatedAt: productNotes.updatedAt, deletedAt: productNotes.deletedAt,
 };
 
 /**
@@ -72,8 +72,9 @@ export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGu
   .get("/api/product/:productId/note", async ({ params, user, authorize, status }) => {
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, { message: "プロダクトが見つかりません" });
+    // 論理削除(deletedAt が入ったメモ)は、ここには出さない
     const rows = await db.select(noteColumns).from(productNotes).leftJoin(users, eq(productNotes.createdBy, users.userId))
-      .where(and(eq(productNotes.productId, params.productId), visibleNoteFilter(user.userId)))
+      .where(and(eq(productNotes.productId, params.productId), visibleNoteFilter(user.userId), isNull(productNotes.deletedAt)))
       .orderBy(asc(productNotes.createdAt), asc(productNotes.noteId));
     const can = authorize({ userId: user.userId, role: membership.role });
     return rows.map((n) => ({ ...n, canEdit: can.canEdit(n) }));
@@ -90,6 +91,8 @@ export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGu
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, notFound);
     const note = await findNote(params.noteId);
+    // 論理削除されているメモは更新できない(404)
+    if (note?.deletedAt) return status(404, notFound);
     // 他人の非公開メモは存在を漏らさないよう、無いのと同じ 404 にする
     if (!note || note.productId !== params.productId || !isVisible(note, user.userId)) return status(404, notFound);
     // 変更できるのは作成者だけ(作成者が NULL のメモは、リーダーだけ)
