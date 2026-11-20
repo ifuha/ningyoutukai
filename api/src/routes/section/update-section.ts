@@ -53,6 +53,8 @@ export const updateSection = new Elysia({ name: "section-update" })
             .where(and(eq(sections.sectionId, params.sectionId), eq(sections.productId, params.productId)))
             .for("update");
           if (!current) return { kind: "not-found" } as const;
+          // 論理削除されているセクションは更新できない
+          if (current.deletedAt) return { kind: "not-found" } as const;
 
           const dx = body.x === undefined ? 0 : body.x - current.x;
           const dy = body.y === undefined ? 0 : body.y - current.y;
