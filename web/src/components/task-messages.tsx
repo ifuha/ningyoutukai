@@ -105,6 +105,8 @@ function MessageRow({
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   /** 絵文字の選択肢。外側を押したかを判定する */
   const pickerRef = useRef<HTMLSpanElement>(null)
+  /** 右クリックのメニューを、開いている `<dialog>` の中に描くために使う(外に描くと、dialog の下で押せない) */
+  const rowRef = useRef<HTMLLIElement>(null)
   const queryKey = ['products', productId, 'task', taskId, 'messages']
 
   // 編集・削除は件数が変わらないので、一覧の末尾は動かさない(取得し直して表示だけ入れ替える)
@@ -198,6 +200,7 @@ function MessageRow({
 
   return (
     <li
+      ref={rowRef}
       className="flex gap-2 text-m"
       onContextMenu={(e) => {
         // 右クリック(スマホは長押し)で、編集・削除のメニューを出す
@@ -370,6 +373,8 @@ function MessageRow({
           y={menu.y}
           items={items}
           label="メッセージの操作"
+          // タスク詳細の `<dialog>` の中に描く(外だと dialog の下になり、押せない)
+          container={rowRef.current?.closest('dialog') ?? null}
           onClose={() => setMenu(null)}
         />
       )}
