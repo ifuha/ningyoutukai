@@ -7,7 +7,8 @@ import { reactionEmojis } from "../../lib/reaction";
 /**
  * メッセージ 1 件へのリアクション。仕様は docs/v2.0/message-feature.md
  * - 押せるのは、コメントを書ける人(リーダーと担当者)だけ
- * - **1 人のメッセージ 1 件につき 1 個だけ**(主キーは messageId + memberId)。押すと、前の絵文字は置き換わる
+ * - **同じ人でも、違う絵文字なら複数**(主キーは messageId + memberId + emoji)。
+ *   同じ絵文字をもう一度押すと、その 1 件が押し直される(二重登録にはならない)
  * - メッセージやメンバーを消すと、連鎖して消える
  */
 export const taskMessageReactions = snakeCase.table(
@@ -23,7 +24,7 @@ export const taskMessageReactions = snakeCase.table(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    primaryKey({ columns: [t.messageId, t.memberId] }),
+    primaryKey({ columns: [t.messageId, t.memberId, t.emoji] }),
     // メッセージの履歴を引いたあとの、絵文字ごとの集計で使う
     index("task_message_reactions_message_idx").on(t.messageId),
     check(

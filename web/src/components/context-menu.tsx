@@ -17,6 +17,7 @@ export function ContextMenu({
   items,
   label,
   onClose,
+  container,
 }: {
   /** 押した位置(画面の座標) */
   x: number
@@ -27,6 +28,11 @@ export function ContextMenu({
   label: string
   /** 閉じる(項目を選んだときは、その操作のあとに呼ぶ) */
   onClose: () => void
+  /**
+   * 描く先(既定は `document.body`)。`<dialog>` を `showModal()` で開いている間は、
+   * body に描いたメニューは dialog の下(不活性)になって押せない。dialog の中に描く
+   */
+  container?: HTMLElement | null
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ left: x, top: y })
@@ -100,7 +106,7 @@ export function ContextMenu({
     >
       <ContextMenuItems items={items} choose={choose} />
     </div>,
-    document.body,
+    container ?? document.body,
   )
 }
 
