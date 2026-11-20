@@ -1,4 +1,4 @@
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { productNotes, products, users } from "../db/schema";
@@ -72,8 +72,9 @@ export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGu
   .get("/api/product/:productId/note", async ({ params, user, authorize, status }) => {
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, { message: "プロダクトが見つかりません" });
+    // 論理削除(deletedAt が入ったメモ)は、ここには出さない
     const rows = await db.select(noteColumns).from(productNotes).leftJoin(users, eq(productNotes.createdBy, users.userId))
-      .where(and(eq(productNotes.productId, params.productId), visibleNoteFilter(user.userId)))
+      .where(and(eq(productNotes.productId, params.productId), visibleNoteFilter(user.userId), isNull(productNotes.deletedAt)))
       .orderBy(asc(productNotes.createdAt), asc(productNotes.noteId));
     const can = authorize({ userId: user.userId, role: membership.role });
     return rows.map((n) => ({ ...n, canEdit: can.canEdit(n) }));

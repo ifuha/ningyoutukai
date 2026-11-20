@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../../db";
 import { sections } from "../../db/schema";
@@ -8,6 +8,7 @@ import { MessageSchema } from "../../lib/response-schema";
 import { SectionSchema, sectionColumns, withMemberIds } from "../../lib/section-view";
 
 // セクション一覧取得 GET /api/product/:productId/section(プロダクトのメンバーなら誰でも)
+// 論理削除(deletedAt が入ったセクション)は、ここには出さない
 export const listSections = new Elysia({ name: "section-list" })
   .use(authGuard)
   .get(
@@ -19,7 +20,7 @@ export const listSections = new Elysia({ name: "section-list" })
       const rows = await db
         .select(sectionColumns)
         .from(sections)
-        .where(eq(sections.productId, params.productId))
+        .where(and(eq(sections.productId, params.productId), isNull(sections.deletedAt)))
         // 名前順。名前は同じプロダクトの中で一意だが、並びを確実に固定するため sectionId も見る
         .orderBy(asc(sections.sectionName), asc(sections.sectionId));
 
