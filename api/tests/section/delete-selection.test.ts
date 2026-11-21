@@ -112,27 +112,50 @@ describe("一括削除(論理削除) POST /delete-selection", () => {
     expect((await findSection(s.sectionId))?.deletedAt).toBeNull();
   });
 
-  test("論理削除済み(deletedAt が入った)セクションも、再指定できる(deletedAt が更新される)", async () => {
+  test("soft delete 中のものを、もう一度まとめて削除すると 404(deletedAt は変えない)", async () => {
     const { productId, leader } = await setupProduct();
     const s = await insertSection(productId);
+    expect((await req("POST", deleteSelectionUrl(productId), { cookie: leader.cookie, body: { sectionIds: [s.sectionId] } })).status).toBe(204);
+    const first = (await findSection(s.sectionId))?.deletedAt;
 
-    const res = await req("POST", deleteSelectionUrl(productId), {
-      cookie: leader.cookie,
-      body: { sectionIds: [s.sectionId] },
-    });
-    expect(res.status).toBe(204);
-    const first = await findSection(s.sectionId);
-    expect(first?.deletedAt).not.toBeNull();
-
-    // 古い deletedAt を入れてからもう一度 → 204(deletedAt が更新される)
-    const past = new Date(Date.now() - 60_000);
-    await db.update(sections).set({ deletedAt: past }).where(eq(sections.sectionId, s.sectionId));
-    const res2 = await req("POST", deleteSelectionUrl(productId), {
-      cookie: leader.cookie,
-      body: { sectionIds: [s.sectionId] },
-    });
-    expect(res2.status).toBe(204);
-    const second = await findSection(s.sectionId);
-    expect(second?.deletedAt?.getTime()).toBeGreaterThan(past.getTime());
+    const res = await req("POST", deleteSelectionUrl(productId), { cookie: leader.cookie, body: { sectionIds: [s.sectionId] } });
+    expect(res.status).toBe(404);
+    // 期限(10 分)を延ばさない
+    expect((await findSection(s.sectionId))?.deletedAt).toEqual(first);
   });
+});
+
+// soft delete 中のセクション・メモは、見つからないのと同じ。操作は成功(2xx)せず、行も変わらない。
+// 返すステータスは、各エンドポイントの「見つからない」ときと同じ(URL の ID は 404、本文で指したセクションは 422)
+describe("soft delete 中のセクション・メモへの操作", () => {
+  type Ctx = Awaited<ReturnType<typeof setupProduct>> & { sectionId: string; noteId: string };
+  const cases: [string, number, (c: Ctx) => Promise<Response>][] = [
+    ["セクションの更新", 404, (c) => req("PATCH", `/api/product/${c.productId}/section/${c.sectionId}`, { cookie: c.leader.cookie, body: { sectionName: "変更" } })],
+    ["セクションの削除", 404, (c) => req("DELETE", `/api/product/${c.productId}/section/${c.sectionId}`, { cookie: c.leader.cookie })],
+    ["まとめて移動(セクション)", 422, (c) => req("POST", `/api/product/${c.productId}/move`, { cookie: c.leader.cookie, body: { sections: [{ sectionId: c.sectionId, x: 9, y: 9 }] } })],
+    ["メンバーを所属させる", 422, (c) => req("PATCH", `/api/product/${c.productId}/member/${c.members[0]!.memberId}/position`, { cookie: c.leader.cookie, body: { positionX: 1, positionY: 1, sectionId: c.sectionId } })],
+    ["メモの更新", 404, (c) => req("PATCH", `/api/product/${c.productId}/note/${c.noteId}`, { cookie: c.leader.cookie, body: { content: "変更" } })],
+    ["メモの削除", 404, (c) => req("DELETE", `/api/product/${c.productId}/note/${c.noteId}`, { cookie: c.leader.cookie })],
+    ["まとめて移動(メモ)", 404, (c) => req("POST", `/api/product/${c.productId}/move`, { cookie: c.leader.cookie, body: { notes: [{ noteId: c.noteId, x: 9, y: 9 }] } })],
+  ];
+
+  for (const [name, expected, run] of cases) {
+    test(`${name}は ${expected}、行は soft delete のまま残る`, async () => {
+      const product = await setupProduct({ members: 1 });
+      const section = await insertSection(product.productId);
+      const note = await insertNote(product.productId, product.leader.userId);
+      const del = await req("POST", deleteSelectionUrl(product.productId), {
+        cookie: product.leader.cookie,
+        body: { sectionIds: [section.sectionId], noteIds: [note.noteId] },
+      });
+      expect(del.status).toBe(204);
+      const before = { section: await findSection(section.sectionId), note: await findNote(note.noteId) };
+
+      const res = await run({ ...product, sectionId: section.sectionId, noteId: note.noteId });
+      expect(res.status).toBe(expected);
+      // 物理削除も、中身の変更もされない(戻せる状態のまま)
+      expect(await findSection(section.sectionId)).toEqual(before.section);
+      expect(await findNote(note.noteId)).toEqual(before.note);
+    });
+  }
 });

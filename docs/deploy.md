@@ -236,6 +236,15 @@ curl -s -o /dev/null -w "%{http_code}\n" "$WEB/api/product"   # 401(未ログイ
 - 実行の記録は、Cloudflare のダッシュボードの Worker のログ(`[document-auto-delete] N プロダクトで M 件の文書を削除しました`)で見る
 - 失敗したら、次の実行でやり直せる(条件に合う文書は、また候補になる)
 
+### 定期実行(soft delete の掃除)
+
+まとめて削除(`POST /api/product/:productId/delete-selection`)したセクション・メモは、すぐには消さず、`deleted_at` を入れて 10 分残す(soft delete)。その間、一覧・更新・削除・移動からは、見つからない扱いになる。
+`api/wrangler.jsonc` の `triggers.crons` の `*/5 * * * *` で、5 分おきに、期限を過ぎた行を物理削除する(`src/worker.ts` の `scheduled` → `lib/soft-delete-cleanup.ts`)。物理削除は、soft delete から 10〜15 分後になる。
+
+- Cron の式は、`lib/worker-context.ts` の `SOFT_DELETE_CLEANUP_CRON` と同じ文字列にする(違うと、文書の自動削除のほうが動く)
+- ローカル(Bun。`src/index.ts`)は、Cron の代わりに、API の実行中 60 秒ごとに掃除する
+- 失敗したら、次の実行でやり直せる(Worker のログに `[soft-delete] soft delete の掃除に失敗しました`)
+
 ### R2 の準備(バックアップ用)
 
 1. Cloudflare ダッシュボードの R2 でバケット(例: `ningyoutukai-backup`)を作る。公開設定はしない。CLI なら `npx wrangler r2 bucket create ningyoutukai-backup`。

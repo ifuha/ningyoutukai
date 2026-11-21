@@ -5,14 +5,16 @@ import { sections } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { getMembership } from "../../lib/product-access";
 import { MessageSchema } from "../../lib/response-schema";
+import { softDelete } from "../../lib/soft-delete";
 
 // セクション削除 DELETE /api/product/:productId/section/:sectionId(リーダーのみ)
 // 所属していたメンバーは、DB の ON DELETE SET NULL で無所属に戻る。メンバーとカードの位置は残る。
 export const deleteSection = new Elysia({ name: "section-delete" })
   .use(authGuard)
+  .use(softDelete)
   .delete(
     "/api/product/:productId/section/:sectionId",
-    async ({ params, user, status }) => {
+    async ({ params, user, softDelete, status }) => {
       const membership = await getMembership(params.productId, user.userId);
       if (!membership) return status(404, { message: "プロダクトが見つかりません" });
       if (membership.role !== "leader") {
@@ -23,7 +25,8 @@ export const deleteSection = new Elysia({ name: "section-delete" })
       // 同時に削除されて既に無い場合も、0 件になって 404
       const deleted = await db
         .delete(sections)
-        .where(and(eq(sections.sectionId, params.sectionId), eq(sections.productId, params.productId)))
+        // soft delete 中のセクションは、見つからないのと同じ(404)。期限が来たら、定期実行が物理削除する
+        .where(and(eq(sections.sectionId, params.sectionId), eq(sections.productId, params.productId), softDelete.liveSection))
         .returning({ sectionId: sections.sectionId });
       if (deleted.length === 0) return status(404, { message: "セクションが見つかりません" });
 

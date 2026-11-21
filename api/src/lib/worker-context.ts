@@ -1,5 +1,6 @@
 import { createDb, dbStorage } from "../db";
 import { runDocumentAutoDelete } from "./document-auto-delete";
+import { cleanupExpiredDeletions } from "./soft-delete-cleanup";
 import { createR2Storage, createUnavailableStorage, documentStorage, documentStorageContext, storageContext } from "./storage";
 import type { R2BucketLike } from "./storage";
 
@@ -43,6 +44,22 @@ export async function scheduledDocumentAutoDelete(env: WorkerEnv, ctx: WorkerCtx
     return results;
   } catch (e) {
     console.error("[document-auto-delete] 自動削除に失敗しました", e);
+    throw e;
+  }
+}
+
+/** soft delete の掃除の Cron 式(`wrangler.jsonc` の `triggers.crons` と同じ文字列にする)。5 分おきなので、物理削除は soft delete から 10〜15 分後 */
+export const SOFT_DELETE_CLEANUP_CRON = "*/5 * * * *";
+
+/**
+ * 定期実行(Cron Trigger)で動かす、soft delete の掃除。期限(10 分)を過ぎた soft delete 中のセクション・メモを、物理削除する。
+ * 失敗しても、次の実行でやり直せる
+ */
+export async function scheduledSoftDeleteCleanup(env: WorkerEnv, ctx: WorkerCtx) {
+  try {
+    await withWorkerContext(env, ctx, () => cleanupExpiredDeletions());
+  } catch (e) {
+    console.error("[soft-delete] soft delete の掃除に失敗しました", e);
     throw e;
   }
 }
