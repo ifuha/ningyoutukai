@@ -5,6 +5,7 @@ import { productNotes, sections } from "../../db/schema";
 import { authGuard } from "../../lib/auth-guard";
 import { getMembership } from "../../lib/product-access";
 import { MessageSchema } from "../../lib/response-schema";
+import { softDelete } from "../../lib/soft-delete";
 
 const MAX_ITEMS = 500;
 
@@ -15,9 +16,10 @@ const MAX_ITEMS = 500;
 // - 配列は省略でき、1 つ以上が必要(すべて空なら 422)。見つからないものは 404、成功は 204(戻り値なし)
 export const deleteSelection = new Elysia({ name: "section-delete-selection" })
   .use(authGuard)
+  .use(softDelete)
   .post(
     "/api/product/:productId/delete-selection",
-    async ({ params, body, user, status }) => {
+    async ({ params, body, user, softDelete, status }) => {
       const membership = await getMembership(params.productId, user.userId);
       if (!membership) return status(404, { message: "プロダクトが見つかりません" });
       if (membership.role !== "leader") {
@@ -38,7 +40,7 @@ export const deleteSelection = new Elysia({ name: "section-delete-selection" })
           await db
             .update(sections)
             .set({ deletedAt: now })
-            .where(and(eq(sections.productId, params.productId), inArray(sections.sectionId, sectionIds)))
+            .where(and(eq(sections.productId, params.productId), inArray(sections.sectionId, sectionIds), softDelete.liveSection))
             .returning({ sectionId: sections.sectionId })
         ).length;
       }
@@ -47,7 +49,7 @@ export const deleteSelection = new Elysia({ name: "section-delete-selection" })
           await db
             .update(productNotes)
             .set({ deletedAt: now })
-            .where(and(eq(productNotes.productId, params.productId), inArray(productNotes.noteId, noteIds)))
+            .where(and(eq(productNotes.productId, params.productId), inArray(productNotes.noteId, noteIds), softDelete.liveNote))
             .returning({ noteId: productNotes.noteId })
         ).length;
       }

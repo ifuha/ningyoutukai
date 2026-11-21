@@ -7,6 +7,7 @@ import { authorize } from "../../lib/note-authorize";
 import { getMembership } from "../../lib/product-access";
 import { MessageSchema } from "../../lib/response-schema";
 import { COORD_MAX, coordSchema } from "../../lib/section-input";
+import { softDelete } from "../../lib/soft-delete";
 
 // まとめて移動 POST /api/product/:productId/move
 //
@@ -39,9 +40,10 @@ const hasDuplicate = (ids: readonly string[]): boolean => new Set(ids).size !== 
 
 export const moveSelection = new Elysia({ name: "section-move-selection" })
   .use(authGuard)
+  .use(softDelete)
   .post(
     "/api/product/:productId/move",
-    async ({ params, body, user, status }) => {
+    async ({ params, body, user, softDelete, status }) => {
       const membership = await getMembership(params.productId, user.userId);
       if (!membership) return status(404, { message: "プロダクトが見つかりません" });
 
@@ -92,6 +94,8 @@ export const moveSelection = new Elysia({ name: "section-move-selection" })
               and(
                 eq(sections.productId, params.productId),
                 inArray(sections.sectionId, sectionTargets.map((s) => s.sectionId)),
+                // soft delete 中のセクションは、見つからないのと同じ
+                softDelete.liveSection,
               ),
             )
             .for("update");
@@ -124,7 +128,8 @@ export const moveSelection = new Elysia({ name: "section-move-selection" })
               createdBy: productNotes.createdBy,
             })
             .from(productNotes)
-            .where(inArray(productNotes.noteId, noteTargets.map((n) => n.noteId)))
+            // soft delete 中のメモは、見つからないのと同じ
+            .where(and(inArray(productNotes.noteId, noteTargets.map((n) => n.noteId)), softDelete.liveNote))
             .for("update");
           if (rows.length !== noteTargets.length) return { kind: "note-not-found" } as const;
           for (const note of rows) {

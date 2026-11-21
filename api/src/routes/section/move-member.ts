@@ -6,6 +6,7 @@ import { authGuard } from "../../lib/auth-guard";
 import { getMembership } from "../../lib/product-access";
 import { MessageSchema } from "../../lib/response-schema";
 import { coordSchema } from "../../lib/section-input";
+import { softDelete } from "../../lib/soft-delete";
 
 // カードの移動 PATCH /api/product/:productId/member/:memberId/position(リーダーのみ)
 // 位置(絶対座標)と、所属するセクションを変える。メンバーは、自分のカードも動かせない。
@@ -15,9 +16,10 @@ import { coordSchema } from "../../lib/section-input";
 // 列指定で書く必要があり、drizzle で表せない)。ここで必ず確かめる。
 export const moveMember = new Elysia({ name: "section-move-member" })
   .use(authGuard)
+  .use(softDelete)
   .patch(
     "/api/product/:productId/member/:memberId/position",
-    async ({ params, body, user, status }) => {
+    async ({ params, body, user, softDelete, status }) => {
       const membership = await getMembership(params.productId, user.userId);
       if (!membership) return status(404, { message: "プロダクトが見つかりません" });
       if (membership.role !== "leader") {
@@ -43,7 +45,8 @@ export const moveMember = new Elysia({ name: "section-move-member" })
           const [section] = await tx
             .select({ sectionId: sections.sectionId })
             .from(sections)
-            .where(and(eq(sections.sectionId, body.sectionId), eq(sections.productId, params.productId)))
+            // soft delete 中のセクションは、見つからないのと同じ
+            .where(and(eq(sections.sectionId, body.sectionId), eq(sections.productId, params.productId), softDelete.liveSection))
             .for("update");
           if (!section) return { kind: "section-not-found" } as const;
         }
