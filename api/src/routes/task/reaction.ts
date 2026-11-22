@@ -20,7 +20,8 @@ const params = t.Object({
 /**
  * タスクのメッセージへのリアクション(docs/v2.0/message-feature.md)。
  * - 押せるのは、コメントを書ける人(リーダーと担当者)。完了済みのタスクは不可
- * - 1 人のメッセージ 1 件につき 1 個だけ。**もう一度押すと取り消し**、別の絵文字を押すと置き換わる
+ * - **違う絵文字なら、1 人が複数押せる**(主キーは messageId + memberId + emoji)。
+ *   同じ絵文字をもう一度押すと、その 1 件が押し直される。外すのは DELETE(絵文字を指定)
  * - 絵文字は reaction.ts の 5 個だけ(422)
  *
  * どちらも応答には、そのメッセージの最新のリアクション(絵文字ごとの一覧)を返す
@@ -45,7 +46,7 @@ export const messageReactions = new Elysia({ name: "task-reaction" })
         return status(409, { message: "削除済みのメッセージにはリアクションを付けられません" });
       }
 
-      // 押し直すと置き換わる(1 人 1 個は主キーで保証される)
+      // 同じ絵文字の二重登録は、主キー(messageId + memberId + emoji)で防ぐ(違う絵文字は別行になる)
       try {
         await db
           .insert(taskMessageReactions)
@@ -55,8 +56,8 @@ export const messageReactions = new Elysia({ name: "task-reaction" })
             emoji: body.emoji,
           })
           .onConflictDoUpdate({
-            target: [taskMessageReactions.messageId, taskMessageReactions.memberId],
-            set: { emoji: body.emoji, createdAt: new Date() },
+            target: [taskMessageReactions.messageId, taskMessageReactions.memberId, taskMessageReactions.emoji],
+            set: { createdAt: new Date() },
           });
       } catch (e) {
         // 押すまでの間にメッセージが削除されて、連鎖で消えた場合
@@ -77,12 +78,12 @@ export const messageReactions = new Elysia({ name: "task-reaction" })
       params,
       body: t.Object({ emoji: t.UnionEnum([...reactionEmojis]) }),
       response: { 200: t.Object({ reactions: ReactionListSchema }), 403: MessageSchema, 404: MessageSchema, 409: MessageSchema },
-      detail: { summary: "メッセージにリアクションを付ける(もう一度押すと取り消し)" },
+      detail: { summary: "メッセージにリアクションを付ける(違う絵文字は複数押せる)" },
     },
   )
   .delete(
     "/api/product/:productId/task/:taskId/message/:messageId/reaction",
-    async ({ params: p, user, status }) => {
+    async ({ params: p, query, user, status }) => {
       const check = await loadTarget(p.productId, p.taskId, p.messageId, user.userId);
       if (check.ok === false) return status(check.status, check.error);
       const { viewer, task, message } = check;
@@ -95,12 +96,14 @@ export const messageReactions = new Elysia({ name: "task-reaction" })
         return status(409, { message: "完了済みのタスクではリアクションを外せません" });
       }
 
+      // 指定した絵文字だけを外す(他の絵文字は残る)
       await db
         .delete(taskMessageReactions)
         .where(
           and(
             eq(taskMessageReactions.messageId, message.messageId),
             eq(taskMessageReactions.memberId, viewer.productMemberId),
+            eq(taskMessageReactions.emoji, query.emoji),
           ),
         );
 
@@ -109,8 +112,11 @@ export const messageReactions = new Elysia({ name: "task-reaction" })
     {
       requireUser: true,
       params,
+      // UnionEnum は先頭を既定値にして欠けたキーを通してしまうので、外す先の絵文字が
+      // 必須であることが分かる Union(Literal)にする(欠け・未知の絵文字は 422)
+      query: t.Object({ emoji: t.Union(reactionEmojis.map((e) => t.Literal(e))) }),
       response: { 200: t.Object({ reactions: ReactionListSchema }), 403: MessageSchema, 404: MessageSchema, 409: MessageSchema },
-      detail: { summary: "メッセージのリアクションを取り消す" },
+      detail: { summary: "メッセージのリアクションを取り消す(指定した絵文字だけ)" },
     },
   );
 

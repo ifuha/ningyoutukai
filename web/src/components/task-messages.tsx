@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { formatDateTime } from '#/components/member-card'
+import { SmilePlus } from 'lucide-react'
+import { ContextMenu } from '#/components/context-menu'
+import type { ContextMenuItem } from '#/lib/context-menu-items'
+import { formatDateTime, formatMessageTime } from '#/components/member-card'
 import { TaskMessageForm } from '#/components/task-message-form'
 import { eden, edenData } from '#/lib/eden'
 import { errorMessage } from '#/lib/error-message'
@@ -43,8 +46,42 @@ const actionClass =
 const chipClass =
   'flex cursor-pointer items-center gap-1 rounded-sm border border-line bg-panel px-1.5 py-0.5 text-s hover:bg-side-item focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-default disabled:opacity-60'
 
+/** 右クリックのメニューの項目。編集・削除できるものだけ出す(`hidden` は画面側で外す) */
+export function messageMenuItems(
+  message: Pick<TaskMessage, 'canEdit' | 'canDelete'>,
+  actions: { onEdit: () => void; onDelete: () => void },
+): ContextMenuItem[] {
+  return [
+    { label: '編集', hidden: !message.canEdit, onSelect: actions.onEdit },
+    { label: '削除', hidden: !message.canDelete, onSelect: actions.onDelete },
+  ]
+}
+
+/** 投稿者のアイコン。アバターの画像があれば画像、なければ名前の頭文字を丸に出す */
+function MessageAvatar({ name, src }: { name: string; src: string | null | undefined }) {
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt=""
+        draggable={false}
+        className="mt-0.5 size-8 shrink-0 rounded-full object-cover"
+      />
+    )
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-side text-s font-medium"
+    >
+      {[...name][0] ?? '?'}
+    </span>
+  )
+}
+
 // 1 件分の行。削除済みは本文を出さず、「削除されました」とだけ出す(履歴の並びは崩さない)。
-// 本人なら編集・削除ができる(api が canEdit / canDelete で判定して返す。削除できるのはコメントだけ)。
+// 本人なら、右クリック(スマホは長押し)のメニューから編集・削除ができる
+// (api が canEdit / canDelete で判定して返す。削除できるのはコメントだけ)。
 // `reactable`(リーダー・担当者で、完了済みでない)のときだけ、絵文字を付けられる
 function MessageRow({
   productId,
@@ -64,6 +101,12 @@ function MessageRow({
   const [text, setText] = useState(message.body)
   const [confirming, setConfirming] = useState(false)
   const [picking, setPicking] = useState(false)
+  /** 右クリックのメニューを出す位置(画面の座標)。null なら閉じている */
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  /** 絵文字の選択肢。外側を押したかを判定する */
+  const pickerRef = useRef<HTMLSpanElement>(null)
+  /** 右クリックのメニューを、開いている `<dialog>` の中に描くために使う(外に描くと、dialog の下で押せない) */
+  const rowRef = useRef<HTMLLIElement>(null)
   const queryKey = ['products', productId, 'task', taskId, 'messages']
 
   // 編集・削除は件数が変わらないので、一覧の末尾は動かさない(取得し直して表示だけ入れ替える)
@@ -95,7 +138,7 @@ function MessageRow({
       void queryClient.invalidateQueries({ queryKey })
     },
   })
-  // リアクション。押した絵文字をもう一度押すと、外れる(自分だけが外れる)
+  // リアクション。自分の絵文字をもう一度押すと、その絵文字だけ外れる(違う絵文字は複数付けられる)
   const press = useMutation({
     mutationFn: ({ emoji, remove: unpress }: { emoji: ReactionGroup['emoji']; remove: boolean }) =>
       unpress
@@ -104,7 +147,9 @@ function MessageRow({
               .api.product({ productId })
               .task({ taskId })
               .message({ messageId: message.messageId })
-              .reaction.delete(),
+              // DELETE は第 1 引数が本文(この API は本文を取らないので空)、第 2 引数がオプション。
+              // クエリは第 2 引数に置く
+              .reaction.delete({}, { query: { emoji } }),
           )
         : edenData(
             eden()
@@ -118,192 +163,220 @@ function MessageRow({
       void queryClient.invalidateQueries({ queryKey })
     },
   })
+  // 絵文字の選択肢は、外側を押すか Esc で閉じる(「やめる」ボタンは置かない)
+  useEffect(() => {
+    if (!picking) return
+    const outside = (e: Event) => {
+      if (e.target instanceof Node && pickerRef.current?.contains(e.target)) return
+      setPicking(false)
+    }
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPicking(false)
+    }
+    document.addEventListener('pointerdown', outside, true)
+    document.addEventListener('keydown', key)
+    return () => {
+      document.removeEventListener('pointerdown', outside, true)
+      document.removeEventListener('keydown', key)
+    }
+  }, [picking])
+
   const busy = save.isPending || remove.isPending || press.isPending
   const label = kindLabel[message.kind]
   // 自分が押している絵文字(あれば、それをもう一度押すと外す)
   const mine = (group: ReactionGroup) =>
     group.members.some((m) => m.productMemberId === viewerMemberId)
+  const hasEmoji = (emoji: ReactionGroup['emoji']) =>
+    message.reactions.some((group) => group.emoji === emoji && mine(group))
+  // 右クリックのメニュー。編集・削除できるものだけ出す
+  const items = messageMenuItems(message, {
+    onEdit: () => {
+      setText(message.body)
+      save.reset()
+      setEditing(true)
+    },
+    onDelete: () => setConfirming(true),
+  })
 
   return (
-    <li className="space-y-0.5 text-m">
-      <p className="text-s opacity-60">
-        {message.author.userName}
-        {label && ` / ${label}`}
-        {` / ${formatDateTime(message.createdAt)}`}
-        {message.editedAt && ' / 編集済み'}
-      </p>
-      {message.deleted ? (
-        <p className="opacity-60">削除されました</p>
-      ) : editing ? (
-        <div className="space-y-1">
-          <textarea
-            aria-label="メッセージを編集"
-            value={text}
-            maxLength={MAX_MESSAGE_LENGTH}
-            disabled={busy}
-            autoFocus
-            onChange={(e) => {
-              setText(e.target.value)
-              save.reset()
-            }}
-            className={textareaClass}
-          />
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-s opacity-60">
-              {text.length} / {MAX_MESSAGE_LENGTH}
-            </span>
-            <span className="flex gap-3">
-              <button
-                type="button"
-                className={actionClass}
-                disabled={busy}
-                onClick={() => {
-                  setEditing(false)
-                  setText(message.body)
-                  save.reset()
-                }}
-              >
-                やめる
-              </button>
-              <button
-                type="button"
-                className={actionClass}
-                disabled={busy || !canSubmitMessage(text)}
-                onClick={() => save.mutate(normalizeMessageBody(text))}
-              >
-                保存
-              </button>
-            </span>
-          </div>
-          {save.isError && (
-            <p role="alert" className="border-l border-line pl-3 text-m">
-              ERR {errorMessage(save.error.message)}
-            </p>
-          )}
-        </div>
-      ) : (
-        <>
-          {message.body && (
-            <p className="break-words whitespace-pre-wrap">{message.body}</p>
-          )}
-          {/* リアクション。押せるのはコメントを書ける人だけ(それ以外は、押されているものだけ表示) */}
-          {(message.reactions.length > 0 || reactable) && (
-            <div className="flex flex-wrap items-center gap-1">
-              {message.reactions.map((group) => (
-                <button
-                  key={group.emoji}
-                  type="button"
-                  title={group.members.map((m) => m.userName).join('、')}
-                  aria-label={`リアクション ${group.emoji} ${group.members.length} 人${
-                    mine(group) ? '(自分)。押すと外れます' : ''
-                  }`}
-                  disabled={busy || !reactable}
-                  onClick={() => press.mutate({ emoji: group.emoji, remove: mine(group) })}
-                  className={`${chipClass}${mine(group) ? ' ring-1 ring-ink' : ''}`}
-                >
-                  <span aria-hidden="true">{group.emoji}</span>
-                  <span>{group.members.length}</span>
-                </button>
-              ))}
-              {reactable &&
-                (picking ? (
-                  <span className="flex items-center gap-1">
-                    {reactionEmojis.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        aria-label={`リアクション ${emoji} を付ける`}
-                        disabled={busy}
-                        onClick={() => press.mutate({ emoji, remove: false })}
-                        className={chipClass}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      className={actionClass}
-                      disabled={busy}
-                      onClick={() => setPicking(false)}
-                    >
-                      やめる
-                    </button>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    aria-label="リアクションを追加"
-                    disabled={busy}
-                    onClick={() => setPicking(true)}
-                    className={chipClass}
-                  >
-                    ＋
-                  </button>
-                ))}
-            </div>
-          )}
-          {press.isError && (
-            <p role="alert" className="border-l border-line pl-3 text-m">
-              ERR {errorMessage(press.error.message)}
-            </p>
-          )}
-          {(message.canEdit || message.canDelete) && (
-            <div className="flex flex-wrap items-center gap-3 text-s">
-              {message.canEdit && !confirming && (
+    <li
+      ref={rowRef}
+      className="flex gap-2 text-m hover:bg-side-item/20"
+      onContextMenu={(e) => {
+        // 右クリック(スマホは長押し)で、編集・削除のメニューを出す
+        if (message.deleted || editing) return
+        if (!message.canEdit && !message.canDelete) return
+        e.preventDefault()
+        setMenu({ x: e.clientX, y: e.clientY })
+      }}
+    >
+      <MessageAvatar name={message.author.userName} src={message.author.avatarUrl} />
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <p className="flex flex-wrap items-baseline gap-x-2 text-s">
+          <span className="font-medium">{message.author.userName}</span>
+          {label && <span className="opacity-60">{label}</span>}
+          <time
+            dateTime={message.createdAt}
+            title={formatDateTime(message.createdAt)}
+            className="opacity-60"
+          >
+            {formatMessageTime(message.createdAt)}
+          </time>
+          {message.editedAt && <span className="opacity-60">編集済み</span>}
+        </p>
+        {message.deleted ? (
+          <p className="opacity-60">削除されました</p>
+        ) : editing ? (
+          <div className="space-y-1">
+            <textarea
+              aria-label="メッセージを編集"
+              value={text}
+              maxLength={MAX_MESSAGE_LENGTH}
+              disabled={busy}
+              autoFocus
+              onChange={(e) => {
+                setText(e.target.value)
+                save.reset()
+              }}
+              className={textareaClass}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-s opacity-60">
+                {text.length} / {MAX_MESSAGE_LENGTH}
+              </span>
+              <span className="flex gap-3">
                 <button
                   type="button"
                   className={actionClass}
                   disabled={busy}
                   onClick={() => {
+                    setEditing(false)
                     setText(message.body)
                     save.reset()
-                    setEditing(true)
                   }}
                 >
-                  編集
+                  やめる
                 </button>
-              )}
-              {message.canDelete &&
-                (confirming ? (
-                  <>
-                    <span className="opacity-70">
-                      このメッセージを削除しますか?
-                    </span>
-                    <button
-                      type="button"
-                      className={actionClass}
-                      disabled={busy}
-                      onClick={() => remove.mutate()}
-                    >
-                      削除する
-                    </button>
-                    <button
-                      type="button"
-                      className={actionClass}
-                      disabled={busy}
-                      onClick={() => setConfirming(false)}
-                    >
-                      やめる
-                    </button>
-                  </>
-                ) : (
+                <button
+                  type="button"
+                  className={actionClass}
+                  disabled={busy || !canSubmitMessage(text)}
+                  onClick={() => save.mutate(normalizeMessageBody(text))}
+                >
+                  保存
+                </button>
+              </span>
+            </div>
+            {save.isError && (
+              <p role="alert" className="border-l border-line pl-3 text-m">
+                ERR {errorMessage(save.error.message)}
+              </p>
+            )}
+          </div>
+        ) : (
+          <>
+            {message.body && (
+              <p className="break-words whitespace-pre-wrap">{message.body}</p>
+            )}
+            {/* リアクション。押せるのはコメントを書ける人だけ(それ以外は、押されているものだけ表示) */}
+            {(message.reactions.length > 0 || reactable) && (
+              <div className="flex flex-wrap items-center gap-1">
+                {message.reactions.map((group) => (
                   <button
+                    key={group.emoji}
                     type="button"
-                    className={actionClass}
-                    disabled={busy}
-                    onClick={() => setConfirming(true)}
+                    title={group.members.map((m) => m.userName).join('、')}
+                    aria-label={`リアクション ${group.emoji} ${group.members.length} 人${
+                      mine(group) ? '(自分)。押すと外れます' : ''
+                    }`}
+                    disabled={busy || !reactable}
+                    onClick={() => press.mutate({ emoji: group.emoji, remove: mine(group) })}
+                    className={`${chipClass}${mine(group) ? ' ring-1 ring-ink' : ''}`}
                   >
-                    削除
+                    <span aria-hidden="true">{group.emoji}</span>
+                    <span>{group.members.length}</span>
                   </button>
                 ))}
-            </div>
-          )}
-          {remove.isError && (
-            <p role="alert" className="border-l border-line pl-3 text-m">
-              ERR {errorMessage(remove.error.message)}
-            </p>
-          )}
-        </>
+                {reactable &&
+                  (picking ? (
+                    <span ref={pickerRef} className="flex items-center gap-1">
+                      {reactionEmojis.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          aria-label={
+                            hasEmoji(emoji)
+                              ? `リアクション ${emoji} を外す`
+                              : `リアクション ${emoji} を付ける`
+                          }
+                          aria-pressed={hasEmoji(emoji)}
+                          title={hasEmoji(emoji) ? '外す' : '付ける'}
+                          disabled={busy}
+                          onClick={() => press.mutate({ emoji, remove: hasEmoji(emoji) })}
+                          className={`${chipClass}${hasEmoji(emoji) ? ' ring-1 ring-ink' : ''}`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label="リアクションを追加"
+                      title="リアクションを追加"
+                      disabled={busy}
+                      onClick={() => setPicking(true)}
+                      className={chipClass}
+                    >
+                      <SmilePlus size={14} aria-hidden="true" />
+                    </button>
+                  ))}
+              </div>
+            )}
+            {press.isError && (
+              <p role="alert" className="border-l border-line pl-3 text-m">
+                ERR {errorMessage(press.error.message)}
+              </p>
+            )}
+            {confirming && message.canDelete && (
+              <div className="flex flex-wrap items-center gap-3 text-s">
+                <span className="opacity-70">このメッセージを削除しますか?</span>
+                <button
+                  type="button"
+                  className={actionClass}
+                  disabled={busy}
+                  onClick={() => remove.mutate()}
+                >
+                  削除する
+                </button>
+                <button
+                  type="button"
+                  className={actionClass}
+                  disabled={busy}
+                  onClick={() => setConfirming(false)}
+                >
+                  やめる
+                </button>
+              </div>
+            )}
+            {remove.isError && (
+              <p role="alert" className="border-l border-line pl-3 text-m">
+                ERR {errorMessage(remove.error.message)}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          items={items}
+          label="メッセージの操作"
+          // タスク詳細の `<dialog>` の中に描く(外だと dialog の下になり、押せない)
+          container={rowRef.current?.closest('dialog') ?? null}
+          onClose={() => setMenu(null)}
+        />
       )}
     </li>
   )

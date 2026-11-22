@@ -44,6 +44,15 @@ const press = (
   emoji: string,
 ) => request("POST", url(productId, taskId, messageId), { cookie, body: { emoji } });
 
+/** 指定した絵文字のリアクションを外す(消すのは、その絵文字だけ) */
+const unpress = (
+  productId: string,
+  taskId: string,
+  messageId: string,
+  cookie: string | undefined,
+  emoji: string,
+) => request("DELETE", url(productId, taskId, messageId), { cookie, query: { emoji } });
+
 const rowsOf = (messageId: string) =>
   db.select().from(taskMessageReactions).where(eq(taskMessageReactions.messageId, messageId));
 
@@ -159,16 +168,15 @@ describe("リアクションの API", () => {
       expect(await rowsOf(messageId)).toHaveLength(2);
     });
 
-    test("同じ人が別の絵文字を押すと置き換わる(1 人 1 個)", async () => {
+    test("同じ人が別の絵文字も押せる(違う絵文字は 2 件残る)", async () => {
       const task = await insertTask(a.members[0]!.memberId);
       const messageId = await makeComment(a.productId, task.taskId, a.members[0]!.cookie);
       await press(a.productId, task.taskId, messageId, a.members[0]!.cookie, "👍");
       const res = await press(a.productId, task.taskId, messageId, a.members[0]!.cookie, "🎉");
       expect(res.status).toBe(200);
       const stored = await rowsOf(messageId);
-      expect(stored).toHaveLength(1);
-      expect(stored[0]!.emoji).toBe("🎉");
-      expect((await res.json()).reactions.map((r: { emoji: string }) => r.emoji)).toEqual(["🎉"]);
+      expect(stored.map((r) => r.emoji).sort()).toEqual(["👍", "🎉"].sort());
+      expect((await res.json()).reactions.map((r: { emoji: string }) => r.emoji)).toEqual(["👍", "🎉"]);
     });
 
     test("同じ絵文字をもう一度押すと、1 件だけ残る(同じ人による二重登録は主キーで防ぐ)", async () => {
@@ -185,9 +193,7 @@ describe("リアクションの API", () => {
       await press(a.productId, task.taskId, messageId, a.members[0]!.cookie, "👍");
       await press(a.productId, task.taskId, messageId, a.leader.cookie, "👍");
 
-      const res = await request("DELETE", url(a.productId, task.taskId, messageId), {
-        cookie: a.members[0]!.cookie,
-      });
+      const res = await unpress(a.productId, task.taskId, messageId, a.members[0]!.cookie, "👍");
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.reactions[0].members).toEqual([
@@ -198,12 +204,39 @@ describe("リアクションの API", () => {
       expect(stored[0]!.memberId).toBe(a.leader.memberId);
     });
 
+    test("指定した絵文字だけ外す(同じ人の他の絵文字は残る)", async () => {
+      const task = await insertTask(a.members[0]!.memberId);
+      const messageId = await makeComment(a.productId, task.taskId, a.members[0]!.cookie);
+      await press(a.productId, task.taskId, messageId, a.members[0]!.cookie, "👍");
+      await press(a.productId, task.taskId, messageId, a.members[0]!.cookie, "🎉");
+
+      const res = await unpress(a.productId, task.taskId, messageId, a.members[0]!.cookie, "👍");
+      expect(res.status).toBe(200);
+      expect((await res.json()).reactions.map((r: { emoji: string }) => r.emoji)).toEqual(["🎉"]);
+      const stored = await rowsOf(messageId);
+      expect(stored).toHaveLength(1);
+      expect(stored[0]!.emoji).toBe("🎉");
+    });
+
+    test("DELETE で絵文字を指定しない・知らない絵文字は 422", async () => {
+      const task = await insertTask(a.members[0]!.memberId);
+      const messageId = await makeComment(a.productId, task.taskId, a.members[0]!.cookie);
+      await press(a.productId, task.taskId, messageId, a.members[0]!.cookie, "👍");
+
+      const missing = await request("DELETE", url(a.productId, task.taskId, messageId), {
+        cookie: a.members[0]!.cookie,
+      });
+      expect(missing.status).toBe(422);
+      const unknown = await unpress(a.productId, task.taskId, messageId, a.members[0]!.cookie, "🚀");
+      expect(unknown.status).toBe(422);
+      // 外れていない
+      expect(await rowsOf(messageId)).toHaveLength(1);
+    });
+
     test("何も押していないのに DELETE しても 200(残りは空)", async () => {
       const task = await insertTask(a.members[0]!.memberId);
       const messageId = await makeComment(a.productId, task.taskId, a.members[0]!.cookie);
-      const res = await request("DELETE", url(a.productId, task.taskId, messageId), {
-        cookie: a.leader.cookie,
-      });
+      const res = await unpress(a.productId, task.taskId, messageId, a.leader.cookie, "👍");
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ reactions: [] });
     });

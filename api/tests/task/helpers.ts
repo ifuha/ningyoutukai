@@ -154,15 +154,16 @@ export async function countTasks(productId: string) {
   return rows.length;
 }
 
-type Opts = { cookie?: string; body?: unknown };
+type Opts = { cookie?: string; body?: unknown; query?: Record<string, string> };
 
-/** タスク API を呼ぶ。path は `/api/product/...` から始まる絶対パス */
-export function request(method: string, path: string, { cookie, body }: Opts = {}) {
+/** タスク API を呼ぶ。path は `/api/product/...` から始まる絶対パス。`query` は URL のクエリになる */
+export function request(method: string, path: string, { cookie, body, query }: Opts = {}) {
   const headers = new Headers();
   if (cookie) headers.set("cookie", cookie);
   if (body !== undefined) headers.set("content-type", "application/json");
+  const qs = query ? `?${new URLSearchParams(query).toString()}` : "";
   return app.handle(
-    new Request(`http://localhost${path}`, {
+    new Request(`http://localhost${path}${qs}`, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
