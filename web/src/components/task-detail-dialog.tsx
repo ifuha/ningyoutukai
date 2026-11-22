@@ -19,8 +19,9 @@ import { retryDelay, retryTransient } from '#/lib/query-retry'
 
 export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 
-// 詳細の項目(説明・期限など)を包むカード。格子の中で長い語でも折り返すよう min-w-0
-const fieldCardClass = 'min-w-0 space-y-0.5 rounded-sm border border-line bg-side/60 p-2'
+// 詳細の項目(説明・期限など)を包むカード。格子の中で長い語でも折り返すよう min-w-0。
+// 背景は side-item(ダークでは bg-side と bg-panel が同じ色で、差が出ないため)
+const fieldCardClass = 'min-w-0 space-y-0.5 rounded-sm border border-line bg-side-item/50 p-2'
 
 function Detail({
   productId,
