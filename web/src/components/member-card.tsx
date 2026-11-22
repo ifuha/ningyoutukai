@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react'
 import { AiCards } from '#/components/ai-card'
 import { EditingDot } from '#/components/editing-dot'
+import { hasUnread, ReviewDot, withUnreadLabel } from '#/components/review-dot'
 import { memberEditingLabel } from '#/lib/document-tree'
 import { useElementHeight } from '#/lib/use-element-height'
 import type { TreeAi, TreeMember, TreeTask } from '#/lib/tree'
@@ -31,6 +32,40 @@ export function formatDateTime(iso: string): string {
 /** ISO の日時を、日本時間の `M/D` にする */
 export function formatLimit(iso: string): string {
   return dateFormat.format(new Date(iso)).replace('月', '/').replace('日', '')
+}
+
+const messageTimeFormat = new Intl.DateTimeFormat('ja-JP', {
+  timeZone: 'Asia/Tokyo',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+const dayKeyFormat = new Intl.DateTimeFormat('ja-JP', {
+  timeZone: 'Asia/Tokyo',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+})
+
+/** 日本時間で見た日付(年月日)が同じか。日をまたいだかの判定に使う */
+function sameDayJst(a: Date, b: Date): boolean {
+  return dayKeyFormat.format(a) === dayKeyFormat.format(b)
+}
+
+/**
+ * ISO の日時を、やりとり向けに短くする(日本時間)。
+ * 今日は `今日 HH:mm`、昨日は `昨日 HH:mm`、それより前は `YYYY/M/D HH:mm`。
+ * `now` はテスト用(省略すると、いまの日時)
+ */
+export function formatMessageTime(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  if (sameDayJst(date, now)) return `今日 ${messageTimeFormat.format(date)}`
+  // 日本時間には夏時間が無いので、24 時間前がそのまま昨日になる
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  if (sameDayJst(date, yesterday)) return `昨日 ${messageTimeFormat.format(date)}`
+  return dateTimeFormat.format(date)
 }
 
 // ツリーの 1 人分のカード(見出し部: アバター・名前・役割 / 本体: タスク 3 件まで / フッター: 件数)
@@ -119,13 +154,22 @@ export function MemberCard({
                     <button
                       type="button"
                       onClick={() => onEditTask(t)}
+                      aria-label={withUnreadLabel(t.taskName, t.unreadCount)}
+                      title={hasUnread(t.unreadCount) ? withUnreadLabel(t.taskName, t.unreadCount) : undefined}
                       className="min-w-0 flex-1 cursor-pointer truncate text-left underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                     >
                       {t.taskName}
                     </button>
                   ) : (
-                    <span className="min-w-0 flex-1 truncate">{t.taskName}</span>
+                    <span
+                      className="min-w-0 flex-1 truncate"
+                      title={hasUnread(t.unreadCount) ? withUnreadLabel(t.taskName, t.unreadCount) : undefined}
+                    >
+                      {t.taskName}
+                    </span>
                   )}
+                  {/* 未読のやりとりがあるときだけ、赤い点(名前は flex-1 なので、点を足しても行の並びは変わらない) */}
+                  {hasUnread(t.unreadCount) && <ReviewDot className="self-center" />}
                   {t.timeLimit && (
                     <span className="shrink-0 text-s">
                       {formatLimit(t.timeLimit)}

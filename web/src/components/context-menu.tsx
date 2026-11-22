@@ -17,6 +17,7 @@ export function ContextMenu({
   items,
   label,
   onClose,
+  container,
 }: {
   /** 押した位置(画面の座標) */
   x: number
@@ -27,6 +28,11 @@ export function ContextMenu({
   label: string
   /** 閉じる(項目を選んだときは、その操作のあとに呼ぶ) */
   onClose: () => void
+  /**
+   * 描く先(既定は `document.body`)。`<dialog>` を `showModal()` で開いている間は、
+   * body に描いたメニューは dialog の下(不活性)になって押せない。dialog の中に描く
+   */
+  container?: HTMLElement | null
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ left: x, top: y })
@@ -53,13 +59,24 @@ export function ContextMenu({
       onClose()
     }
     const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        // dialog の cancel(閉じる)を止めて、メニューだけ閉じる。閉じたあとは cancel の監視も外れるので、先に止める
+        e.preventDefault()
+        onClose()
+      }
     }
+    // `<dialog>` の中では、Esc は「cancel」として dialog を閉じにくる。ここで止めて、メニューだけ閉じる
+    const cancel = (e: Event) => {
+      e.preventDefault()
+      onClose()
+    }
+    document.addEventListener('cancel', cancel, true)
     document.addEventListener('pointerdown', outside, true)
     document.addEventListener('wheel', outside, { capture: true, passive: true })
     document.addEventListener('keydown', key)
     window.addEventListener('resize', onClose)
     return () => {
+      document.removeEventListener('cancel', cancel, true)
       document.removeEventListener('pointerdown', outside, true)
       document.removeEventListener('wheel', outside, true)
       document.removeEventListener('keydown', key)
@@ -94,13 +111,17 @@ export function ContextMenu({
         else if (e.key === 'Home') move(0)
         else if (e.key === 'End') move(-1)
       }}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        // メニューは、行の子として描くので、止めないと行の右クリックが働いて、メニューが開き直る
+        e.stopPropagation()
+      }}
       className="fixed z-50 w-56 shadow-box bg-panel p-1 text-m text-ink"
       style={{ left: pos.left, top: pos.top }}
     >
       <ContextMenuItems items={items} choose={choose} />
     </div>,
-    document.body,
+    container ?? document.body,
   )
 }
 
