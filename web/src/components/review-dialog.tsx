@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { formatLimit } from '#/components/member-card'
 import { Modal } from '#/components/modal'
 import { IconButton } from '#/components/icon-button'
-import { Check, X } from 'lucide-react'
+import { Check, History, X } from 'lucide-react'
 import { eden, edenData } from '#/lib/eden'
 import { ApiError } from '#/lib/api'
 import type { ProductTree, TreeMember, TreeTask } from '#/lib/tree'
@@ -145,6 +146,7 @@ export function ReviewDialog({
   open: boolean
   onClose: () => void
 }) {
+  const navigate = useNavigate()
   return (
     <Modal open={open} onClose={onClose}>
       <h2 className="text-l font-black">確認待ち({items.length} 件)</h2>
@@ -157,7 +159,21 @@ export function ReviewDialog({
           ))}
         </ul>
       )}
-      <IconButton icon={X} label="閉じる" variant="outline" className="bg-panel" onClick={onClose} />
+      <div className="flex flex-wrap gap-3">
+        <IconButton icon={X} label="閉じる" variant="outline" className="bg-panel" onClick={onClose} />
+        {/* 完了にしたタスクはツリーから消える。過去の報告は、履歴の画面で読む */}
+        <IconButton
+          icon={History}
+          label="完了した報告の履歴"
+          showLabel
+          variant="outline"
+          className="bg-panel"
+          onClick={() => {
+            onClose()
+            void navigate({ to: '/products/$productId/history', params: { productId } })
+          }}
+        />
+      </div>
     </Modal>
   )
 }
