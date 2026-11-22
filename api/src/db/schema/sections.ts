@@ -21,6 +21,8 @@ export const sections = snakeCase.table(
     width: doublePrecision().notNull().default(300),
     height: doublePrecision().notNull().default(400),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    // 論理削除(複数削除エンドポイントで入る。NULL のときは残っている)
+    deletedAt: timestamp({ withTimezone: true }),
   },
   (table) => [
     // 同じプロダクトの中で、名前は重複しない(この一意制約が product_id の検索の索引も兼ねる)

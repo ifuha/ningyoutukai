@@ -17,4 +17,4 @@ export const listProductNotes = (productId: string) => edenData(eden().api.produ
 export const createProductNote = (productId: string, x: number, y: number) => edenData(eden().api.product({ productId }).note.post({ x, y }))
 export const updateProductNote = (productId: string, noteId: string, patch: ProductNotePatch) => edenData(eden().api.product({ productId }).note({ noteId }).patch(patch as Parameters<ReturnType<NotesRoute>['patch']>[0]))
 // ↑ eden の PATCH の型は、まだ isPublic を知らない。API の対応後に、キャストを消す
-export const deleteProductNote = (productId: string, noteId: string) => edenData(eden().api.product({ productId }).note({ noteId }).delete())
+export const deleteProductNote = (productId: string, noteId: string, client: Client = eden()) => edenData(client.api.product({ productId }).note({ noteId }).delete())

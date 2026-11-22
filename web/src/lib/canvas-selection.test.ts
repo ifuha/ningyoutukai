@@ -5,12 +5,14 @@ import {
   itemKey,
   itemsInRect,
   itemsToMove,
+  notesForMarquee,
   parseKey,
   pressItem,
   reconcileItemSelection,
   rectContains,
   rectFromPoints,
   rectsIntersect,
+  splitDeletable,
   toggleKey,
   type ItemKey,
   type Selectable,
@@ -100,6 +102,23 @@ describe('itemsInRect(範囲選択)', () => {
   })
 })
 
+describe('notesForMarquee(範囲選択に入れるメモ)', () => {
+  test('変更できるメモだけを返す(他の人のメモは、範囲選択では選ばない)', () => {
+    const mine = { noteId: 'mine', canEdit: true }
+    const others = { noteId: 'others', canEdit: false }
+    expect(notesForMarquee([mine, others])).toEqual([mine])
+    expect(notesForMarquee([others])).toEqual([])
+  })
+  test('入力の配列は変えない', () => {
+    const notes = [
+      { noteId: 'mine', canEdit: true },
+      { noteId: 'others', canEdit: false },
+    ]
+    notesForMarquee(notes)
+    expect(notes.map((n) => n.noteId)).toEqual(['mine', 'others'])
+  })
+})
+
 describe('toggleKey / pressItem(押したときの選択)', () => {
   const a = itemKey('card', 'a')
   const b = itemKey('card', 'b')
@@ -170,7 +189,7 @@ describe('reconcileItemSelection(消えた・選べないものを外す)', () =
   })
 })
 
-describe('itemsToMove(まとめて動かす候補。次の PR で使う)', () => {
+describe('itemsToMove(まとめて動かす候補)', () => {
   const section: ItemKey = 'section:s1'
   test('セクションと、その所属カード(位置を持つ)は、二重に動かさないようカードを除く', () => {
     expect(
@@ -193,5 +212,38 @@ describe('itemsToMove(まとめて動かす候補。次の PR で使う)', () =>
     expect(
       itemsToMove([{ kind: 'card', id: 'a', sectionId: 's1', hasPosition: false }]),
     ).toEqual([{ kind: 'card', id: 'a', sectionId: 's1', hasPosition: false }])
+  })
+})
+
+describe('splitDeletable(選択のうち、削除できるもの)', () => {
+  const deletable = new Set<ItemKey>(['section:s1', 'note:n1', 'note:n2'])
+
+  test('セクションとメモに分ける。削除できないもの(カード・他の人のメモ)は飛ばす', () => {
+    const selected = new Set<ItemKey>([
+      'card:c1',
+      'section:s1',
+      'note:n1',
+      'note:others',
+      'note:n2',
+    ])
+    expect(splitDeletable(selected, deletable)).toEqual({
+      sectionIds: ['s1'],
+      noteIds: ['n1', 'n2'],
+    })
+  })
+
+  test('選択の順のまま返す', () => {
+    const selected: ItemKey[] = ['note:n2', 'section:s1', 'note:n1']
+    expect(splitDeletable(selected, deletable)).toEqual({
+      sectionIds: ['s1'],
+      noteIds: ['n2', 'n1'],
+    })
+  })
+
+  test('削除できるものが無ければ、空', () => {
+    expect(splitDeletable(['card:c1', 'note:others'], deletable)).toEqual({
+      sectionIds: [],
+      noteIds: [],
+    })
   })
 })

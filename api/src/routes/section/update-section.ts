@@ -16,6 +16,7 @@ import {
 } from "../../lib/section-input";
 import { SectionSchema, sectionColumns, withMemberIds } from "../../lib/section-view";
 import { isUniqueViolation } from "../../lib/task-kind";
+import { softDelete } from "../../lib/soft-delete";
 
 // セクション更新 PATCH /api/product/:productId/section/:sectionId(リーダーのみ)
 // 名前・色・位置・大きさを、一部だけ変えられる。
@@ -23,9 +24,10 @@ import { isUniqueViolation } from "../../lib/task-kind";
 // 大きさ(width・height)の変更では、カードは動かさない。
 export const updateSection = new Elysia({ name: "section-update" })
   .use(authGuard)
+  .use(softDelete)
   .patch(
     "/api/product/:productId/section/:sectionId",
-    async ({ params, body, user, status }) => {
+    async ({ params, body, user, softDelete, status }) => {
       const membership = await getMembership(params.productId, user.userId);
       if (!membership) return status(404, { message: "プロダクトが見つかりません" });
       if (membership.role !== "leader") {
@@ -50,8 +52,9 @@ export const updateSection = new Elysia({ name: "section-update" })
           const [current] = await tx
             .select(sectionColumns)
             .from(sections)
-            .where(and(eq(sections.sectionId, params.sectionId), eq(sections.productId, params.productId)))
+            .where(and(eq(sections.sectionId, params.sectionId), eq(sections.productId, params.productId), softDelete.liveSection))
             .for("update");
+          // soft delete 中のセクションは、見つからないのと同じ(404)
           if (!current) return { kind: "not-found" } as const;
 
           const dx = body.x === undefined ? 0 : body.x - current.x;

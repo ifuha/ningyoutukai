@@ -12,11 +12,14 @@ import type { TreeMember } from '#/lib/tree'
  * ハンドラがない(リーダーでない・「セクション」の道具で描いている間)ときは、何も包まない(これまでと同じ DOM のまま)。
  */
 export function DragSlot({
+  cardId,
   handlers,
   dragging,
   selected = false,
   children,
 }: {
+  /** カードの productMemberId。まとめて動かすときに、選択の輪郭ごと動かす目印 */
+  cardId?: string
   handlers?: CardDragHandlers
   dragging: boolean
   /** 選択中(選択の輪郭を付ける)。複数選択のときも、それぞれに付く */
@@ -28,6 +31,7 @@ export function DragSlot({
     <div
       {...handlers}
       data-drag-slot=""
+      data-card-slot-id={cardId}
       data-selected={selected || undefined}
       className={`pointer-events-auto touch-none ${dragging ? 'opacity-40' : ''} ${
         selected ? 'outline outline-2 outline-ink outline-offset-2' : ''

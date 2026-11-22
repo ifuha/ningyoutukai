@@ -43,7 +43,8 @@
     }
   ],
 
-  // 定期実行(Cron Trigger。時刻は UTC)。毎日 18:00 UTC(日本時間の翌日 3:00)に、長い間呼び出されない文書を自動で削除する(src/worker.ts の scheduled)。
-  // 日数は、プロダクトの設定(初期 7 日)。docs/deploy.md の「定期実行」
-  "triggers": { "crons": ["0 18 * * *"] }
+  // 定期実行(Cron Trigger。時刻は UTC)。src/worker.ts の scheduled が、式で処理を分ける。docs/deploy.md の「定期実行」
+  // - "0 18 * * *": 毎日 18:00 UTC(日本時間の翌日 3:00)に、長い間呼び出されない文書を自動で削除する。日数は、プロダクトの設定(初期 7 日)
+  // - "*/5 * * * *": 5 分おきに、期限(10 分)を過ぎた soft delete 中のセクション・メモを物理削除する(lib/worker-context.ts の SOFT_DELETE_CLEANUP_CRON と同じ文字列)
+  "triggers": { "crons": ["0 18 * * *", "*/5 * * * *"] }
 }

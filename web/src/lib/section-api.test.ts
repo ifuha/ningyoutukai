@@ -4,6 +4,7 @@ import { createClient } from './eden'
 import {
   createSection,
   deleteSection,
+  deleteSelection,
   listSections,
   moveMember,
   sectionApiErrorKind,
@@ -13,6 +14,8 @@ import {
 const P = '11111111-1111-4111-8111-111111111111'
 const S = '22222222-2222-4222-8222-222222222222'
 const M = '33333333-3333-4333-8333-333333333333'
+const S2 = '22222222-2222-4222-8222-222222222223'
+const N = '44444444-4444-4444-8444-444444444444'
 
 type Sent = { url: string; method: string; body: string | null; contentType: string | null }
 
@@ -135,6 +138,35 @@ describe('deleteSection', () => {
     expect(sent[0].url).toBe(`http://localhost:3001/api/product/${P}/section/${S}`)
     expect(sent[0].body).toBeNull()
     expect(r).toBeUndefined()
+  })
+})
+
+describe('deleteSelection(既存の 1 件ずつの削除 API を順に呼ぶ)', () => {
+  test('まとめて削除するエンドポイントは使わない。セクション → メモの順に、DELETE を 1 件ずつ送る', async () => {
+    const { client, sent } = recorder(() => new Response(null, { status: 204 }))
+    await deleteSelection(P, { sectionIds: [S, S2], noteIds: [N] }, client)
+    expect(sent.map((s) => `${s.method} ${s.url}`)).toEqual([
+      `DELETE http://localhost:3001/api/product/${P}/section/${S}`,
+      `DELETE http://localhost:3001/api/product/${P}/section/${S2}`,
+      `DELETE http://localhost:3001/api/product/${P}/note/${N}`,
+    ])
+    expect(sent.every((s) => s.body === null)).toBe(true)
+  })
+
+  test('1 件でも弾かれたら、そこで打ち切る(残りは呼ばない)', async () => {
+    const { client, sent } = recorder(() => json({ message: 'セクションが見つかりません' }, 404))
+    const e = await rejected(
+      deleteSelection(P, { sectionIds: [S, S2], noteIds: [N] }, client),
+    )
+    expect(e).toBeInstanceOf(ApiError)
+    expect(e).toMatchObject({ status: 404, message: 'セクションが見つかりません' })
+    expect(sent).toHaveLength(1)
+  })
+
+  test('消すものが無ければ、何も呼ばない', async () => {
+    const { client, sent } = recorder()
+    await deleteSelection(P, { sectionIds: [], noteIds: [] }, client)
+    expect(sent).toHaveLength(0)
   })
 })
 

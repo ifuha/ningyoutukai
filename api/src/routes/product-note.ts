@@ -1,4 +1,4 @@
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, or, type SQL } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { productNotes, products, users } from "../db/schema";
@@ -9,6 +9,7 @@ import { mailer } from "../lib/mailer";
 import { getMemberContactsExcept, getMembership } from "../lib/product-access";
 import { MessageSchema } from "../lib/response-schema";
 import { coordSchema } from "../lib/section-input";
+import { softDelete } from "../lib/soft-delete";
 
 const params = t.Object({ productId: t.String({ format: "uuid" }) });
 const noteParams = t.Object({ productId: t.String({ format: "uuid" }), noteId: t.String({ format: "uuid" }) });
@@ -44,8 +45,9 @@ type NoteRow = { isPublic: boolean; createdBy: string | null };
 
 const isVisible = (note: NoteRow, userId: string) => note.isPublic || note.createdBy === userId;
 
-async function findNote(noteId: string) {
-  const [note] = await db.select(noteColumns).from(productNotes).leftJoin(users, eq(productNotes.createdBy, users.userId)).where(eq(productNotes.noteId, noteId));
+/** メモを 1 件読む。`live` は、生きているメモの条件(`softDelete.liveNote`)。soft delete 中のメモは、見つからない(undefined) */
+async function findNote(noteId: string, live: SQL) {
+  const [note] = await db.select(noteColumns).from(productNotes).leftJoin(users, eq(productNotes.createdBy, users.userId)).where(and(eq(productNotes.noteId, noteId), live));
   return note;
 }
 
@@ -68,45 +70,48 @@ async function notifyNotePublished(args: { productId: string; publisherUserId: s
   await mailer.send({ to: recipients.map((r) => r.email), subject: `メモが公開されました: ${productName}`, text: lines.join("\n") });
 }
 
-export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGuard).use(noteAuthorize)
-  .get("/api/product/:productId/note", async ({ params, user, authorize, status }) => {
+export const productNoteRoutes = new Elysia({ name: "product-note" }).use(authGuard).use(noteAuthorize).use(softDelete)
+  .get("/api/product/:productId/note", async ({ params, user, authorize, softDelete, status }) => {
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, { message: "プロダクトが見つかりません" });
+    // 論理削除(deletedAt が入ったメモ)は、ここには出さない
     const rows = await db.select(noteColumns).from(productNotes).leftJoin(users, eq(productNotes.createdBy, users.userId))
-      .where(and(eq(productNotes.productId, params.productId), visibleNoteFilter(user.userId)))
+      .where(and(eq(productNotes.productId, params.productId), visibleNoteFilter(user.userId), softDelete.liveNote))
       .orderBy(asc(productNotes.createdAt), asc(productNotes.noteId));
     const can = authorize({ userId: user.userId, role: membership.role });
     return rows.map((n) => ({ ...n, canEdit: can.canEdit(n) }));
   }, { requireUser: true, params, response: { 200: noteListSchema, 404: MessageSchema }, detail: { summary: "メモ一覧取得(公開と自分のメモ)" } })
-  .post("/api/product/:productId/note", async ({ params, body, user, authorize, status }) => {
+  .post("/api/product/:productId/note", async ({ params, body, user, authorize, softDelete, status }) => {
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, { message: "プロダクトが見つかりません" });
     // isPublic は DB の既定(非公開)のまま。公開は PATCH で作成者が切り替える
     const [created] = await db.insert(productNotes).values({ productId: params.productId, createdBy: user.userId, x: body.x, y: body.y }).returning({ noteId: productNotes.noteId });
-    const note = (await findNote(created.noteId))!;
+    const note = (await findNote(created.noteId, softDelete.liveNote))!;
     return status(201, { ...note, canEdit: authorize({ userId: user.userId, role: membership.role }).canEdit(note) });
   }, { requireUser: true, params, body: t.Object({ x: coordSchema(), y: coordSchema() }), response: { 201: noteSchema, 404: MessageSchema }, detail: { summary: "メモ作成" } })
-  .patch("/api/product/:productId/note/:noteId", async ({ params, body, user, authorize, status }) => {
+  .patch("/api/product/:productId/note/:noteId", async ({ params, body, user, authorize, softDelete, status }) => {
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, notFound);
-    const note = await findNote(params.noteId);
+    // soft delete 中のメモは、見つからないのと同じ(404)
+    const note = await findNote(params.noteId, softDelete.liveNote);
     // 他人の非公開メモは存在を漏らさないよう、無いのと同じ 404 にする
     if (!note || note.productId !== params.productId || !isVisible(note, user.userId)) return status(404, notFound);
     // 変更できるのは作成者だけ(作成者が NULL のメモは、リーダーだけ)
     const can = authorize({ userId: user.userId, role: membership.role });
     if (!can.canEdit(note)) return status(403, forbiddenEdit);
     await db.update(productNotes).set({ ...body, updatedAt: new Date() }).where(eq(productNotes.noteId, params.noteId));
-    const updated = await findNote(params.noteId);
+    const updated = await findNote(params.noteId, softDelete.liveNote);
     // 非公開 → 公開に切り替えたときだけ、ほかのメンバーへ知らせる
     if (updated && body.isPublic === true && !note.isPublic) {
       await notifyNotePublished({ productId: params.productId, publisherUserId: user.userId, publisherName: user.userName, content: updated.content });
     }
     return updated ? { ...updated, canEdit: can.canEdit(updated) } : status(404, notFound);
   }, { requireUser: true, params: noteParams, body: t.Object({ content: t.Optional(t.String({ maxLength: 2000, pattern: "^[^\\u0000]*$" })), x: t.Optional(coordSchema()), y: t.Optional(coordSchema()), isPublic: t.Optional(t.Boolean()) }), response: { 200: noteSchema, 403: MessageSchema, 404: MessageSchema }, detail: { summary: "メモ更新(作成者のみ)" } })
-  .delete("/api/product/:productId/note/:noteId", async ({ params, user, authorize, status }) => {
+  .delete("/api/product/:productId/note/:noteId", async ({ params, user, authorize, softDelete, status }) => {
     const membership = await getMembership(params.productId, user.userId);
     if (!membership) return status(404, notFound);
-    const note = await findNote(params.noteId);
+    // soft delete 中のメモは、見つからないのと同じ(404)
+    const note = await findNote(params.noteId, softDelete.liveNote);
     if (!note || note.productId !== params.productId || !isVisible(note, user.userId)) return status(404, notFound);
     // 削除できるのは作成者だけ(作成者が NULL のメモは、リーダーだけ)
     if (!authorize({ userId: user.userId, role: membership.role }).canEdit(note)) return status(403, forbiddenDelete);

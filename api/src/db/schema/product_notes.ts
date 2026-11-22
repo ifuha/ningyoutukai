@@ -15,6 +15,8 @@ export const productNotes = snakeCase.table("product_notes", {
   y: doublePrecision().notNull().default(0),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  // 論理削除(複数削除エンドポイントで入る。NULL のときは残っている)
+  deletedAt: timestamp({ withTimezone: true }),
 }, (table) => [
   // ユーザーを消したときの SET NULL と、作成者ごとのメモ検索を全件走査にしない
   index("product_notes_created_by_idx").on(table.createdBy),

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { db } from "../../src/db";
-import { productMembers, sections } from "../../src/db/schema";
+import { productMembers, productNotes, sections } from "../../src/db/schema";
 import { productTreeRoutes } from "../../src/routes/product-tree";
 import { sectionRoutes } from "../../src/routes/section";
 import { cleanup, createOutsider, setupProduct } from "../task/helpers";
@@ -31,6 +31,7 @@ const sectionUrl = (productId: string, sectionId?: string) =>
   `/api/product/${productId}/section${sectionId ? `/${sectionId}` : ""}`;
 const positionUrl = (productId: string, memberId: string) =>
   `/api/product/${productId}/member/${memberId}/position`;
+const moveUrl = (productId: string) => `/api/product/${productId}/move`;
 
 async function insertSection(productId: string, values: Partial<typeof sections.$inferInsert> = {}) {
   const [row] = await db
@@ -56,6 +57,22 @@ async function findMember(memberId: string) {
 
 async function findSection(sectionId: string) {
   const [row] = await db.select().from(sections).where(eq(sections.sectionId, sectionId));
+  return row;
+}
+
+async function insertNote(
+  productId: string,
+  values: Partial<typeof productNotes.$inferInsert> = {},
+) {
+  const [row] = await db
+    .insert(productNotes)
+    .values({ productId, content: "メモ", ...values })
+    .returning();
+  return row;
+}
+
+async function findNote(noteId: string) {
+  const [row] = await db.select().from(productNotes).where(eq(productNotes.noteId, noteId));
   return row;
 }
 
@@ -567,6 +584,177 @@ describe("PATCH /member/:memberId/position(カードの移動)", () => {
     expect((await move({ positionX: 1, positionY: 1, sectionId: "not-a-uuid" })).status).toBe(422);
     expect((await move({ positionX: 1_000_000, positionY: -1_000_000 })).status).toBe(200);
     expect(pos(await findMember(members[0].memberId))).toEqual([1_000_000, -1_000_000]);
+  });
+});
+
+describe("POST /move(まとめて移動)", () => {
+  test("セクションと所属カードを同じ差分で動かし、明示されたカードは絶対位置を優先する。メモも同じトランザクションで動く", async () => {
+    const { productId, leader, members } = await setupProduct();
+    const s = await insertSection(productId, { x: 100, y: 100 });
+    await setMember(members[0].memberId, { sectionId: s.sectionId, positionX: 150, positionY: 150 });
+    await setMember(members[1].memberId, { sectionId: s.sectionId, positionX: 200, positionY: 120 });
+    const note = await insertNote(productId, { createdBy: leader.userId, x: 1, y: 2 });
+
+    const res = await req("POST", moveUrl(productId), {
+      cookie: leader.cookie,
+      body: {
+        sections: [{ sectionId: s.sectionId, x: 200, y: 50 }],
+        members: [{ memberId: members[0].memberId, positionX: 500, positionY: 400 }],
+        notes: [{ noteId: note.noteId, x: 30, y: 40 }],
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(await findSection(s.sectionId)).toMatchObject({ x: 200, y: 50 });
+    // 明示したカードは、セクションの差分(+100, -50)を足さず、絶対位置のまま
+    expect(pos(await findMember(members[0].memberId))).toEqual([500, 400]);
+    // 明示していない所属カードは、セクションと同じ差分だけ動く
+    expect(pos(await findMember(members[1].memberId))).toEqual([300, 70]);
+    expect(await findNote(note.noteId)).toMatchObject({ x: 30, y: 40 });
+  });
+
+  test("メンバーは、セクション・カードを含む一括移動を 403。メモだけなら、自分のメモを動かせる", async () => {
+    const { productId, members } = await setupProduct();
+    const section = await insertSection(productId, { x: 10, y: 10 });
+    await setMember(members[1].memberId, { sectionId: section.sectionId, positionX: 20, positionY: 20 });
+    const own = await insertNote(productId, { createdBy: members[0].userId, isPublic: false, x: 1, y: 1 });
+
+    const forbidden = await req("POST", moveUrl(productId), {
+      cookie: members[0].cookie,
+      body: {
+        sections: [{ sectionId: section.sectionId, x: 100, y: 100 }],
+        members: [{ memberId: members[1].memberId, positionX: 1, positionY: 1 }],
+        notes: [{ noteId: own.noteId, x: 50, y: 50 }],
+      },
+    });
+    expect(forbidden.status).toBe(403);
+    // 何も変わらない(メモも動かない)
+    expect(await findSection(section.sectionId)).toMatchObject({ x: 10, y: 10 });
+    expect(pos(await findMember(members[1].memberId))).toEqual([20, 20]);
+    expect(await findNote(own.noteId)).toMatchObject({ x: 1, y: 1 });
+
+    const ok = await req("POST", moveUrl(productId), {
+      cookie: members[0].cookie,
+      body: { notes: [{ noteId: own.noteId, x: 50, y: 60 }] },
+    });
+    expect(ok.status).toBe(204);
+    expect(await findNote(own.noteId)).toMatchObject({ x: 50, y: 60 });
+  });
+
+  test("他の人の公開メモは 403、見えない非公開メモは 404。何も変わらない", async () => {
+    const { productId, leader, members } = await setupProduct();
+    const publicNote = await insertNote(productId, {
+      createdBy: members[0].userId,
+      isPublic: true,
+      x: 1,
+      y: 1,
+    });
+    const privateNote = await insertNote(productId, {
+      createdBy: members[0].userId,
+      isPublic: false,
+      x: 2,
+      y: 2,
+    });
+    expect(
+      (
+        await req("POST", moveUrl(productId), {
+          cookie: leader.cookie,
+          body: { notes: [{ noteId: publicNote.noteId, x: 9, y: 9 }] },
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await req("POST", moveUrl(productId), {
+          cookie: leader.cookie,
+          body: { notes: [{ noteId: privateNote.noteId, x: 9, y: 9 }] },
+        })
+      ).status,
+    ).toBe(404);
+    expect(await findNote(publicNote.noteId)).toMatchObject({ x: 1, y: 1 });
+    expect(await findNote(privateNote.noteId)).toMatchObject({ x: 2, y: 2 });
+  });
+
+  test("座標の上限を超える移動は 422 で、ほかの項目も含めて何も変えない", async () => {
+    const { productId, leader, members } = await setupProduct();
+    const s = await insertSection(productId, { x: 100, y: 100 });
+    await setMember(members[0].memberId, { sectionId: s.sectionId, positionX: 999_990, positionY: 100 });
+    const note = await insertNote(productId, { createdBy: leader.userId, x: 1, y: 2 });
+
+    const res = await req("POST", moveUrl(productId), {
+      cookie: leader.cookie,
+      body: {
+        sections: [{ sectionId: s.sectionId, x: 1_000_000, y: 100 }],
+        notes: [{ noteId: note.noteId, x: 30, y: 40 }],
+      },
+    });
+    expect(res.status).toBe(422);
+    expect(await findSection(s.sectionId)).toMatchObject({ x: 100, y: 100 });
+    expect(pos(await findMember(members[0].memberId))).toEqual([999_990, 100]);
+    expect(await findNote(note.noteId)).toMatchObject({ x: 1, y: 2 });
+  });
+
+  test("複数のセクションのうち、後ろのものが範囲外なら、前のセクションもカードも動かない", async () => {
+    const { productId, leader, members } = await setupProduct();
+    const first = await insertSection(productId, { x: 0, y: 0 });
+    const second = await insertSection(productId, { x: 0, y: 0 });
+    await setMember(members[0].memberId, {
+      sectionId: first.sectionId,
+      positionX: 10,
+      positionY: 10,
+    });
+    await setMember(members[1].memberId, {
+      sectionId: second.sectionId,
+      positionX: 999_990,
+      positionY: 0,
+    });
+
+    const res = await req("POST", moveUrl(productId), {
+      cookie: leader.cookie,
+      body: {
+        sections: [
+          { sectionId: first.sectionId, x: 100, y: 100 },
+          { sectionId: second.sectionId, x: 100, y: 100 },
+        ],
+      },
+    });
+    expect(res.status).toBe(422);
+    expect(await findSection(first.sectionId)).toMatchObject({ x: 0, y: 0 });
+    expect(await findSection(second.sectionId)).toMatchObject({ x: 0, y: 0 });
+    expect(pos(await findMember(members[0].memberId))).toEqual([10, 10]);
+    expect(pos(await findMember(members[1].memberId))).toEqual([999_990, 0]);
+  });
+
+  test("見つからないセクション・カードは 422、別プロダクトのものも同じ。何も変わらない", async () => {
+    const { productId, leader } = await setupProduct();
+    const other = await setupProduct();
+    const foreignSection = await insertSection(other.productId);
+    for (const body of [
+      { sections: [{ sectionId: foreignSection.sectionId, x: 1, y: 1 }] },
+      { members: [{ memberId: other.members[0].memberId, positionX: 1, positionY: 1 }] },
+    ]) {
+      expect((await req("POST", moveUrl(productId), { cookie: leader.cookie, body })).status).toBe(422);
+    }
+    expect(await findSection(foreignSection.sectionId)).toMatchObject({ x: 0, y: 0 });
+    expect(pos(await findMember(other.members[0].memberId))).toEqual([null, null]);
+  });
+
+  test("空の指定・重複した ID は 422。cookie なしは 401、所属していないユーザーは 404", async () => {
+    const { productId, leader } = await setupProduct();
+    const s = await insertSection(productId);
+    const body = { sections: [{ sectionId: s.sectionId, x: 1, y: 1 }] };
+    expect((await req("POST", moveUrl(productId), { cookie: leader.cookie, body: {} })).status).toBe(422);
+    expect((await req("POST", moveUrl(productId), { cookie: leader.cookie, body: { sections: [] } })).status).toBe(422);
+    expect(
+      (
+        await req("POST", moveUrl(productId), {
+          cookie: leader.cookie,
+          body: { sections: [...body.sections, ...body.sections] },
+        })
+      ).status,
+    ).toBe(422);
+    expect((await req("POST", moveUrl(productId), { body })).status).toBe(401);
+    const outsider = await createOutsider();
+    expect((await req("POST", moveUrl(productId), { cookie: outsider.cookie, body })).status).toBe(404);
   });
 });
 
