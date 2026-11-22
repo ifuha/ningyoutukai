@@ -78,15 +78,18 @@ export function TaskMessageForm({
           }}
           className={textareaClass}
         />
-        {/* 送信ボタンは入力欄の右下(内側)に置く。リサイズのつまみは避ける */}
-        <span className="absolute right-3 bottom-3">
+        {/* 送信ボタンは入力欄の右下(内側)に置く。リサイズのつまみは避ける。
+            span は flex にして、行の高さ(ベースラインの余白)でボタンがずれないようにする。
+            紙飛行機のアイコンは右上に重心があるので、見た目の中央に寄せる(左下へ 1px)。
+            ホバーは、塗りを薄くするのではなく、背景を淡い色に変える */}
+        <span className="absolute right-3 bottom-3 flex">
           <IconButton
             type="submit"
             icon={Send}
             label="送信"
             size="sm"
             variant="solid"
-            className="rounded-full"
+            className="rounded-full hover:border-line hover:bg-side-item hover:text-ink hover:opacity-100 [&>svg]:-translate-x-px [&>svg]:translate-y-px"
             disabled={post.isPending || !submittable}
           />
         </span>
