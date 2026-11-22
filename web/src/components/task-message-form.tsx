@@ -12,7 +12,7 @@ import {
 
 // 右側は、中に置く送信ボタンのぶん空ける(文字がボタンの下に潜らないように)
 const textareaClass =
-  'block min-h-28 w-full resize-y rounded-lg border border-line bg-panel p-3 pr-12 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'block min-h-28 w-full resize-y rounded-sm border border-line bg-panel p-3 pr-12 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
 // コメントの入力欄。リーダーと担当者にだけ出す(api が、それ以外は 403、完了済みは 409 にする)。
 // 送れたら入力欄を空にして、履歴を取り直す。失敗したら、入力は残して、理由を出す
