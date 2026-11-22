@@ -137,10 +137,14 @@ describe('右クリック(コンテキストメニュー)の項目', () => {
     expect(called).toEqual(['編集', '削除'])
   })
 
-  test('行の下には、編集・削除のテキストボタンを出さない(右クリックにまとめる)', () => {
-    const html = render([message()])
-    expect(html).not.toContain('>編集<')
-    expect(html).not.toContain('>削除<')
+  test('編集か削除ができるメッセージには、右クリックが使えない人のための「…」ボタンを出す', () => {
+    expect(render([message()])).toContain('aria-label="メッセージの操作"')
+    expect(render([message({ canEdit: false, canDelete: true })])).toContain('aria-label="メッセージの操作"')
+  })
+
+  test('どちらもできないメッセージと、削除済みのメッセージには、「…」ボタンを出さない', () => {
+    expect(render([message({ canEdit: false, canDelete: false })])).not.toContain('aria-label="メッセージの操作"')
+    expect(render([message({ deleted: true })])).not.toContain('aria-label="メッセージの操作"')
   })
 })
 

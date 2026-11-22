@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { SmilePlus } from 'lucide-react'
+import { Ellipsis, SmilePlus } from 'lucide-react'
 import { ContextMenu } from '#/components/context-menu'
 import type { ContextMenuItem } from '#/lib/context-menu-items'
 import { formatDateTime, formatMessageTime } from '#/components/member-card'
@@ -171,11 +171,22 @@ function MessageRow({
       setPicking(false)
     }
     const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPicking(false)
+      if (e.key === 'Escape') {
+        // dialog の cancel(閉じる)を止めて、候補だけ閉じる。閉じたあとは cancel の監視も外れるので、先に止める
+        e.preventDefault()
+        setPicking(false)
+      }
     }
+    // `<dialog>` の中では、Esc は「cancel」として dialog を閉じにくる。ここで止めて、候補だけ閉じる
+    const cancel = (e: Event) => {
+      e.preventDefault()
+      setPicking(false)
+    }
+    document.addEventListener('cancel', cancel, true)
     document.addEventListener('pointerdown', outside, true)
     document.addEventListener('keydown', key)
     return () => {
+      document.removeEventListener('cancel', cancel, true)
       document.removeEventListener('pointerdown', outside, true)
       document.removeEventListener('keydown', key)
     }
@@ -186,8 +197,10 @@ function MessageRow({
   // 自分が押している絵文字(あれば、それをもう一度押すと外す)
   const mine = (group: ReactionGroup) =>
     group.members.some((m) => m.productMemberId === viewerMemberId)
-  const hasEmoji = (emoji: ReactionGroup['emoji']) =>
-    message.reactions.some((group) => group.emoji === emoji && mine(group))
+  // 絵文字の候補。自分がもう付けたものは、候補に出さない
+  const candidates = reactionEmojis.filter(
+    (emoji) => !message.reactions.some((group) => group.emoji === emoji && mine(group)),
+  )
   // 右クリックのメニュー。編集・削除できるものだけ出す
   const items = messageMenuItems(message, {
     onEdit: () => {
@@ -201,7 +214,7 @@ function MessageRow({
   return (
     <li
       ref={rowRef}
-      className="flex gap-2 text-m hover:bg-side-item/20"
+      className="flex gap-2 rounded-sm px-2 py-1.5 text-m hover:bg-side-item/20"
       onContextMenu={(e) => {
         // 右クリック(スマホは長押し)で、編集・削除のメニューを出す
         if (message.deleted || editing) return
@@ -212,18 +225,37 @@ function MessageRow({
     >
       <MessageAvatar name={message.author.userName} src={message.author.avatarUrl} />
       <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="flex flex-wrap items-baseline gap-x-2 text-s">
-          <span className="font-medium">{message.author.userName}</span>
-          {label && <span className="opacity-60">{label}</span>}
-          <time
-            dateTime={message.createdAt}
-            title={formatDateTime(message.createdAt)}
-            className="opacity-60"
-          >
-            {formatMessageTime(message.createdAt)}
-          </time>
-          {message.editedAt && <span className="opacity-60">編集済み</span>}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-s">
+            <span className="font-medium">{message.author.userName}</span>
+            {label && <span className="opacity-60">{label}</span>}
+            <time
+              dateTime={message.createdAt}
+              title={formatDateTime(message.createdAt)}
+              className="opacity-60"
+            >
+              {formatMessageTime(message.createdAt)}
+            </time>
+            {message.editedAt && <span className="opacity-60">編集済み</span>}
+          </p>
+          {/* 右クリックが使えない人(キーボード・スマホ)のための入口。右クリックと同じメニューを開く */}
+          {!message.deleted && !editing && (message.canEdit || message.canDelete) && (
+            <button
+              type="button"
+              aria-label="メッセージの操作"
+              aria-haspopup="menu"
+              title="編集・削除"
+              disabled={busy}
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect()
+                setMenu({ x: rect.left, y: rect.bottom })
+              }}
+              className={`${chipClass} shrink-0`}
+            >
+              <Ellipsis size={14} aria-hidden="true" />
+            </button>
+          )}
+        </div>
         {message.deleted ? (
           <p className="opacity-60">削除されました</p>
         ) : editing ? (
@@ -297,23 +329,20 @@ function MessageRow({
                     <span>{group.members.length}</span>
                   </button>
                 ))}
+                {/* 候補は、自分がまだ付けていない絵文字だけ(付けたものは出さない。外すのは、上の絵文字の枠を押す)。全部付けたら、ボタンも出さない */}
                 {reactable &&
+                  candidates.length > 0 &&
                   (picking ? (
                     <span ref={pickerRef} className="flex items-center gap-1">
-                      {reactionEmojis.map((emoji) => (
+                      {candidates.map((emoji) => (
                         <button
                           key={emoji}
                           type="button"
-                          aria-label={
-                            hasEmoji(emoji)
-                              ? `リアクション ${emoji} を外す`
-                              : `リアクション ${emoji} を付ける`
-                          }
-                          aria-pressed={hasEmoji(emoji)}
-                          title={hasEmoji(emoji) ? '外す' : '付ける'}
+                          aria-label={`リアクション ${emoji} を付ける`}
+                          title="付ける"
                           disabled={busy}
-                          onClick={() => press.mutate({ emoji, remove: hasEmoji(emoji) })}
-                          className={`${chipClass}${hasEmoji(emoji) ? ' ring-1 ring-ink' : ''}`}
+                          onClick={() => press.mutate({ emoji, remove: false })}
+                          className={chipClass}
                         >
                           {emoji}
                         </button>
@@ -431,7 +460,7 @@ export function TaskMessages({
       ) : messages.data.messages.length === 0 ? (
         <p className="text-m">やりとりはまだありません</p>
       ) : (
-        <ul ref={listRef} className="max-h-64 space-y-3 overflow-y-auto">
+        <ul ref={listRef} className="max-h-64 space-y-1 overflow-y-auto">
           {messages.data.messages.map((message) => (
             <MessageRow
               key={message.messageId}
