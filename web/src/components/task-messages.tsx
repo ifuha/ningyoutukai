@@ -214,7 +214,7 @@ function MessageRow({
   return (
     <li
       ref={rowRef}
-      className="flex gap-2 rounded-sm px-2 py-1.5 text-m hover:bg-side-item/20"
+      className="flex gap-2 rounded-sm px-2 py-1.5 text-m hover:bg-panel"
       onContextMenu={(e) => {
         // 右クリック(スマホは長押し)で、編集・削除のメニューを出す
         if (message.deleted || editing) return
@@ -451,6 +451,7 @@ export function TaskMessages({
   return (
     <section aria-label="やりとり" className="space-y-2">
       <h3 className="text-s opacity-60">やりとり</h3>
+      {/* 履歴は淡い背景の枠に入れて、上の項目のカードと、下の入力欄から区切る */}
       {messages.isPending ? (
         <p className="text-m opacity-60">読み込み中…</p>
       ) : messages.isError ? (
@@ -460,7 +461,7 @@ export function TaskMessages({
       ) : messages.data.messages.length === 0 ? (
         <p className="text-m">やりとりはまだありません</p>
       ) : (
-        <ul ref={listRef} className="max-h-64 space-y-1 overflow-y-auto">
+        <ul ref={listRef} className="max-h-64 space-y-1 overflow-y-auto rounded-sm bg-side/40 p-1">
           {messages.data.messages.map((message) => (
             <MessageRow
               key={message.messageId}

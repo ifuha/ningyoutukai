@@ -10,8 +10,9 @@ import {
   normalizeMessageBody,
 } from '#/lib/message-body'
 
+// 右側は、中に置く送信ボタンのぶん空ける(文字がボタンの下に潜らないように)
 const textareaClass =
-  'min-h-20 w-full resize-y border border-line bg-panel p-2 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
+  'block min-h-28 w-full resize-y rounded-sm border border-line bg-panel p-3 pr-12 text-m text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60'
 
 // コメントの入力欄。リーダーと担当者にだけ出す(api が、それ以外は 403、完了済みは 409 にする)。
 // 送れたら入力欄を空にして、履歴を取り直す。失敗したら、入力は残して、理由を出す
@@ -58,39 +59,47 @@ export function TaskMessageForm({
         submit()
       }}
     >
-      <textarea
-        aria-label="コメント"
-        placeholder="コメントを書く(Ctrl + Enter で送信)"
-        value={text}
-        maxLength={MAX_MESSAGE_LENGTH}
-        disabled={post.isPending}
-        onChange={(e) => {
-          setText(e.target.value)
-          post.reset()
-        }}
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-            e.preventDefault()
-            submit()
-          }
-        }}
-        className={textareaClass}
-      />
+      <div className="relative">
+        <textarea
+          aria-label="コメント"
+          placeholder="コメントを書く(Ctrl + Enter で送信)"
+          value={text}
+          maxLength={MAX_MESSAGE_LENGTH}
+          disabled={post.isPending}
+          onChange={(e) => {
+            setText(e.target.value)
+            post.reset()
+          }}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+              e.preventDefault()
+              submit()
+            }
+          }}
+          className={textareaClass}
+        />
+        {/* 送信ボタンは入力欄の右下(内側)に置く。リサイズのつまみは避ける。
+            span は flex にして、行の高さ(ベースラインの余白)でボタンがずれないようにする。
+            紙飛行機のアイコンは右上に重心があるので、見た目の中央に寄せる(左下へ 1px)。
+            ホバーは、塗りを薄くするのではなく、背景を淡い色に変える */}
+        <span className="absolute right-3 bottom-3 flex">
+          <IconButton
+            type="submit"
+            icon={Send}
+            label="送信"
+            size="sm"
+            variant="solid"
+            className="rounded-full hover:border-line hover:bg-side-item hover:text-ink hover:opacity-100 [&>svg]:-translate-x-px [&>svg]:translate-y-px"
+            disabled={post.isPending || !submittable}
+          />
+        </span>
+      </div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-s opacity-60">
           {text.length} / {MAX_MESSAGE_LENGTH}
         </span>
         <span className="flex items-center gap-3">
           {beforeSend?.(text, () => setText(''))}
-          <IconButton
-            type="submit"
-            icon={Send}
-            label="送信"
-            showLabel
-            variant="outline"
-            className="bg-panel"
-            disabled={post.isPending || !submittable}
-          />
         </span>
       </div>
       {post.isError && (
