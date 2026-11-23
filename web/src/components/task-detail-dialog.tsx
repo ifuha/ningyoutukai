@@ -26,8 +26,8 @@ export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 const fieldCardClass = 'overflow-hidden rounded-xs border border-line/50'
 // 項目 1 つ分の余白。格子の中で長い語でも折り返すよう min-w-0
 const fieldClass = 'min-w-0 space-y-0.5 p-2'
-const fieldTopBg = 'bg-side-item/80'
-const fieldBottomBg = 'bg-side-item/30'
+const fieldTopBg = 'bg-side-item/50'
+const fieldBottomBg = 'bg-side-item/20'
 
 function Detail({
   productId,
