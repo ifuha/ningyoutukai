@@ -21,10 +21,13 @@ export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 
 // 詳細の項目(説明・期限など)を 1 枚のカードにまとめる。項目の間は、薄い区切り線。
 // 背景は side-item(ダークでは bg-side と bg-panel が同じ色で、差が出ないため)。
-// 枠線は、背景で区切れているので薄く(line の半分)、角丸は 2px(rounded-xs)
-const fieldCardClass = 'overflow-hidden rounded-xs border border-line/50 bg-side-item/50'
+// 枠線は、背景で区切れているので薄く(line の半分)、角丸は 2px(rounded-xs)。
+// 背景は、上(説明)を濃く、下(短い項目)を淡くして、2 段に見分ける
+const fieldCardClass = 'overflow-hidden rounded-xs border border-line/50'
 // 項目 1 つ分の余白。格子の中で長い語でも折り返すよう min-w-0
 const fieldClass = 'min-w-0 space-y-0.5 p-2'
+const fieldTopBg = 'bg-side-item/80'
+const fieldBottomBg = 'bg-side-item/30'
 
 function Detail({
   productId,
@@ -151,25 +154,25 @@ function Detail({
       <h2 className="text-l font-black break-words">{task.taskName}</h2>
       {/* 項目は 1 枚のカードにまとめる。説明は横幅いっぱい、短い項目は、その下に区切り線を挟んで格子に */}
       <dl className={`grid grid-cols-2 text-m md:grid-cols-4 ${fieldCardClass}`}>
-        <div className={`col-span-full ${fieldClass}`}>
+        <div className={`col-span-full ${fieldClass} ${fieldTopBg}`}>
           <dt className="text-s opacity-60">説明</dt>
           <dd className="break-words whitespace-pre-wrap">
             {task.description || '—'}
           </dd>
         </div>
-        <div className={`${fieldClass} border-t border-line/50`}>
+        <div className={`${fieldClass} ${fieldBottomBg} border-t border-line/50`}>
           <dt className="text-s opacity-60">期限</dt>
           <dd>{task.timeLimit ? formatDateTime(task.timeLimit) : '—'}</dd>
         </div>
-        <div className={`${fieldClass} border-t border-l border-line/50`}>
+        <div className={`${fieldClass} ${fieldBottomBg} border-t border-l border-line/50`}>
           <dt className="text-s opacity-60">種類</dt>
           <dd className="break-words">{task.taskType?.taskTypeName ?? '—'}</dd>
         </div>
-        <div className={`${fieldClass} border-t border-line/50 md:border-l`}>
+        <div className={`${fieldClass} ${fieldBottomBg} border-t border-line/50 md:border-l`}>
           <dt className="text-s opacity-60">公開</dt>
           <dd>{task.isVisible ? '公開' : '非公開'}</dd>
         </div>
-        <div className={`${fieldClass} border-t border-l border-line/50`}>
+        <div className={`${fieldClass} ${fieldBottomBg} border-t border-l border-line/50`}>
           <dt className="text-s opacity-60">状態</dt>
           <dd>
             {statusLabel[task.status]}
