@@ -452,7 +452,8 @@ export function TaskMessages({
     <section aria-label="やりとり" className="space-y-2">
       <h3 className="text-s opacity-60">やりとり</h3>
       {/* 履歴は淡い背景の枠に入れて、上の項目のカードと、下の入力欄から区切る。
-          ライト・ダークの両方で差が出るよう side-item を使う(ダークでは bg-side と bg-panel が同じ色) */}
+          ライト・ダークの両方で差が出るよう side-item を使う(ダークでは bg-side と bg-panel が同じ色)。
+          スクロールバーは隠す(ホイール・タッチ・キーボードでは、いままでどおりスクロールできる) */}
       {messages.isPending ? (
         <p className="text-m opacity-60">読み込み中…</p>
       ) : messages.isError ? (
@@ -462,7 +463,10 @@ export function TaskMessages({
       ) : visible.length === 0 ? (
         <p className="text-m">やりとりはまだありません</p>
       ) : (
-        <ul ref={listRef} className="max-h-64 space-y-1 overflow-y-auto rounded-sm bg-side-item/30 p-1">
+        <ul
+          ref={listRef}
+          className="max-h-64 space-y-1 overflow-y-auto rounded-sm bg-side-item/30 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           {visible.map((message) => (
             <MessageRow
               key={message.messageId}
