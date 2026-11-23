@@ -19,8 +19,8 @@ import { retryDelay, retryTransient } from '#/lib/query-retry'
 
 export type TaskDetailTarget = { task: TreeTask; member: TreeMember }
 
-// 詳細の項目(説明・期限など)を包むカード。格子の中で長い語でも折り返すよう min-w-0
-const fieldCardClass = 'min-w-0 space-y-0.5 rounded-sm border border-line bg-side/60 p-2'
+// 詳細の項目(説明・期限など)。枠線も背景も付けず、余白だけで並べる。格子の中で長い語でも折り返すよう min-w-0
+const fieldClass = 'min-w-0 space-y-0.5'
 
 function Detail({
   productId,
@@ -145,27 +145,27 @@ function Detail({
   return (
     <>
       <h2 className="text-l font-black break-words">{task.taskName}</h2>
-      {/* 項目はカードで並べる。説明は横幅いっぱい、短い項目は格子に */}
-      <dl className="grid grid-cols-2 gap-2 text-m md:grid-cols-4">
-        <div className={`col-span-2 md:col-span-4 ${fieldCardClass}`}>
+      {/* 説明は横幅いっぱい、短い項目はその下に格子で並べる */}
+      <dl className="grid grid-cols-2 gap-3 text-m md:grid-cols-4">
+        <div className={`col-span-full ${fieldClass}`}>
           <dt className="text-s opacity-60">説明</dt>
           <dd className="break-words whitespace-pre-wrap">
             {task.description || '—'}
           </dd>
         </div>
-        <div className={fieldCardClass}>
+        <div className={fieldClass}>
           <dt className="text-s opacity-60">期限</dt>
           <dd>{task.timeLimit ? formatDateTime(task.timeLimit) : '—'}</dd>
         </div>
-        <div className={fieldCardClass}>
+        <div className={fieldClass}>
           <dt className="text-s opacity-60">種類</dt>
           <dd className="break-words">{task.taskType?.taskTypeName ?? '—'}</dd>
         </div>
-        <div className={fieldCardClass}>
+        <div className={fieldClass}>
           <dt className="text-s opacity-60">公開</dt>
           <dd>{task.isVisible ? '公開' : '非公開'}</dd>
         </div>
-        <div className={fieldCardClass}>
+        <div className={fieldClass}>
           <dt className="text-s opacity-60">状態</dt>
           <dd>
             {statusLabel[task.status]}

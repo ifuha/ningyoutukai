@@ -79,7 +79,7 @@ function MessageAvatar({ name, src }: { name: string; src: string | null | undef
   )
 }
 
-// 1 件分の行。削除済みは本文を出さず、「削除されました」とだけ出す(履歴の並びは崩さない)。
+// 1 件分の行。削除済みのメッセージは、一覧に出さない(`TaskMessages` で外す)。
 // 本人なら、右クリック(スマホは長押し)のメニューから編集・削除ができる
 // (api が canEdit / canDelete で判定して返す。削除できるのはコメントだけ)。
 // `reactable`(リーダー・担当者で、完了済みでない)のときだけ、絵文字を付けられる
@@ -214,10 +214,10 @@ function MessageRow({
   return (
     <li
       ref={rowRef}
-      className="flex gap-2 rounded-sm px-2 py-1.5 text-m hover:bg-panel"
+      className="flex gap-2 rounded-sm px-2 py-1.5 text-m hover:bg-side-item"
       onContextMenu={(e) => {
         // 右クリック(スマホは長押し)で、編集・削除のメニューを出す
-        if (message.deleted || editing) return
+        if (editing) return
         if (!message.canEdit && !message.canDelete) return
         e.preventDefault()
         setMenu({ x: e.clientX, y: e.clientY })
@@ -239,7 +239,7 @@ function MessageRow({
             {message.editedAt && <span className="opacity-60">編集済み</span>}
           </p>
           {/* 右クリックが使えない人(キーボード・スマホ)のための入口。右クリックと同じメニューを開く */}
-          {!message.deleted && !editing && (message.canEdit || message.canDelete) && (
+          {!editing && (message.canEdit || message.canDelete) && (
             <button
               type="button"
               aria-label="メッセージの操作"
@@ -256,9 +256,7 @@ function MessageRow({
             </button>
           )}
         </div>
-        {message.deleted ? (
-          <p className="opacity-60">削除されました</p>
-        ) : editing ? (
+        {editing ? (
           <div className="space-y-1">
             <textarea
               aria-label="メッセージを編集"
@@ -439,10 +437,12 @@ export function TaskMessages({
     retry: false,
   })
 
+  // 削除済みのメッセージは、一覧に出さない(api は、履歴の並びのため、削除済みも返す)。
   // 件数が変わったとき(初めて読み込んだとき、コメントを投稿したとき)に、いちばん新しいメッセージが見えるよう、
-  // 一覧の末尾までスクロールする。編集・削除は件数が変わらないので、動かさない
+  // 一覧の末尾までスクロールする。編集・削除は件数が変わらないので、動かさない(削除は、件数が減る)
+  const visible = messages.data?.messages.filter((m) => !m.deleted) ?? []
   const listRef = useRef<HTMLUListElement>(null)
-  const count = messages.data?.messages.length
+  const count = visible.length
   useEffect(() => {
     const el = listRef.current
     if (el) el.scrollTop = el.scrollHeight
@@ -451,18 +451,23 @@ export function TaskMessages({
   return (
     <section aria-label="やりとり" className="space-y-2">
       <h3 className="text-s opacity-60">やりとり</h3>
-      {/* 履歴は淡い背景の枠に入れて、上の項目のカードと、下の入力欄から区切る */}
+      {/* 履歴は淡い背景の枠に入れて、上の項目のカードと、下の入力欄から区切る。
+          ライト・ダークの両方で差が出るよう side-item を使う(ダークでは bg-side と bg-panel が同じ色)。
+          スクロールバーは隠す(ホイール・タッチ・キーボードでは、いままでどおりスクロールできる) */}
       {messages.isPending ? (
         <p className="text-m opacity-60">読み込み中…</p>
       ) : messages.isError ? (
         <p role="alert" className="border-l border-line pl-3 text-m">
           ERR {errorMessage(messages.error.message)}
         </p>
-      ) : messages.data.messages.length === 0 ? (
+      ) : visible.length === 0 ? (
         <p className="text-m">やりとりはまだありません</p>
       ) : (
-        <ul ref={listRef} className="max-h-64 space-y-1 overflow-y-auto rounded-sm bg-side/40 p-1">
-          {messages.data.messages.map((message) => (
+        <ul
+          ref={listRef}
+          className="max-h-64 space-y-1 overflow-y-auto rounded-sm bg-side-item/30 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {visible.map((message) => (
             <MessageRow
               key={message.messageId}
               productId={productId}

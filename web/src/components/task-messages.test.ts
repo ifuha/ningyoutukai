@@ -98,7 +98,7 @@ describe('TaskMessages のリアクション', () => {
     expect(html).not.toContain('リアクションを追加')
   })
 
-  test('削除済みのメッセージには絵文字を出さない', () => {
+  test('削除済みのメッセージは、一覧に出さない(絵文字も出ない)', () => {
     const html = render(
       [
         message({
@@ -106,11 +106,18 @@ describe('TaskMessages のリアクション', () => {
           body: '',
           reactions: [reaction('👍', [{ productMemberId: 'm1', userName: '担当者' }])],
         }),
+        message({ messageId: 'm2', body: '残るコメント' }),
       ],
       { reactable: false },
     )
-    expect(html).toContain('削除されました')
+    expect(html).toContain('残るコメント')
+    expect(html).not.toContain('削除されました')
     expect(html).not.toContain('👍')
+  })
+
+  test('すべて削除済みなら、「やりとりはまだありません」を出す', () => {
+    const html = render([message({ deleted: true, body: '' })])
+    expect(html).toContain('やりとりはまだありません')
   })
 })
 
